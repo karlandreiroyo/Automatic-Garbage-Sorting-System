@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import './App.css';
+import '../employee/employeecss/App.css';
 
 // 1. IMPORT YOUR LOGOS
 // Make sure the filename matches what you saved in src/assets/
-import sidebarLogo from './assets/whitelogo.png'; 
+import sidebarLogo from '../assets/whitelogo.png'; 
 
 // Import Page Components
 import BinMonitoring from './BinMonitoring';

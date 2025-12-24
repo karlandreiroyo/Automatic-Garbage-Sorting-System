@@ -1,0 +1,43 @@
+.history-page { max-width: 1000px; margin: 0 auto; padding: 20px 40px; font-family: 'Segoe UI', sans-serif; color: #333; }
+.history-header-text h1 { font-size: 1.8rem; color: #1a1a1a; margin: 0 0 8px 0; font-weight: 700; }
+.history-header-text p { color: #666; font-size: 0.95rem; margin-bottom: 32px; }
+
+.stats-row { display: flex; gap: 60px; margin-bottom: 40px; flex-wrap: wrap; }
+.stats-box { display: flex; align-items: flex-start; gap: 16px; }
+.stats-icon-bg { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.stats-icon-bg svg { width: 24px; height: 24px; }
+.bg-green-light { background-color: #e8f5e9; color: #008751; }
+.bg-blue-light { background-color: #e3f2fd; color: #1976d2; }
+.bg-purple-light { background-color: #f3e5f5; color: #9c27b0; }
+.stats-content { display: flex; flex-direction: column; justify-content: center; }
+.stats-label { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+.stats-value { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; line-height: 1.2; }
+.stats-value small { font-size: 1rem; font-weight: 500; margin-left: 4px; }
+
+.filter-tabs { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+.filter-btn { padding: 10px 20px; border-radius: 6px; border: 1px solid #e0e0e0; background: white; color: #555; cursor: pointer; font-weight: 500; font-size: 0.95rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: 0.2s; }
+.filter-btn:hover { background: #f9f9f9; }
+.filter-btn.active { background-color: #008751; color: white; border-color: #008751; }
+
+.history-list { display: flex; flex-direction: column; gap: 16px; min-height: 400px; }
+.history-list-card { display: flex; background: white; padding: 30px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.03); align-items: flex-start; }
+
+.card-left { margin-right: 25px; padding-top: 5px; }
+.list-icon { width: 24px; height: 24px; }
+.icon-red { color: #d32f2f; }
+.icon-blue { color: #1976d2; }
+.icon-green { color: #2e7d32; }
+
+.card-middle { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.card-middle h3 { margin: 0 0 4px 0; font-size: 1.05rem; color: #111; font-weight: 700; }
+.light-text { font-weight: 400; color: #111; }
+.card-meta-row { display: flex; gap: 50px; }
+.meta-item { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #555; width: 180px; }
+
+.card-right { display: flex; align-items: flex-start; height: 100%; padding-top: 5px; }
+.status-completed { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; color: #008751; }
+
+.pagination { display: flex; justify-content: center; gap: 10px; margin-top: 50px; margin-bottom: 30px; }
+.page-btn { width: 40px; height: 40px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; color: #333; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.page-btn.active { background-color: #1b5e20; color: white; border-color: #1b5e20; }
+.page-btn.next-btn { width: auto; padding: 0 20px; }
