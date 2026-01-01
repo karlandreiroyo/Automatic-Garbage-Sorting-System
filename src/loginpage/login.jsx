@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient.jsx';
 import mainLogo from '../assets/sorting-logo.png';
 import './Login.css';
 
@@ -21,52 +22,74 @@ function Login({ setIsLoggedIn }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Define users with different roles
-  const users = [
-    {
-      email: 'employee@gmail.com',
-      password: 'password123',
-      role: 'employee'
-    },
-    {
-      email: 'supervisor@gmail.com',
-      password: 'supervisor123',
-      role: 'supervisor'
-    },
-    {
-      email: 'admin@gmail.com',
-      password: 'admin123',
-      role: 'admin'
-    }
-  ];
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    // Find user with matching credentials
-    const user = users.find(
-      u => u.email === email && u.password === password
-    );
+    try {
+      // Step 1: Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
 
-    if (user) {
-      // Store user info in localStorage
-      localStorage.setItem('userRole', user.role);
-      localStorage.setItem('userEmail', user.email);
+      if (authError) {
+        alert('Invalid email or password!');
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Get user details from the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, email, first_name, last_name')
+        .eq('auth_id', authData.user.id)
+        .single();
+
+      if (userError || !userData) {
+        alert('User data not found!');
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Convert database role to React role
+      let reactRole;
+      if (userData.role === 'ADMIN') {
+        reactRole = 'admin';
+      } else if (userData.role === 'COLLECTOR') {
+        reactRole = 'employee';
+      } else if (userData.role === 'SUPERVISOR') {
+        reactRole = 'supervisor';
+      } else {
+        alert('Invalid user role!');
+        setLoading(false);
+        return;
+      }
+
+      // Step 4: Store user info in localStorage
+      localStorage.setItem('userRole', reactRole);
+      localStorage.setItem('userEmail', userData.email);
+      localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
 
       setIsLoggedIn(true);
 
-      // Role-based redirect
-      if (user.role === 'admin') {
-        navigate('/admin'); // redirect to AdminDashboard
-      } else if (user.role === 'supervisor') {
-        navigate('/supervisor'); // redirect to SupervisorDashboard
-      } else {
-        navigate('/'); // default Employee Dashboard
+      // Step 5: Role-based redirect
+      if (reactRole === 'admin') {
+        navigate('/admin');
+      } else if (reactRole === 'supervisor') {
+        navigate('/supervisor');
+      } else if (reactRole === 'employee') {
+        navigate('/'); 
       }
-    } else {
-      alert('Invalid email or password!');
+
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An error occurred during login. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -93,10 +116,11 @@ function Login({ setIsLoggedIn }) {
               <label>Email Address</label>
               <input
                 type="email"
-                placeholder="employee@gmail.com"
+                placeholder="abc@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -109,11 +133,13 @@ function Login({ setIsLoggedIn }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className="eye-icon"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
                 >
                   <EyeIcon visible={showPassword} />
                 </button>
@@ -134,18 +160,18 @@ function Login({ setIsLoggedIn }) {
               </label>
             </div>
 
-            <button type="submit" className="login-btn">
-              Login
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
           {/* Optional: Display test credentials */}
           <div style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
             <p><strong>Test Accounts:</strong></p>
-            <p>Employee: employee@gmail.com / password123</p>
-            <p>Supervisor: supervisor@gmail.com / supervisor123</p>
-            <p>Admin: admin@gmail.com / admin123</p>
+            <p>Employee: abc@gmail.com / 123</p>
+            <p>Admin: admin@gmail.com / 1234</p>
           </div>
+          
         </div>
       </div>
     </div>
