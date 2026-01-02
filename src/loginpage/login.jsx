@@ -18,7 +18,7 @@ const EyeIcon = ({ visible }) => (
   )
 );
 
-function Login({ setIsLoggedIn }) {
+function Login({ setIsLoggedIn, setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -75,6 +75,7 @@ function Login({ setIsLoggedIn }) {
       localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
 
       setIsLoggedIn(true);
+      setUserRole(reactRole);
 
       // Step 5: Role-based redirect
       if (reactRole === 'admin') {

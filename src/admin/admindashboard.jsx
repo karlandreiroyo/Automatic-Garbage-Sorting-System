@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../supabaseClient.jsx';
 import { useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
 import '../admin/admincss/admindashboard.css';
@@ -7,10 +8,21 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState('Dashboard');
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+  const confirmSignOut = window.confirm('Are you sure you want to sign out?');
+  
+  if (confirmSignOut) {
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+    
+    // Clear localStorage
     localStorage.removeItem('userRole');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    
+    // Navigate to login
     navigate('/login');
+    }
   };
 
   const menuItems = [
