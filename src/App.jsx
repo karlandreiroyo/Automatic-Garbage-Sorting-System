@@ -14,6 +14,8 @@ import About from './employee/About';
 
 // Admin component
 import AdminDashboard from './admin/admindashboard';
+import AdminDash from './admin/adminDash.jsx';
+import Accounts from './admin/accounts.jsx';
 
 // Supervisor component
 import SupervisorDashboard from './supervisor/supervisordashboard';
@@ -105,17 +107,30 @@ function App() {
         />
         <Route path="/forgot" element={<Forgot />} />
 
-        {/* Admin route */}
+
+
+        {/* Admin routes */}
         <Route 
           path="/admin" 
           element={isLoggedIn && userRole === 'admin' ? <AdminDashboard onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
+        <Route 
+          path="/AdminDash" 
+          element={isLoggedIn && userRole === 'admin' ? <AdminDash onLogout={handleLogout} /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/accounts" 
+          element={isLoggedIn && userRole === 'admin' ? <Accounts onLogout={handleLogout} /> : <Navigate to="/login" />} 
+        />
+
 
         {/* Supervisor route */}
         <Route
           path="/supervisor"
           element={isLoggedIn && userRole === 'supervisor' ? <SupervisorDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
+
+
 
         {/* Employee routes */}
         <Route 

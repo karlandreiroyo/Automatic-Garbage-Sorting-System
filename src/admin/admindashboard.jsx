@@ -2,166 +2,106 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient.jsx';
 import { useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
-import '../admin/admincss/admindashboard.css';
+import '../admin/admincss/admindashboard.css'; 
 
-export default function AdminDashboard() {
-  const navigate = useNavigate();
-  const [activeMenu, setActiveMenu] = useState('Dashboard');
+// IMPORT FILES OF DASHBOARD HERE FOR SIDE BAR
+import AdminDash from './adminDash.jsx';
+import Accounts from './accounts.jsx';
 
-  const handleSignOut = async () => {
-  const confirmSignOut = window.confirm('Are you sure you want to sign out?');
-  
-  if (confirmSignOut) {
-    // Sign out from Supabase
-    await supabase.auth.signOut();
-    
-    // Clear localStorage
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    
-    // Navigate to login
-    navigate('/login');
-    }
-  };
+  const SignOutIcon = () => 
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+    </svg>;
+  const AlertIcon = () => 
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12">
+        </line>
+        <line x1="12" y1="16" x2="12.01" y2="16">
+        </line>
+    </svg>;
 
-  const menuItems = [
-    { name: 'Dashboard', icon: '📊' },
-    { name: 'Waste Categories', icon: '🗑️' },
-    { name: 'Data Analytics', icon: '📈' },
-    { name: 'Accounts', icon: '👥' },
-    { name: 'Bin Monitoring', icon: '📡' },
-    { name: 'About', icon: 'ℹ️' },
-  ];
-
-  const stats = [
-    { title: 'Total Items Sorted', value: '912', subtitle: 'Today', icon: '📦', color: '#10B981' },
-    { title: 'Categories Detected', value: '4', subtitle: 'Active categories', icon: '🗑️', color: '#10B981' },
-    { title: 'Sorting Efficiency', value: '98.2%', subtitle: 'Accuracy rate', icon: '📈', color: '#10B981' },
-    { title: 'Avg. Processing Time', value: '2.3s', subtitle: 'Per item', icon: '⏱️', color: '#10B981' },
-  ];
-
-  const wasteData = [
-    { category: 'Plastic', count: 240, color: '#10B981' },
-    { category: 'Paper', count: 190, color: '#10B981' },
-    { category: 'Metal', count: 100, color: '#10B981' },
-    { category: 'Glass', count: 50, color: '#D1D5DB' },
-  ];
-
-  const recentActivity = [
-    { type: 'Plastic', time: '2 min ago', items: 12 },
-    { type: 'Paper', time: '5 min ago', items: 8 },
-    { type: 'Metal', time: '8 min ago', items: 5 },
-  ];
-
-  const maxCount = Math.max(...wasteData.map(d => d.count));
+const AdminDashboard = ({ onLogout }) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <div className="admin-container">
-      {/* Sidebar */}
-      <div className="admin-sidebar">
-        <div className="admin-logo">
-          <img src={sidebarLogo} alt="Sorting System Logo" className="admin-logo-icon" />
-          <div>
-            <div className="admin-logo-title">Sorting System</div>
-            <div className="admin-logo-subtitle">Waste Management</div>
+      {showLogoutModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-icon-wrapper"><AlertIcon /></div>
+            <h3>Sign Out?</h3>
+            <p>Are you sure you want to end your session?</p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => setShowLogoutModal(false)}>No, Cancel</button>
+              <button className="btn-modal btn-confirm" onClick={onLogout}>Yes, Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <div className="power-indicator">
+            <span>ADMIN PANEL</span>
+            <div className="battery-icon">
+              <div className="battery-level" style={{width: '100%'}}></div>
+            </div>
+            <span>ACTIVE</span>
+          </div>
+          <div className="sidebar-logo">
+            <img src={sidebarLogo} alt="Logo" />
+            <div className="logo-text">
+              <h3>Admin Panel</h3>
+              <p>Management System</p>
+            </div>
           </div>
         </div>
 
-        <nav className="admin-nav">
-          {menuItems.map((item) => (
-            <div
-              key={item.name}
-              className={`admin-menu-item ${activeMenu === item.name ? 'active' : ''}`}
-              onClick={() => setActiveMenu(item.name)}
-            >
-              <span className="admin-menu-icon">{item.icon}</span>
-              {item.name}
-            </div>
-          ))}
-        </nav>
+        <nav className="sidebar-nav">
+          <div className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <span className="nav-icon">📊</span> Dashboard
+          </div>
+          <div className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+            <span className="nav-icon">🧹</span> Waste Categories
+          </div>
+          <div className={`nav-item ${activeTab === 'data' ? 'active' : ''}`} onClick={() => setActiveTab('data')}>
+            <span className="nav-icon">📈</span> Data Analytics
+          </div>
+          <div className={`nav-item ${activeTab === 'account' ? 'active' : ''}`} onClick={() => setActiveTab('account')}>
+            <span className="nav-icon">👥</span> Accounts
+          </div>
+          <div className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`} onClick={() => setActiveTab('bins')}>
+            <span className="nav-icon">🗑️</span> Bin Monitoring
+          </div>
+          <div className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>
+            <span className="nav-icon">ℹ️</span> About
+          </div>
+          <div className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            <span className="nav-icon">⚙️</span> Settings
+          </div>
+        </nav>   
 
-        <div className="admin-signout-container">
-          <div className="admin-menu-item" onClick={handleSignOut}>
-            <span className="admin-menu-icon">🚪</span>
-            Sign Out
+        <div className="sidebar-footer">
+          <button className="sign-out-btn" onClick={() => setShowLogoutModal(true)}>
+            <SignOutIcon /> Sign Out
+          </button>
+          <div className="today-status-card">
+            <p>System Status</p>
+            <h2>99.8%</h2>
+            <span>Uptime</span>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="admin-main-content">
-        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 className="admin-title">Dashboard Overview</h1>
-            <p className="admin-subtitle">Waste sorting statistics</p>
-          </div>
-          <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#111827' }}>
-            Welcome Admin Royo
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="admin-stats-grid">
-          {stats.map((stat, index) => (
-            <div key={index} className="admin-stat-card">
-              <div className="admin-stat-icon" style={{ backgroundColor: stat.color + '20' }}>
-                {stat.icon}
-              </div>
-              <div className="admin-stat-content">
-                <div className="admin-stat-title">{stat.title}</div>
-                <div className="admin-stat-value">{stat.value}</div>
-                <div className="admin-stat-subtitle">{stat.subtitle}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Charts Section */}
-        <div className="admin-charts-grid">
-          {/* Waste Distribution Chart */}
-          <div className="admin-chart-card">
-            <h3 className="admin-chart-title">Today's Waste Distribution</h3>
-            <div className="admin-bar-chart">
-              <div className="admin-y-axis">
-                {[250, 200, 150, 100, 50, 0].map((val) => (
-                  <div key={val} className="admin-y-axis-label">{val}</div>
-                ))}
-              </div>
-              <div className="admin-chart-bars">
-                {wasteData.map((data, index) => (
-                  <div key={index} className="admin-bar-container">
-                    <div
-                      className="admin-bar"
-                      style={{
-                        height: `${(data.count / maxCount) * 100}%`,
-                        backgroundColor: data.color,
-                      }}
-                    />
-                    <div className="admin-bar-label">{data.category}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="admin-activity-card">
-            <h3 className="admin-chart-title">Recent Activity</h3>
-            <div className="admin-activity-list">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="admin-activity-item">
-                  <div className="admin-activity-left">
-                    <div className="admin-activity-type">{activity.type}</div>
-                    <div className="admin-activity-detail">{activity.items} items sorted</div>
-                  </div>
-                  <div className="admin-activity-time">{activity.time}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* SIDE BAR ROUTE */}
+      <div className="main-content">
+        {activeTab === 'dashboard' && <AdminDash />}
+        {activeTab === 'account' && <Accounts />}
       </div>
     </div>
   );
-}
+};
+
+export default AdminDashboard;

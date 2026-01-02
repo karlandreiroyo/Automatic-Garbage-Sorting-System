@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '../supabaseClient';
 import '../employee/employeecss/App.css';
 
 // 1. IMPORT YOUR LOGOS
@@ -119,13 +120,6 @@ const Dashboard = ({ onLogout }) => {
 
       {/* --- MAIN CONTENT AREA --- */}
       <div className="main-content">
-        <header className="dashboard-header">
-          {activeTab === 'monitoring' && <div><h1>Real-Time Bin Monitoring</h1><p>Monitor bin fill levels in real-time</p></div>}
-          {activeTab === 'notifications' && <div className="notif-header-top"><div><h1>Notifications</h1><p>2 unread notifications</p></div><a href="#" className="mark-all-link">Mark all as read</a></div>}
-          {activeTab === 'history' && <div><h1>Collection History</h1><p>View past collection records</p></div>}
-          {(activeTab === 'profile' || activeTab === 'about') && <div></div>}
-        </header>
-
         <div className="content-body">
           {activeTab === 'monitoring' && <BinMonitoring />}
           {activeTab === 'notifications' && <Notifications />}
