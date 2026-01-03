@@ -1,7 +1,13 @@
+/**
+ * About Component
+ * Displays information about the Automatic Garbage Sorting System
+ * Features: Expandable waste category cards with examples, accordion sections for specs, project info, team, and contact
+ */
+
 import React, { useState } from 'react';
 import './admincss/about.css';
 
-// Icons
+// Icon Components for waste categories and sections
 const LeafIcon = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
@@ -29,6 +35,11 @@ const ChevronDown = () => (
   </svg>
 );
 
+/**
+ * Check Circle Icon Component
+ * Displays a checkmark icon with customizable color
+ * @param {string} color - Hex color code for the icon (default: green)
+ */
 const CheckCircle = ({ color = '#10b981' }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -68,6 +79,7 @@ const MailIcon = () => (
 );
 
 const About = () => {
+  // State to track which sections are expanded/open
   const [openSections, setOpenSections] = useState({
     biodegradable: false,
     recyclable: false,
@@ -78,9 +90,15 @@ const About = () => {
     contact: false
   });
 
+  /**
+   * Toggles the open/closed state of a section
+   * @param {string} section - The section key to toggle
+   */
   const toggleSection = (section) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
+
+  // Example items for Biodegradable waste category
 
   const biodegradableExamples = [
     'Fruit and vegetable peels',
@@ -91,6 +109,7 @@ const About = () => {
     'Wood chips and sawdust'
   ];
 
+  // Example items for Non-Biodegradable waste category
   const nonBiodegradableExamples = [
     'Styrofoam and foam packaging',
     'Plastic bags and wrappers',
@@ -100,6 +119,7 @@ const About = () => {
     'Medical and hazardous waste'
   ];
 
+  // Example items for Recyclable waste category
   const recyclableExamples = [
     'Plastic bottles (PET #1, HDPE #2)',
     'Glass bottles and jars',
@@ -109,6 +129,7 @@ const About = () => {
     'Clean food containers'
   ];
 
+  // Main features for Specs section
   const specsFeatures = [
     'Automatic sorting',
     'Camera and sensor based detection',
@@ -116,6 +137,7 @@ const About = () => {
     'Compact design'
   ];
 
+  // Team members list
   const teamMembers = [
     'Team Leader: Royo Karl Andrei',
     'Arcilla Khyl',
@@ -124,6 +146,7 @@ const About = () => {
     'Santos John Ivan'
   ];
 
+  // Contact email addresses
   const contactEmails = [
     'royo@gmail.com',
     'arcilla@gmail.com',
@@ -150,9 +173,9 @@ const About = () => {
         <h2>Smart waste for a Cleaner Tomorrow</h2>
       </div>
 
-      {/* WASTE TYPE CARDS */}
+      {/* Waste Category Cards with Expandable Examples */}
       <div className="waste-cards-grid">
-        {/* BIODEGRADABLE CARD */}
+        {/* Biodegradable Category Card */}
         <div className={`waste-card ${openSections.biodegradable ? 'expanded' : ''}`}>
           <div className="waste-card-header" onClick={() => toggleSection('biodegradable')}>
             <div className="waste-card-icon green">
@@ -180,7 +203,7 @@ const About = () => {
           )}
         </div>
 
-        {/* RECYCLABLE CARD */}
+        {/* Recyclable Category Card */}
         <div className={`waste-card ${openSections.recyclable ? 'expanded' : ''}`}>
           <div className="waste-card-header" onClick={() => toggleSection('recyclable')}>
             <div className="waste-card-icon blue">
@@ -208,7 +231,7 @@ const About = () => {
           )}
         </div>
 
-        {/* NON-BIODEGRADABLE CARD */}
+        {/* Non-Biodegradable Category Card */}
         <div className={`waste-card ${openSections.nonBiodegradable ? 'expanded' : ''}`}>
           <div className="waste-card-header" onClick={() => toggleSection('nonBiodegradable')}>
             <div className="waste-card-icon gray">
@@ -237,9 +260,9 @@ const About = () => {
         </div>
       </div>
 
-      {/* ACCORDION SECTIONS */}
+      {/* Accordion Sections for Additional Information */}
       <div className="accordion-grid">
-        {/* SPECS */}
+        {/* Specs Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
             <div className="accordion-icon">
@@ -264,7 +287,7 @@ const About = () => {
           )}
         </div>
 
-        {/* ABOUT PROJECT */}
+        {/* About Project Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header orange" onClick={() => toggleSection('about')}>
             <div className="accordion-icon">
@@ -284,7 +307,7 @@ const About = () => {
           )}
         </div>
 
-        {/* TEAM MEMBERS */}
+        {/* Team Members Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header gray" onClick={() => toggleSection('team')}>
             <div className="accordion-icon">
@@ -306,7 +329,7 @@ const About = () => {
           )}
         </div>
 
-        {/* CONTACT US */}
+        {/* Contact Us Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header gray" onClick={() => toggleSection('contact')}>
             <div className="accordion-icon">

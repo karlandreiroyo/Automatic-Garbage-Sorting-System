@@ -1,8 +1,16 @@
+/**
+ * Bin Monitoring Component
+ * Real-time monitoring of waste bin fill levels with two views:
+ * 1. List View: Shows all bins with system power indicators
+ * 2. Detail View: Shows category-specific bins with drain functionality
+ * Features: Click bins to view details, drain individual or all bins
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/binMonitoring.css';
 
-// Icons
+// Icon Components for different waste categories
 const LeafIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
@@ -37,7 +45,18 @@ const GearIcon = () => (
   </svg>
 );
 
+/**
+ * Battery Icon Component
+ * Displays system power level with color coding
+ * @param {number} level - Battery level percentage (0-100)
+ * @returns {JSX.Element} Battery icon with fill level
+ */
 const BatteryIcon = ({ level }) => {
+  /**
+   * Determines battery color based on level
+   * Green (>=80%), Yellow (50-79%), Red (<50%)
+   * @returns {string} Hex color code
+   */
   const getColor = () => {
     if (level >= 80) return '#10b981';
     if (level >= 50) return '#f59e0b';
@@ -54,14 +73,27 @@ const BatteryIcon = ({ level }) => {
   );
 };
 
-// List View Component (First Image)
+/**
+ * Bin List Card Component
+ * Displays bin information in list view with system power and fill level
+ * @param {Object} bin - Bin data object
+ * @param {Function} onClick - Callback when bin is clicked
+ */
 const BinListCard = ({ bin, onClick }) => {
+  /**
+   * Gets status text based on fill level
+   * @returns {string} Status text (Full, Almost Full, Normal)
+   */
   const getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
     return 'Normal';
   };
 
+  /**
+   * Gets CSS class for status badge
+   * @returns {string} CSS class name
+   */
   const getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
@@ -100,14 +132,27 @@ const BinListCard = ({ bin, onClick }) => {
   );
 };
 
-// Detail View Component (Second Image)
+/**
+ * Bin Detail Card Component
+ * Displays detailed bin information in detail view
+ * Shows category, fill level, last collection time, and visual bin representation
+ * @param {Object} bin - Bin data object with category information
+ */
 const BinDetailCard = ({ bin }) => {
+  /**
+   * Gets status text based on fill level
+   * @returns {string} Status text (Full, Almost Full, Normal)
+   */
   const getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
     return 'Normal';
   };
 
+  /**
+   * Gets CSS class for status badge
+   * @returns {string} CSS class name
+   */
   const getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
@@ -151,8 +196,15 @@ const BinDetailCard = ({ bin }) => {
   );
 };
 
+/**
+ * Main Bin Monitoring Component
+ * Manages two views: list view and detail view
+ * Handles bin data fetching, draining operations, and navigation
+ */
 const BinMonitoring = () => {
-  const [view, setView] = useState('list'); // 'list' or 'detail'
+  // State to track current view ('list' or 'detail')
+  const [view, setView] = useState('list');
+  // State for list view bins (Bin 1, Bin 2, etc.)
   const [bins, setBins] = useState([
     { id: 1, name: 'Bin 1', fillLevel: 80, systemPower: 100, capacity: '20kg', lastUpdate: '2 hours ago', category: 'Biodegradable' },
     { id: 2, name: 'Bin 2', fillLevel: 86, systemPower: 50, capacity: '20kg', lastUpdate: '1 hour ago', category: 'Non-Biodegradable' },
@@ -160,6 +212,7 @@ const BinMonitoring = () => {
     { id: 4, name: 'Bin 4', fillLevel: 90, systemPower: 100, capacity: '20kg', lastUpdate: '1 hour ago', category: 'Unsorted' }
   ]);
 
+  // State for detail view category bins (Biodegradable, Non-Biodegradable, etc.)
   const [categoryBins, setCategoryBins] = useState([
     { 
       id: 1, 
@@ -199,10 +252,15 @@ const BinMonitoring = () => {
     }
   ]);
 
+  // Fetch bin data on component mount
   useEffect(() => {
     fetchBinData();
   }, []);
 
+  /**
+   * Fetches bin data from Supabase database
+   * Falls back to default data if database fetch fails
+   */
   const fetchBinData = async () => {
     try {
       // Try to fetch from Supabase if you have a bins table
@@ -229,14 +287,26 @@ const BinMonitoring = () => {
     }
   };
 
+  /**
+   * Handles bin click to navigate to detail view
+   * @param {Object} bin - The clicked bin object
+   */
   const handleBinClick = (bin) => {
     setView('detail');
   };
 
+  /**
+   * Handles back button click to return to list view
+   */
   const handleBack = () => {
     setView('list');
   };
 
+  /**
+   * Drains a specific bin by setting fill level to 0%
+   * Updates both database and local state
+   * @param {number} binId - The ID of the bin to drain
+   */
   const handleDrain = async (binId) => {
     try {
       // Update in Supabase if you have a bins table
@@ -279,6 +349,10 @@ const BinMonitoring = () => {
     }
   };
 
+  /**
+   * Drains all bins by setting fill levels to 0%
+   * Updates both database and local state for all bins
+   */
   const handleDrainAll = async () => {
     try {
       // Update all bins in Supabase
@@ -311,6 +385,11 @@ const BinMonitoring = () => {
     }
   };
 
+  /**
+   * Calculates number of bins requiring action
+   * Counts full bins (>=90%) and almost full bins (75-89%)
+   * @returns {Object} Object with full and almostFull counts
+   */
   const getActionRequiredCount = () => {
     const full = categoryBins.filter(b => b.fillLevel >= 90).length;
     const almostFull = categoryBins.filter(b => b.fillLevel >= 75 && b.fillLevel < 90).length;
@@ -319,9 +398,11 @@ const BinMonitoring = () => {
 
   const { full, almostFull } = getActionRequiredCount();
 
+  // Render detail view when a bin is clicked
   if (view === 'detail') {
     return (
       <div className="bin-monitoring-container">
+        {/* Detail View Header with Back and Drain All buttons */}
         <div className="bin-monitoring-header">
           <div>
             <h1>Real-Time Bin Monitoring</h1>
@@ -333,6 +414,7 @@ const BinMonitoring = () => {
           </div>
         </div>
 
+        {/* Bin Status Summary */}
         <div className="bin-status-summary">
           <h2>BIN 1</h2>
           <div className="action-required-alert">
@@ -344,6 +426,7 @@ const BinMonitoring = () => {
           </div>
         </div>
 
+        {/* Category Bin Cards with Drain Buttons */}
         <div className="bin-detail-cards">
           {categoryBins.map(bin => (
             <div key={bin.id} className="bin-detail-wrapper">
@@ -358,8 +441,10 @@ const BinMonitoring = () => {
     );
   }
 
+  // Render list view (default)
   return (
     <div className="bin-monitoring-container">
+      {/* List View Header */}
       <div className="bin-monitoring-header">
         <div>
           <h1>Real-Time Bin Monitoring</h1>
@@ -367,6 +452,7 @@ const BinMonitoring = () => {
         </div>
       </div>
 
+      {/* Action Required Alert */}
       <div className="action-required-alert">
         <span className="warning-icon">⚠️</span>
         <div>
@@ -375,6 +461,7 @@ const BinMonitoring = () => {
         </div>
       </div>
 
+      {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
         {bins.map(bin => (
           <BinListCard key={bin.id} bin={bin} onClick={() => handleBinClick(bin)} />

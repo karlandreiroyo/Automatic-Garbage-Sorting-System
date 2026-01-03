@@ -1,18 +1,34 @@
+/**
+ * Accounts Component
+ * Manages user accounts (employees and supervisors) with CRUD operations
+ * Features: Search, filter by role/status, activate, archive, and delete users
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/accounts.css';
 
 const Accounts = () => { 
+  // State for storing all users from database
   const [users, setUsers] = useState([]);
+  // State for search input value
   const [searchTerm, setSearchTerm] = useState('');
+  // State for role filter (all, supervisor, collector)
   const [filterRole, setFilterRole] = useState('all');
+  // State for status filter (all, active, inactive)
   const [filterStatus, setFilterStatus] = useState('all');
+  // State to control add employee modal visibility
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Fetch users from database on component mount
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  /**
+   * Fetches all users from the Supabase database
+   * Orders them by creation date (newest first)
+   */
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
@@ -27,6 +43,10 @@ const Accounts = () => {
     }
   };
 
+  /**
+   * Activates a user account by setting status to 'active'
+   * @param {string} userId - The ID of the user to activate
+   */
   const handleActivateAccount = async (userId) => {
     try {
       const { error } = await supabase
@@ -41,6 +61,10 @@ const Accounts = () => {
     }
   };
 
+  /**
+   * Archives a user account by setting status to 'inactive'
+   * @param {string} userId - The ID of the user to archive
+   */
   const handleArchive = async (userId) => {
     try {
       const { error } = await supabase
@@ -55,6 +79,11 @@ const Accounts = () => {
     }
   };
 
+  /**
+   * Deletes a user account from the database
+   * Shows confirmation dialog before deletion
+   * @param {string} userId - The ID of the user to delete
+   */
   const handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
@@ -71,6 +100,10 @@ const Accounts = () => {
     }
   };
 
+  /**
+   * Filters users based on search term, role, and status
+   * Returns users that match all filter criteria
+   */
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || user.role?.toLowerCase() === filterRole.toLowerCase();
@@ -80,6 +113,7 @@ const Accounts = () => {
 
   return (
     <div className="accounts-container">
+      {/* Header Section with Title and Add Button */}
       <div className="accounts-header">
         <div>
           <h1>Account Management</h1>
@@ -90,6 +124,7 @@ const Accounts = () => {
         </button>
       </div>
 
+      {/* Filter and Search Section */}
       <div className="filters-row">
         <input
           type="text"
@@ -118,7 +153,9 @@ const Accounts = () => {
         </select>
       </div>
 
+      {/* Users Table */}
       <div className="accounts-table">
+        {/* Table Header */}
         <div className="table-header">
           <div className="th-name">Name</div>
           <div className="th-role">Role</div>
@@ -126,6 +163,7 @@ const Accounts = () => {
           <div className="th-actions">Actions</div>
         </div>
 
+        {/* Table Body with User Rows */}
         <div className="table-body">
           {filteredUsers.map(user => (
             <div key={user.id} className="table-row">
@@ -170,6 +208,7 @@ const Accounts = () => {
         </div>
       </div>
 
+      {/* No Results Message */}
       {filteredUsers.length === 0 && (
         <div className="no-results">
           <p>No users found</p>

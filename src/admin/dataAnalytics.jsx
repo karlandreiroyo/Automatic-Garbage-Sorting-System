@@ -1,21 +1,32 @@
+/**
+ * Data Analytics Component
+ * Displays comprehensive waste sorting statistics and visualizations
+ * Features: Accuracy metrics, donut chart for distribution, bar chart for daily trends
+ * Includes time-based filtering (Daily, Weekly, Monthly, Yearly)
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/dataAnalytics.css';
 
 const DataAnalytics = () => {
+  // State for time filter selection
   const [timeFilter, setTimeFilter] = useState('daily');
+  // State for sorting accuracy data by category
   const [accuracyData, setAccuracyData] = useState([
     { name: 'General Waste', value: 98.2, icon: '🎯' },
     { name: 'Biodegradable', value: 89.4, icon: '➕' },
     { name: 'Non-Biodegradable', value: 90.6, icon: '📦' },
     { name: 'Recycle', value: 92.3, icon: '♻️' }
   ]);
+  // State for waste distribution percentages (for donut chart)
   const [distributionData, setDistributionData] = useState([
     { name: 'Biodegradable', value: 50, color: '#047857' },
     { name: 'Non-Biodegradable', value: 20, color: '#ef4444' },
     { name: 'Recycle', value: 20, color: '#f97316' },
     { name: 'Unsorted', value: 10, color: '#6ee7b7' }
   ]);
+  // State for daily sorting trend data (for bar chart)
   const [dailyTrendData, setDailyTrendData] = useState([
     { day: 'Mon', value: 550 },
     { day: 'Tue', value: 280 },
@@ -26,30 +37,39 @@ const DataAnalytics = () => {
     { day: 'Sun', value: 0 }
   ]);
 
+  // Fetch analytics data when time filter changes
   useEffect(() => {
     fetchAnalyticsData();
   }, [timeFilter]);
 
+  /**
+   * Fetches waste items from database and calculates distribution percentages
+   * Applies time filter and updates distribution data for charts
+   */
   const fetchAnalyticsData = async () => {
     try {
       let query = supabase
         .from('waste_items')
         .select('*');
 
-      // Apply time filter
+      // Apply time filter based on selected period
       if (timeFilter === 'daily') {
+        // Filter for today's data
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         query = query.gte('created_at', today.toISOString());
       } else if (timeFilter === 'weekly') {
+        // Filter for last 7 days
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         query = query.gte('created_at', weekAgo.toISOString());
       } else if (timeFilter === 'monthly') {
+        // Filter for last 30 days
         const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         query = query.gte('created_at', monthAgo.toISOString());
       } else if (timeFilter === 'yearly') {
+        // Filter for last 365 days
         const yearAgo = new Date();
         yearAgo.setFullYear(yearAgo.getFullYear() - 1);
         query = query.gte('created_at', yearAgo.toISOString());
@@ -59,7 +79,7 @@ const DataAnalytics = () => {
 
       if (error) throw error;
 
-      // Calculate distribution
+      // Calculate distribution percentages for donut chart
       const categoryCounts = {
         Biodegradable: 0,
         'Non-Biodegradable': 0,
@@ -67,20 +87,24 @@ const DataAnalytics = () => {
         Unsorted: 0
       };
 
+      // Count items by category
       if (data) {
         data.forEach(item => {
           const category = item.category || 'Unsorted';
           if (categoryCounts.hasOwnProperty(category)) {
             categoryCounts[category]++;
           } else {
+            // Unknown categories go to Unsorted
             categoryCounts.Unsorted++;
           }
         });
       }
 
+      // Calculate percentages for each category
       const total = data ? data.length : 0;
       
       if (total > 0) {
+        // Format distribution data with percentages and colors
         const distribution = [
           {
             name: 'Biodegradable',
@@ -111,7 +135,11 @@ const DataAnalytics = () => {
     }
   };
 
-  // Calculate donut chart
+  /**
+   * Calculates donut chart segments with proper offsets
+   * Returns array of segments with strokeDasharray and strokeDashoffset
+   * @returns {Array} Array of segment objects for donut chart rendering
+   */
   const calculateDonutChart = () => {
     const total = distributionData.reduce((sum, item) => sum + item.value, 0);
     if (total === 0) return [];
@@ -134,11 +162,14 @@ const DataAnalytics = () => {
     return segments;
   };
 
+  // Calculate donut chart segments for rendering
   const segments = calculateDonutChart();
+  // Get maximum value for bar chart scaling (default 1200 if no data)
   const maxBarValue = Math.max(...dailyTrendData.map(d => d.value), 1200);
 
   return (
     <div className="data-analytics-container">
+      {/* Header Section */}
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
@@ -146,6 +177,7 @@ const DataAnalytics = () => {
         </div>
       </div>
 
+      {/* Time Filter Buttons */}
       <div className="time-filters">
         <button
           className={`time-filter-btn ${timeFilter === 'daily' ? 'active' : ''}`}
@@ -173,6 +205,7 @@ const DataAnalytics = () => {
         </button>
       </div>
 
+      {/* Accuracy Metrics Cards */}
       <div className="accuracy-metrics">
         {accuracyData.map((metric, index) => (
           <div key={index} className="accuracy-card">
@@ -187,7 +220,9 @@ const DataAnalytics = () => {
         ))}
       </div>
 
+      {/* Charts Section */}
       <div className="charts-section">
+        {/* Donut Chart for Waste Distribution */}
         <div className="chart-card">
           <h3 className="chart-title">Waste Distribution</h3>
           <div className="donut-chart-container">
@@ -252,6 +287,7 @@ const DataAnalytics = () => {
           </div>
         </div>
 
+        {/* Bar Chart for Daily Sorting Trend */}
         <div className="chart-card">
           <h3 className="chart-title">Daily Sorting Trend</h3>
           <div className="bar-chart-container">
