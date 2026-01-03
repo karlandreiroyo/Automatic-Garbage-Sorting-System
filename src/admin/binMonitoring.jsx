@@ -78,26 +78,30 @@ const BatteryIcon = ({ level }) => {
  * Displays bin information in list view with system power and fill level
  * @param {Object} bin - Bin data object
  * @param {Function} onClick - Callback when bin is clicked
+ * @param {Function} onDrain - Callback when drain button is clicked
  */
-const BinListCard = ({ bin, onClick }) => {
+const BinListCard = ({ bin, onClick, onDrain }) => {
   /**
    * Gets status text based on fill level
-   * @returns {string} Status text (Full, Almost Full, Normal)
+   * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
+   * @returns {string} Status text
    */
   const getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
-    return 'Normal';
+    if (bin.fillLevel >= 50) return 'Normal';
+    return 'Empty';
   };
 
   /**
-   * Gets CSS class for status badge
+   * Gets CSS class for status badge based on fill level
    * @returns {string} CSS class name
    */
   const getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
-    return 'status-normal';
+    if (bin.fillLevel >= 50) return 'status-normal';
+    return 'status-empty';
   };
 
   return (
@@ -115,7 +119,6 @@ const BinListCard = ({ bin, onClick }) => {
         <div className="bin-list-fill-info">
           <div>
             <span>Fill Level</span>
-            <span className="fill-percent">{bin.fillLevel}%</span>
           </div>
           <div className="fill-bar">
             <div className="fill-progress" style={{ width: `${bin.fillLevel}%` }}></div>
@@ -128,6 +131,15 @@ const BinListCard = ({ bin, onClick }) => {
           <span>{bin.fillLevel}%</span>
         </div>
       </div>
+      <button 
+        className="drain-list-bin-btn" 
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent triggering the card click
+          onDrain(bin.id);
+        }}
+      >
+        Drain
+      </button>
     </div>
   );
 };
@@ -141,22 +153,25 @@ const BinListCard = ({ bin, onClick }) => {
 const BinDetailCard = ({ bin }) => {
   /**
    * Gets status text based on fill level
-   * @returns {string} Status text (Full, Almost Full, Normal)
+   * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
+   * @returns {string} Status text
    */
   const getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
-    return 'Normal';
+    if (bin.fillLevel >= 50) return 'Normal';
+    return 'Empty';
   };
 
   /**
-   * Gets CSS class for status badge
+   * Gets CSS class for status badge based on fill level
    * @returns {string} CSS class name
    */
   const getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
-    return 'status-normal';
+    if (bin.fillLevel >= 50) return 'status-normal';
+    return 'status-empty';
   };
 
   return (
@@ -204,57 +219,214 @@ const BinDetailCard = ({ bin }) => {
 const BinMonitoring = () => {
   // State to track current view ('list' or 'detail')
   const [view, setView] = useState('list');
-  // State for list view bins (Bin 1, Bin 2, etc.)
+  // State to track which bin is currently selected for detail view
+  const [selectedBinId, setSelectedBinId] = useState(null);
+  // State to control the visibility of the drain all confirmation modal
+  const [showDrainAllModal, setShowDrainAllModal] = useState(false);
+  
+  // State for list view bins, each with its own independent category bins
   const [bins, setBins] = useState([
-    { id: 1, name: 'Bin 1', fillLevel: 80, systemPower: 100, capacity: '20kg', lastUpdate: '2 hours ago', category: 'Biodegradable' },
-    { id: 2, name: 'Bin 2', fillLevel: 86, systemPower: 50, capacity: '20kg', lastUpdate: '1 hour ago', category: 'Non-Biodegradable' },
-    { id: 3, name: 'Bin 3', fillLevel: 85, systemPower: 20, capacity: '20kg', lastUpdate: '3 hours ago', category: 'Recycle' },
-    { id: 4, name: 'Bin 4', fillLevel: 90, systemPower: 100, capacity: '20kg', lastUpdate: '1 hour ago', category: 'Unsorted' }
-  ]);
-
-  // State for detail view category bins (Biodegradable, Non-Biodegradable, etc.)
-  const [categoryBins, setCategoryBins] = useState([
     { 
       id: 1, 
-      category: 'Non Biodegradable', 
-      fillLevel: 100, 
-      capacity: '100 L', 
-      lastCollection: '4 hours ago',
-      colorClass: 'red',
-      icon: <TrashIcon />
+      name: 'Bin 1', 
+      fillLevel: 80, 
+      systemPower: 100, 
+      capacity: '20kg', 
+      lastUpdate: '2 hours ago', 
+      category: 'Biodegradable',
+      categoryBins: [
+        { 
+          id: 'non-bio-1', 
+          category: 'Non Biodegradable', 
+          fillLevel: 100, 
+          capacity: '100 L', 
+          lastCollection: '4 hours ago',
+          colorClass: 'red',
+          icon: <TrashIcon />
+        },
+        { 
+          id: 'bio-1', 
+          category: 'Biodegradable', 
+          fillLevel: 80, 
+          capacity: '100 L', 
+          lastCollection: '2 hours ago',
+          colorClass: 'green',
+          icon: <LeafIcon />
+        },
+        { 
+          id: 'recycle-1', 
+          category: 'Recyclable', 
+          fillLevel: 86, 
+          capacity: '100L', 
+          lastCollection: '1 hours ago',
+          colorClass: 'blue',
+          icon: <RecycleIcon />
+        },
+        { 
+          id: 'unsorted-1', 
+          category: 'Unsorted', 
+          fillLevel: 83, 
+          capacity: '100L', 
+          lastCollection: '1 hours ago',
+          colorClass: 'lime',
+          icon: <GearIcon />
+        }
+      ]
     },
     { 
       id: 2, 
-      category: 'Biodegradable', 
-      fillLevel: 80, 
-      capacity: '100 L', 
-      lastCollection: '2 hours ago',
-      colorClass: 'green',
-      icon: <LeafIcon />
+      name: 'Bin 2', 
+      fillLevel: 86, 
+      systemPower: 50, 
+      capacity: '20kg', 
+      lastUpdate: '1 hour ago', 
+      category: 'Non-Biodegradable',
+      categoryBins: [
+        { 
+          id: 'non-bio-2', 
+          category: 'Non Biodegradable', 
+          fillLevel: 95, 
+          capacity: '100 L', 
+          lastCollection: '3 hours ago',
+          colorClass: 'red',
+          icon: <TrashIcon />
+        },
+        { 
+          id: 'bio-2', 
+          category: 'Biodegradable', 
+          fillLevel: 75, 
+          capacity: '100 L', 
+          lastCollection: '1 hour ago',
+          colorClass: 'green',
+          icon: <LeafIcon />
+        },
+        { 
+          id: 'recycle-2', 
+          category: 'Recyclable', 
+          fillLevel: 90, 
+          capacity: '100L', 
+          lastCollection: '2 hours ago',
+          colorClass: 'blue',
+          icon: <RecycleIcon />
+        },
+        { 
+          id: 'unsorted-2', 
+          category: 'Unsorted', 
+          fillLevel: 70, 
+          capacity: '100L', 
+          lastCollection: '30 minutes ago',
+          colorClass: 'lime',
+          icon: <GearIcon />
+        }
+      ]
     },
     { 
       id: 3, 
-      category: 'Recyclable', 
-      fillLevel: 86, 
-      capacity: '100L', 
-      lastCollection: '1 hours ago',
-      colorClass: 'blue',
-      icon: <RecycleIcon />
+      name: 'Bin 3', 
+      fillLevel: 85, 
+      systemPower: 20, 
+      capacity: '20kg', 
+      lastUpdate: '3 hours ago', 
+      category: 'Recycle',
+      categoryBins: [
+        { 
+          id: 'non-bio-3', 
+          category: 'Non Biodegradable', 
+          fillLevel: 88, 
+          capacity: '100 L', 
+          lastCollection: '5 hours ago',
+          colorClass: 'red',
+          icon: <TrashIcon />
+        },
+        { 
+          id: 'bio-3', 
+          category: 'Biodegradable', 
+          fillLevel: 82, 
+          capacity: '100 L', 
+          lastCollection: '2 hours ago',
+          colorClass: 'green',
+          icon: <LeafIcon />
+        },
+        { 
+          id: 'recycle-3', 
+          category: 'Recyclable', 
+          fillLevel: 85, 
+          capacity: '100L', 
+          lastCollection: '1 hour ago',
+          colorClass: 'blue',
+          icon: <RecycleIcon />
+        },
+        { 
+          id: 'unsorted-3', 
+          category: 'Unsorted', 
+          fillLevel: 90, 
+          capacity: '100L', 
+          lastCollection: '45 minutes ago',
+          colorClass: 'lime',
+          icon: <GearIcon />
+        }
+      ]
     },
     { 
       id: 4, 
-      category: 'Unsorted', 
-      fillLevel: 83, 
-      capacity: '100L', 
-      lastCollection: '1 hours ago',
-      colorClass: 'lime',
-      icon: <GearIcon />
+      name: 'Bin 4', 
+      fillLevel: 90, 
+      systemPower: 100, 
+      capacity: '20kg', 
+      lastUpdate: '1 hour ago', 
+      category: 'Unsorted',
+      categoryBins: [
+        { 
+          id: 'non-bio-4', 
+          category: 'Non Biodegradable', 
+          fillLevel: 92, 
+          capacity: '100 L', 
+          lastCollection: '6 hours ago',
+          colorClass: 'red',
+          icon: <TrashIcon />
+        },
+        { 
+          id: 'bio-4', 
+          category: 'Biodegradable', 
+          fillLevel: 88, 
+          capacity: '100 L', 
+          lastCollection: '3 hours ago',
+          colorClass: 'green',
+          icon: <LeafIcon />
+        },
+        { 
+          id: 'recycle-4', 
+          category: 'Recyclable', 
+          fillLevel: 91, 
+          capacity: '100L', 
+          lastCollection: '2 hours ago',
+          colorClass: 'blue',
+          icon: <RecycleIcon />
+        },
+        { 
+          id: 'unsorted-4', 
+          category: 'Unsorted', 
+          fillLevel: 90, 
+          capacity: '100L', 
+          lastCollection: '1 hour ago',
+          colorClass: 'lime',
+          icon: <GearIcon />
+        }
+      ]
     }
   ]);
 
-  // Fetch bin data on component mount
+  // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
     fetchBinData();
+    
+    // Set up real-time polling every 2 seconds to update bin fill levels
+    const interval = setInterval(() => {
+      updateBinFillLevels();
+    }, 2000); // Update every 2 seconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
   }, []);
 
   /**
@@ -270,6 +442,8 @@ const BinMonitoring = () => {
 
       if (!error && data) {
         // Update bins from database
+        // Note: If you have category bins in database, you'll need to fetch them separately
+        // For now, we'll keep the default category bins structure
         const updatedBins = data.map(bin => ({
           id: bin.id,
           name: bin.name || `Bin ${bin.id}`,
@@ -277,7 +451,9 @@ const BinMonitoring = () => {
           systemPower: bin.system_power || bin.systemPower || 100,
           capacity: bin.capacity || '20kg',
           lastUpdate: bin.last_update || 'Just now',
-          category: bin.category || 'General'
+          category: bin.category || 'General',
+          // Keep existing categoryBins or initialize with defaults
+          categoryBins: bins.find(b => b.id === bin.id)?.categoryBins || []
         }));
         setBins(updatedBins);
       }
@@ -288,10 +464,62 @@ const BinMonitoring = () => {
   };
 
   /**
+   * Updates bin fill levels in real-time based on category bins
+   * Calculates the overall fill level as the maximum fill level among category bins
+   * Simulates natural decrease over time (waste being processed/removed)
+   * Bins decrease gradually unless manually drained or new waste is added
+   */
+  const updateBinFillLevels = () => {
+    setBins(prevBins =>
+      prevBins.map(bin => {
+        // Update category bins with gradual decrease to simulate waste processing
+        // Bins naturally decrease over time (0.1% to 0.3% per update cycle)
+        const updatedCategoryBins = bin.categoryBins.map(catBin => {
+          // Simulate natural decrease (waste being processed/removed)
+          // Only decrease if fill level is above 0
+          if (catBin.fillLevel > 0) {
+            // Small random decrease between 0.1% and 0.3% per cycle
+            const decreaseAmount = 0.1 + (Math.random() * 0.2); // 0.1 to 0.3
+            const newCatFillLevel = Math.max(0, Math.round(catBin.fillLevel - decreaseAmount));
+            return {
+              ...catBin,
+              fillLevel: newCatFillLevel
+            };
+          }
+          // If already at 0%, keep it at 0%
+          return {
+            ...catBin,
+            fillLevel: 0
+          };
+        });
+
+        // Calculate overall bin fill level as the maximum fill level among category bins
+        // This represents the most full category bin, which determines the bin's status
+        const maxFillLevel = updatedCategoryBins.length > 0
+          ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
+          : bin.fillLevel;
+
+        // Update last update time to show recent activity
+        const minutesAgo = Math.floor(Math.random() * 3) + 1; // 1-3 minutes ago
+        const updateTime = minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
+
+        return {
+          ...bin,
+          fillLevel: maxFillLevel, // Real-time fill level calculated from category bins
+          lastUpdate: updateTime,
+          categoryBins: updatedCategoryBins // Updated category bins with real-time data
+        };
+      })
+    );
+  };
+
+  /**
    * Handles bin click to navigate to detail view
+   * Sets the selected bin ID to show that bin's category bins
    * @param {Object} bin - The clicked bin object
    */
   const handleBinClick = (bin) => {
+    setSelectedBinId(bin.id);
     setView('detail');
   };
 
@@ -303,11 +531,68 @@ const BinMonitoring = () => {
   };
 
   /**
-   * Drains a specific bin by setting fill level to 0%
-   * Updates both database and local state
-   * @param {number} binId - The ID of the bin to drain
+   * Drains a specific category bin by setting fill level to 0%
+   * Only affects the category bin for the currently selected bin
+   * @param {string} categoryBinId - The ID of the category bin to drain (e.g., 'non-bio-1')
    */
-  const handleDrain = async (binId) => {
+  const handleDrain = async (categoryBinId) => {
+    try {
+      // Update in Supabase if you have a bins table (for category bins)
+      const { error } = await supabase
+        .from('bins')
+        .update({ fill_level: 0, last_update: new Date().toISOString() })
+        .eq('id', categoryBinId);
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 means table doesn't exist, which is okay for now
+        console.warn('Bins table may not exist:', error);
+      }
+
+      // Update only the category bin for the selected bin
+      if (selectedBinId) {
+        setBins(prevBins =>
+          prevBins.map(bin =>
+            bin.id === selectedBinId
+              ? {
+                  ...bin,
+                  categoryBins: bin.categoryBins.map(catBin =>
+                    catBin.id === categoryBinId
+                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      : catBin
+                  )
+                }
+              : bin
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error draining category bin:', error);
+      // Still update local state even if database update fails
+      if (selectedBinId) {
+        setBins(prevBins =>
+          prevBins.map(bin =>
+            bin.id === selectedBinId
+              ? {
+                  ...bin,
+                  categoryBins: bin.categoryBins.map(catBin =>
+                    catBin.id === categoryBinId
+                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      : catBin
+                  )
+                }
+              : bin
+          )
+        );
+      }
+    }
+  };
+
+  /**
+   * Drains a specific list view bin (Bin 1, Bin 2, etc.)
+   * Only affects the specific bin in the list view
+   * @param {number} binId - The ID of the list view bin to drain
+   */
+  const handleDrainListBin = async (binId) => {
     try {
       // Update in Supabase if you have a bins table
       const { error } = await supabase
@@ -316,31 +601,18 @@ const BinMonitoring = () => {
         .eq('id', binId);
 
       if (error && error.code !== 'PGRST116') {
-        // PGRST116 means table doesn't exist, which is okay for now
         console.warn('Bins table may not exist:', error);
       }
 
-      // Update local state
-      setCategoryBins(prevBins => 
-        prevBins.map(bin => 
-          bin.id === binId ? { ...bin, fillLevel: 0, lastCollection: 'Just now' } : bin
-        )
-      );
-
-      // Also update the list view bins
+      // Only update the list view bins, not the category bins
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId ? { ...bin, fillLevel: 0, lastUpdate: 'Just now' } : bin
         )
       );
     } catch (error) {
-      console.error('Error draining bin:', error);
+      console.error('Error draining list bin:', error);
       // Still update local state even if database update fails
-      setCategoryBins(prevBins => 
-        prevBins.map(bin => 
-          bin.id === binId ? { ...bin, fillLevel: 0, lastCollection: 'Just now' } : bin
-        )
-      );
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId ? { ...bin, fillLevel: 0, lastUpdate: 'Just now' } : bin
@@ -350,58 +622,142 @@ const BinMonitoring = () => {
   };
 
   /**
-   * Drains all bins by setting fill levels to 0%
-   * Updates both database and local state for all bins
+   * Shows the drain all confirmation modal
+   * Called when user clicks "Drain All" button
+   * Prevents accidental draining by requiring user confirmation
    */
-  const handleDrainAll = async () => {
-    try {
-      // Update all bins in Supabase
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() });
+  const handleDrainAll = () => {
+    if (!selectedBinId) return;
+    // Show confirmation modal before draining
+    setShowDrainAllModal(true);
+  };
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 means table doesn't exist, which is okay for now
-        console.warn('Bins table may not exist:', error);
+  /**
+   * Confirms and executes draining all category bins for the currently selected bin
+   * Only affects the category bins of the selected bin, not other bins
+   * Called after user confirms in the modal
+   */
+  const confirmDrainAll = async () => {
+    if (!selectedBinId) return;
+
+    try {
+      // Update all category bins for the selected bin in Supabase
+      const selectedBin = bins.find(b => b.id === selectedBinId);
+      if (selectedBin) {
+        const categoryBinIds = selectedBin.categoryBins.map(cb => cb.id);
+        for (const catBinId of categoryBinIds) {
+          const { error } = await supabase
+            .from('bins')
+            .update({ fill_level: 0, last_update: new Date().toISOString() })
+            .eq('id', catBinId);
+
+          if (error && error.code !== 'PGRST116') {
+            // PGRST116 means table doesn't exist, which is okay for now
+            console.warn('Bins table may not exist:', error);
+          }
+        }
       }
 
-      // Update local state for all bins
-      setCategoryBins(prevBins => 
-        prevBins.map(bin => ({ ...bin, fillLevel: 0, lastCollection: 'Just now' }))
+      // Update local state - only drain category bins for the selected bin
+      setBins(prevBins =>
+        prevBins.map(bin =>
+          bin.id === selectedBinId
+            ? {
+                ...bin,
+                categoryBins: bin.categoryBins.map(catBin => ({
+                  ...catBin,
+                  fillLevel: 0,
+                  lastCollection: 'Just now'
+                }))
+              }
+            : bin
+        )
       );
 
-      setBins(prevBins =>
-        prevBins.map(bin => ({ ...bin, fillLevel: 0, lastUpdate: 'Just now' }))
-      );
+      // Close the modal after successful drain
+      setShowDrainAllModal(false);
     } catch (error) {
-      console.error('Error draining all bins:', error);
-      // Still update local state
-      setCategoryBins(prevBins => 
-        prevBins.map(bin => ({ ...bin, fillLevel: 0, lastCollection: 'Just now' }))
-      );
+      console.error('Error draining all category bins:', error);
+      // Still update local state even if database update fails
       setBins(prevBins =>
-        prevBins.map(bin => ({ ...bin, fillLevel: 0, lastUpdate: 'Just now' }))
+        prevBins.map(bin =>
+          bin.id === selectedBinId
+            ? {
+                ...bin,
+                categoryBins: bin.categoryBins.map(catBin => ({
+                  ...catBin,
+                  fillLevel: 0,
+                  lastCollection: 'Just now'
+                }))
+              }
+            : bin
+        )
       );
+      // Close the modal even if there's an error
+      setShowDrainAllModal(false);
     }
   };
 
   /**
-   * Calculates number of bins requiring action
+   * Calculates number of category bins requiring action for the selected bin
    * Counts full bins (>=90%) and almost full bins (75-89%)
    * @returns {Object} Object with full and almostFull counts
    */
   const getActionRequiredCount = () => {
-    const full = categoryBins.filter(b => b.fillLevel >= 90).length;
-    const almostFull = categoryBins.filter(b => b.fillLevel >= 75 && b.fillLevel < 90).length;
+    if (!selectedBinId) return { full: 0, almostFull: 0 };
+    
+    const selectedBin = bins.find(b => b.id === selectedBinId);
+    if (!selectedBin || !selectedBin.categoryBins) return { full: 0, almostFull: 0 };
+    
+    const full = selectedBin.categoryBins.filter(b => b.fillLevel >= 90).length;
+    const almostFull = selectedBin.categoryBins.filter(b => b.fillLevel >= 75 && b.fillLevel < 90).length;
     return { full, almostFull };
   };
 
   const { full, almostFull } = getActionRequiredCount();
+  
+  // Get the selected bin's category bins for display
+  const selectedBin = bins.find(b => b.id === selectedBinId);
+  const currentCategoryBins = selectedBin?.categoryBins || [];
+
+  /**
+   * Alert Icon Component for confirmation modals
+   * Displays a warning icon in modals
+   * @returns {JSX.Element} Alert icon SVG
+   */
+  const AlertIcon = () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  );
 
   // Render detail view when a bin is clicked
   if (view === 'detail') {
     return (
       <div className="bin-monitoring-container">
+        {/* Drain All Confirmation Modal */}
+        {showDrainAllModal && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <div className="modal-icon-wrapper">
+                <AlertIcon />
+              </div>
+              <h3>Drain All Bins?</h3>
+              <p>Are you sure you want to drain all category bins for {selectedBin?.name || 'this bin'}? This action cannot be undone.</p>
+              <div className="modal-actions">
+                <button className="btn-modal btn-cancel" onClick={() => setShowDrainAllModal(false)}>
+                  No, Cancel
+                </button>
+                <button className="btn-modal btn-confirm" onClick={confirmDrainAll}>
+                  Yes, Drain All
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Detail View Header with Back and Drain All buttons */}
         <div className="bin-monitoring-header">
           <div>
@@ -416,7 +772,7 @@ const BinMonitoring = () => {
 
         {/* Bin Status Summary */}
         <div className="bin-status-summary">
-          <h2>BIN 1</h2>
+          <h2>{selectedBin?.name || 'BIN'}</h2>
           <div className="action-required-alert">
             <span className="warning-icon">⚠️</span>
             <div>
@@ -426,12 +782,12 @@ const BinMonitoring = () => {
           </div>
         </div>
 
-        {/* Category Bin Cards with Drain Buttons */}
+        {/* Category Bin Cards with Drain Buttons - Shows only selected bin's category bins */}
         <div className="bin-detail-cards">
-          {categoryBins.map(bin => (
-            <div key={bin.id} className="bin-detail-wrapper">
-              <BinDetailCard bin={bin} />
-              <button className="drain-bin-btn" onClick={() => handleDrain(bin.id)}>
+          {currentCategoryBins.map(catBin => (
+            <div key={catBin.id} className="bin-detail-wrapper">
+              <BinDetailCard bin={catBin} />
+              <button className="drain-bin-btn" onClick={() => handleDrain(catBin.id)}>
                 Drain
               </button>
             </div>
@@ -464,7 +820,12 @@ const BinMonitoring = () => {
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
         {bins.map(bin => (
-          <BinListCard key={bin.id} bin={bin} onClick={() => handleBinClick(bin)} />
+          <BinListCard 
+            key={bin.id} 
+            bin={bin} 
+            onClick={() => handleBinClick(bin)} 
+            onDrain={handleDrainListBin}
+          />
         ))}
       </div>
     </div>
