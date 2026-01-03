@@ -7,6 +7,11 @@ import '../admin/admincss/admindashboard.css';
 // IMPORT FILES OF DASHBOARD HERE FOR SIDE BAR
 import AdminDash from './adminDash.jsx';
 import Accounts from './accounts.jsx';
+import WasteCategories from './wasteCategories.jsx';
+import DataAnalytics from './dataAnalytics.jsx';
+import BinMonitoring from './binMonitoring.jsx';
+import About from './about.jsx';
+import Settings from './settings.jsx';
 
   const SignOutIcon = () => 
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -98,7 +103,12 @@ const AdminDashboard = ({ onLogout }) => {
       {/* SIDE BAR ROUTE */}
       <div className="main-content">
         {activeTab === 'dashboard' && <AdminDash />}
+        {activeTab === 'users' && <WasteCategories />}
+        {activeTab === 'data' && <DataAnalytics />}
         {activeTab === 'account' && <Accounts />}
+        {activeTab === 'bins' && <BinMonitoring />}
+        {activeTab === 'reports' && <About />}
+        {activeTab === 'settings' && <Settings />}
       </div>
     </div>
   );
