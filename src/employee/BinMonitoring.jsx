@@ -1,7 +1,7 @@
 import React from "react";
 import "../employee/employeecss/BinMonitoring.css"; // Link the CSS file
 
-// --- ICONS ---
+// --- ICONS (No changes) ---
 export const LeafIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
@@ -59,9 +59,19 @@ const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, statu
           <div className="fill-bar">
             <div className="fill-progress" style={{ height: "8px", width: `${fillLevel}%` }}></div>
           </div>
-          <div className="last-collection">
-            <span>Last Collection</span>
-            <span>{lastCollection}</span>
+          
+          {/* UPDATED: Wrapper para magkatabi ang Last Collection at Button */}
+          <div className="info-footer">
+            <div className="last-collection">
+              <span>Last Collection</span>
+              <span className="collection-time">{lastCollection}</span>
+            </div>
+            <button className="drain-btn" onClick={() => alert(`${title} bin is draining...`)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+              </svg>
+              DRAIN
+            </button>
           </div>
         </div>
         <div className="bin-visual">

@@ -24,7 +24,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-// UI Icons
 const ChevronDown = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
@@ -71,18 +70,10 @@ const MailIcon = () => (
 );
 
 const About = () => {
-  const [openSections, setOpenSections] = useState({
-    cardBio: false,
-    cardRecycle: false,
-    cardNonBio: false,
-    specs: false,
-    about: false,
-    team: false,
-    contact: false
-  });
+  const [openSection, setOpenSection] = useState(null);
 
   const toggleSection = (section) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setOpenSection(openSection === section ? null : section);
   };
 
   return (
@@ -122,159 +113,120 @@ const About = () => {
         <h2 className="tagline">Smart waste for a Cleaner Tomorrow</h2>
       </div>
 
-      {/* WASTE TYPE CARDS */}
+      {/* WASTE TYPE CARDS - ALWAYS VISIBLE */}
       <div className="cards-grid">
         {/* BIODEGRADABLE CARD */}
         <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardBio')}>
+          <div className="card-header">
             <div className="card-icon-wrapper green">
               <LeafIcon />
             </div>
             <div className="card-title-section">
               <h3>Biodegradable</h3>
             </div>
-            <div className={`chevron ${openSections.cardBio ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardBio && (
-            <div className="card-content">
-              <p className="card-description">
-                Organic waste that naturally decomposes, including food scraps, yard waste, and paper products.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Converts to nutrient-rich compost</span></li>
-                <li><CheckCircle /> <span>Decomposes in 2-6 months</span></li>
-                <li><CheckCircle /> <span>Reduces landfill methane emissions</span></li>
-                <li><CheckCircle /> <span>Perfect for garden fertilization</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Organic waste that naturally decomposes, including food scraps, yard waste, and paper products.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Converts to nutrient-rich compost</span></li>
+              <li><CheckCircle /> <span>Decomposes in 2-6 months</span></li>
+              <li><CheckCircle /> <span>Reduces landfill methane emissions</span></li>
+              <li><CheckCircle /> <span>Perfect for garden fertilization</span></li>
+            </ul>
+          </div>
         </div>
 
         {/* RECYCLABLE CARD */}
         <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardRecycle')}>
+          <div className="card-header">
             <div className="card-icon-wrapper blue">
               <RecycleIcon />
             </div>
             <div className="card-title-section">
               <h3>Recyclable</h3>
             </div>
-            <div className={`chevron ${openSections.cardRecycle ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardRecycle && (
-            <div className="card-content">
-              <p className="card-description">
-                Materials that can be processed and reused, such as plastics, glass, metals, and cardboard.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Saves up to 95% energy vs. new materials</span></li>
-                <li><CheckCircle /> <span>Reduces raw material extraction</span></li>
-                <li><CheckCircle /> <span>Creates jobs in recycling industry</span></li>
-                <li><CheckCircle /> <span>Prevents ocean plastic pollution</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Materials that can be processed and reused, such as plastics, glass, metals, and cardboard.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Saves up to 95% energy vs. new materials</span></li>
+              <li><CheckCircle /> <span>Reduces raw material extraction</span></li>
+              <li><CheckCircle /> <span>Creates jobs in recycling industry</span></li>
+              <li><CheckCircle /> <span>Prevents ocean plastic pollution</span></li>
+            </ul>
+          </div>
         </div>
 
         {/* NON-BIODEGRADABLE CARD */}
         <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardNonBio')}>
+          <div className="card-header">
             <div className="card-icon-wrapper gray">
               <TrashIcon />
             </div>
             <div className="card-title-section">
               <h3>Non-Biodegradable</h3>
             </div>
-            <div className={`chevron ${openSections.cardNonBio ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardNonBio && (
-            <div className="card-content">
-              <p className="card-description">
-                Waste that doesn't naturally decompose and requires special disposal methods.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Requires specialized disposal facilities</span></li>
-                <li><CheckCircle /> <span>Prevents soil and water contamination</span></li>
-                <li><CheckCircle /> <span>Proper sorting reduces toxic exposure</span></li>
-                <li><CheckCircle /> <span>Encourages waste reduction habits</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Waste that doesn't naturally decompose and requires special disposal methods.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Requires specialized disposal facilities</span></li>
+              <li><CheckCircle /> <span>Prevents soil and water contamination</span></li>
+              <li><CheckCircle /> <span>Proper sorting reduces toxic exposure</span></li>
+              <li><CheckCircle /> <span>Encourages waste reduction habits</span></li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* ACCORDION SECTIONS */}
-      <div className="accordion-grid">
+      {/* INFO SECTIONS - ALWAYS VISIBLE */}
+      <div className="info-sections-grid">
         {/* SPECS */}
-        <div className="accordion-item">
-          <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card">
+          <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
+            <div className="info-icon-wrapper">
               <GearIcon />
             </div>
             <h3>Specs</h3>
-            <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
+            <div className={`chevron ${openSection === 'specs' ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.specs && (
-            <div className="accordion-content">
+          {openSection === 'specs' && (
+            <div className="info-card-content">
               <div className="specs-grid">
-                <div className="spec-item">
-                  <strong>Dimensions:</strong>
-                  <span>120cm x 80cm x 150cm</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Weight:</strong>
-                  <span>85kg</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Power:</strong>
-                  <span>220V AC, 500W</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Capacity:</strong>
-                  <span>300L total (3 x 100L bins)</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Sorting Speed:</strong>
-                  <span>30 items/minute</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Accuracy:</strong>
-                  <span>98.2% classification rate</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Sensors:</strong>
-                  <span>AI camera, ultrasonic, weight</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Connectivity:</strong>
-                  <span>Wi-Fi, Bluetooth, IoT enabled</span>
-                </div>
+                <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
+                <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
+                <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
+                <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
+                <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
+                <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
+                <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
+                <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
               </div>
             </div>
           )}
         </div>
 
         {/* ABOUT PROJECT */}
-        <div className="accordion-item">
-          <div className="accordion-header yellow" onClick={() => toggleSection('about')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card">
+          <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
+            <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
-            <div className={`chevron ${openSections.about ? 'open' : ''}`}>
+            <div className={`chevron ${openSection === 'about' ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.about && (
-            <div className="accordion-content">
+          {openSection === 'about' && (
+            <div className="info-card-content">
               <p>
                 The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
                 waste management through artificial intelligence and automation. Our system uses advanced 
@@ -292,18 +244,18 @@ const About = () => {
         </div>
 
         {/* TEAM MEMBERS */}
-        <div className="accordion-item">
-          <div className="accordion-header cyan" onClick={() => toggleSection('team')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card">
+          <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
+            <div className="info-icon-wrapper">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
-            <div className={`chevron ${openSections.team ? 'open' : ''}`}>
+            <div className={`chevron ${openSection === 'team' ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.team && (
-            <div className="accordion-content">
+          {openSection === 'team' && (
+            <div className="info-card-content">
               <div className="team-list">
                 <div className="team-member">
                   <div className="member-avatar">KR</div>
@@ -337,7 +289,7 @@ const About = () => {
                   <div className="member-avatar">JS</div>
                   <div className="member-info">
                     <strong>John Ivan Santos</strong>
-                    <span>Frontend</span>
+                    <span>Frontend</span>              
                   </div>
                 </div>
               </div>
@@ -346,18 +298,18 @@ const About = () => {
         </div>
 
         {/* CONTACT US */}
-        <div className="accordion-item">
-          <div className="accordion-header pink" onClick={() => toggleSection('contact')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card">
+          <div className="info-card-header pink" onClick={() => toggleSection('contact')}>
+            <div className="info-icon-wrapper">
               <MailIcon />
             </div>
             <h3>Contact Us</h3>
-            <div className={`chevron ${openSections.contact ? 'open' : ''}`}>
+            <div className={`chevron ${openSection === 'contact' ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.contact && (
-            <div className="accordion-content">
+          {openSection === 'contact' && (
+            <div className="info-card-content">
               <div className="contact-info">
                 <div className="contact-item">
                   <strong>Email:</strong>
@@ -379,8 +331,9 @@ const About = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+
+      </div> {/* end of info-sections-grid */}
+    </div> /* end of about-container */
   );
 };
 

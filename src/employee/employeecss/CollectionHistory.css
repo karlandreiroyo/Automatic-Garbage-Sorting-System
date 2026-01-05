@@ -2,6 +2,12 @@
 .history-header-text h1 { font-size: 1.8rem; color: #1a1a1a; margin: 0 0 8px 0; font-weight: 700; }
 .history-header-text p { color: #666; font-size: 0.95rem; margin-bottom: 32px; }
 
+@media (max-width: 768px) {
+  .history-page { padding: 16px 20px; }
+  .history-header-text h1 { font-size: 1.5rem; }
+  .history-header-text p { font-size: 0.9rem; margin-bottom: 24px; }
+}
+
 .stats-row { display: flex; gap: 60px; margin-bottom: 40px; flex-wrap: wrap; }
 .stats-box { display: flex; align-items: flex-start; gap: 16px; }
 .stats-icon-bg { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
@@ -14,13 +20,33 @@
 .stats-value { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; line-height: 1.2; }
 .stats-value small { font-size: 1rem; font-weight: 500; margin-left: 4px; }
 
+@media (max-width: 768px) {
+  .stats-row { gap: 12px; margin-bottom: 24px; justify-content: space-between; }
+  .stats-box { flex: 1; min-width: 0; gap: 12px; }
+  .stats-icon-bg { width: 40px; height: 40px; }
+  .stats-icon-bg svg { width: 20px; height: 20px; }
+  .stats-label { font-size: 0.75rem; }
+  .stats-value { font-size: 1.2rem; }
+  .stats-value small { font-size: 0.85rem; }
+}
+
 .filter-tabs { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
 .filter-btn { padding: 10px 20px; border-radius: 6px; border: 1px solid #e0e0e0; background: white; color: #555; cursor: pointer; font-weight: 500; font-size: 0.95rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: 0.2s; }
 .filter-btn:hover { background: #f9f9f9; }
 .filter-btn.active { background-color: #008751; color: white; border-color: #008751; }
 
+@media (max-width: 768px) {
+  .filter-tabs { gap: 8px; margin-bottom: 20px; }
+  .filter-btn { padding: 8px 14px; font-size: 0.85rem; }
+}
+
 .history-list { display: flex; flex-direction: column; gap: 16px; min-height: 400px; }
 .history-list-card { display: flex; background: white; padding: 30px; border-radius: 12px; border: 1px solid #eee; box-shadow: 0 4px 12px rgba(0,0,0,0.03); align-items: flex-start; }
+
+@media (max-width: 768px) {
+  .history-list { gap: 12px; min-height: auto; }
+  .history-list-card { padding: 16px; border-radius: 8px; flex-direction: column; align-items: stretch; }
+}
 
 .card-left { margin-right: 25px; padding-top: 5px; }
 .list-icon { width: 24px; height: 24px; }
@@ -28,16 +54,38 @@
 .icon-blue { color: #1976d2; }
 .icon-green { color: #2e7d32; }
 
+@media (max-width: 768px) {
+  .card-left { margin-right: 0; margin-bottom: 12px; padding-top: 0; }
+}
+
 .card-middle { flex: 1; display: flex; flex-direction: column; gap: 12px; }
 .card-middle h3 { margin: 0 0 4px 0; font-size: 1.05rem; color: #111; font-weight: 700; }
 .light-text { font-weight: 400; color: #111; }
 .card-meta-row { display: flex; gap: 50px; }
 .meta-item { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: #555; width: 180px; }
 
+@media (max-width: 768px) {
+  .card-middle { gap: 10px; }
+  .card-middle h3 { font-size: 0.95rem; }
+  .card-meta-row { flex-direction: column; gap: 8px; }
+  .meta-item { font-size: 0.85rem; gap: 8px; width: auto; }
+}
+
 .card-right { display: flex; align-items: flex-start; height: 100%; padding-top: 5px; }
 .status-completed { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; color: #008751; }
+
+@media (max-width: 768px) {
+  .card-right { padding-top: 12px; border-top: 1px solid #f0f0f0; margin-top: 8px; }
+  .status-completed { font-size: 0.85rem; }
+}
 
 .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 50px; margin-bottom: 30px; }
 .page-btn { width: 40px; height: 40px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; color: #333; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 .page-btn.active { background-color: #1b5e20; color: white; border-color: #1b5e20; }
 .page-btn.next-btn { width: auto; padding: 0 20px; }
+
+@media (max-width: 768px) {
+  .pagination { margin-top: 24px; margin-bottom: 20px; gap: 8px; }
+  .page-btn { width: 36px; height: 36px; }
+  .page-btn.next-btn { padding: 0 16px; }
+}

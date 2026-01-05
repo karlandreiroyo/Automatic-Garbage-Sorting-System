@@ -85,36 +85,81 @@ body, #root {
 .dashboard-container { display: flex; height: 100vh; width: 100%; overflow: hidden; }
 
 /* --- SIDEBAR --- */
+/* --- SIDEBAR (Updated to Admin Layout) --- */
 .sidebar {
-  width: 280px; /* <--- UPDATED: Made slightly bigger (was 260px) */
+  width: 280px; 
   min-width: 280px;
-  background-color: #013a2f; /* Deep Jungle Green */
+  background-color: #013a2f; 
   color: white;
   display: flex;
   flex-direction: column;
-  padding: 25px; /* <--- UPDATED: Slightly more padding */
+  padding: 25px; 
   flex-shrink: 0;
-  box-shadow: 4px 0 10px rgba(0,0,0,0.1); /* Added shadow for depth */
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1); 
 }
 
-.sidebar-header { margin-bottom: 40px; }
-.power-indicator { font-size: 0.75rem; color: #a7f3d0; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
-.battery-icon { width: 24px; height: 10px; border: 1px solid #a7f3d0; border-radius: 2px; padding: 1px; }
-.battery-level { background-color: #a7f3d0; height: 100%; }
+/* NEW: Vertical Logo Styles */
+.sidebar-logo-vertical {
+  display: flex;
+  flex-direction: column; /* Stacked vertically */
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin-top: 10px;
+}
 
-.sidebar-logo { display: flex; align-items: center; gap: 10px; }
-.logo-text h3 { font-size: 1.1rem; margin: 0; font-weight: 700; } /* Slightly larger font */
-.logo-text p { font-size: 0.8rem; color: #6ee7b7; margin: 0; }
+.sidebar-img-large {
+  width: 85px; /* Pinalaking logo */
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
 
-.sidebar-nav { display: flex; flex-direction: column; gap: 10px; flex: 1; }
-.nav-item { display: flex; align-items: center; gap: 15px; padding: 14px 18px; color: #d1fae5; text-decoration: none; border-radius: 10px; transition: background 0.2s; font-size: 0.95rem; font-weight: 500; }
-.nav-item:hover, .nav-item.active { background-color: #047857; color: white; }
-.dot { width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; margin-left: auto; }
+.logo-text-vertical h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0;
+  color: #ffffff;
+}
 
-.sidebar-footer { margin-top: auto; }
-.sign-out-btn { display: flex; align-items: center; gap: 10px; background: none; border: none; color: #d1fae5; cursor: pointer; padding: 10px 0; font-size: 1rem; margin-bottom: 20px; transition: 0.2s; }
-.sign-out-btn:hover { color: white; opacity: 0.8; }
+.logo-text-vertical p {
+  font-size: 0.85rem;
+  color: #6ee7b7;
+  margin: 0;
+  font-weight: 500;
+}
 
+/* Updated Nav Items */
+.nav-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 15px; 
+  padding: 14px 18px; 
+  color: #d1fae5; 
+  text-decoration: none; 
+  border-radius: 12px; /* Smoother corners */
+  transition: all 0.2s ease; 
+  font-size: 0.95rem; 
+  font-weight: 500; 
+  cursor: pointer;
+}
+
+.nav-item:hover { 
+  background-color: rgba(255,255,255,0.1); 
+  color: white; 
+}
+
+.nav-item.active { 
+  background-color: #059669; /* Solid green active state */
+  color: white; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+  min-width: 25px;
+  display: flex;
+  justify-content: center;
+}
 .today-status-card { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; }
 .today-status-card p, .today-status-card span { font-size: 0.8rem; color: #a7f3d0; }
 .today-status-card h2 { font-size: 1.8rem; margin: 5px 0; }

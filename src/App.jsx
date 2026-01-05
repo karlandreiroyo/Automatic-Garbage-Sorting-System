@@ -12,7 +12,7 @@ import Notifications from './employee/Notifications';
 import Profile from './employee/Profile';
 import About from './employee/About';
 
-// Admin component
+// Admin components
 import AdminDashboard from './admin/admindashboard';
 import AdminDash from './admin/adminDash.jsx';
 import Accounts from './admin/accounts.jsx';
@@ -27,64 +27,59 @@ function App() {
 
   // Check if user is logged in when app loads
   useEffect(() => {
-  const checkUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
-      const role = localStorage.getItem('userRole');
-      if (role) {
-        setUserRole(role);
-        setIsLoggedIn(true);
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const role = localStorage.getItem('userRole');
+        if (role) {
+          setUserRole(role);
+          setIsLoggedIn(true);
+        } else {
+          // Session exists but no role in localStorage, sign out
+          await supabase.auth.signOut();
+          setIsLoggedIn(false);
+          setUserRole(null);
+        }
       } else {
-        // Session exists but no role in localStorage, sign out
-        await supabase.auth.signOut();
+        // No session, clear everything
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
         setIsLoggedIn(false);
         setUserRole(null);
       }
-    } else {
-      // No session, clear everything
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      setIsLoggedIn(false);
-      setUserRole(null);
-    }
-    
-    setLoading(false);
-  };
+      
+      setLoading(false);
+    };
 
-  checkUser();
+    checkUser();
 
-  // Listen for auth changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT') {
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      setIsLoggedIn(false);
-      setUserRole(null);
-    }
-  });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        setIsLoggedIn(false);
+        setUserRole(null);
+      }
+    });
 
-  return () => {
-    subscription.unsubscribe();
-  };
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
-    // Sign out from Supabase
     await supabase.auth.signOut();
-    
-    // Clear localStorage
     localStorage.removeItem('userRole');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
-    
     setIsLoggedIn(false);
     setUserRole(null);
   };
 
-  // Show loading while checking authentication
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -107,8 +102,6 @@ function App() {
         />
         <Route path="/forgot" element={<Forgot />} />
 
-
-
         {/* Admin routes */}
         <Route 
           path="/admin" 
@@ -123,14 +116,11 @@ function App() {
           element={isLoggedIn && userRole === 'admin' ? <Accounts onLogout={handleLogout} /> : <Navigate to="/login" />} 
         />
 
-
         {/* Supervisor route */}
         <Route
           path="/supervisor"
           element={isLoggedIn && userRole === 'supervisor' ? <SupervisorDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
-
-
 
         {/* Employee routes */}
         <Route 

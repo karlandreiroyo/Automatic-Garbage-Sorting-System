@@ -2,6 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/AdminDash.css';
 
+// Simple SVG Icons base sa images mo
+const Icons = {
+  Total: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+      <path d="M21 8l-2-2H5L3 8h18zM3 8v10a2 2 0 002 2h14a2 2 0 002-2V8M10 12h4" />
+    </svg>
+  ),
+  Category: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  ),
+  Efficiency: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  ),
+  Time: () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+    </svg>
+  )
+};
+
 const AdminDash = () => {
   const [stats, setStats] = useState({
     totalItems: 0,
@@ -19,19 +43,16 @@ const AdminDash = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch stats from your database
       const { data: itemsData, error: itemsError } = await supabase
         .from('waste_items')
         .select('*');
 
       if (itemsError) throw itemsError;
 
-      // Calculate stats
       const totalItems = itemsData?.length || 0;
       const categoriesSet = new Set(itemsData?.map(item => item.category));
       const categories = categoriesSet.size;
 
-      // Calculate distribution
       const dist = {};
       itemsData?.forEach(item => {
         dist[item.category] = (dist[item.category] || 0) + 1;
@@ -42,12 +63,11 @@ const AdminDash = () => {
         count
       }));
 
-      // Fetch recent activity
       const { data: activityData, error: activityError } = await supabase
         .from('waste_items')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(5); // Tinaasan natin para mapuno ang listahan
 
       if (activityError) throw activityError;
 
@@ -87,102 +107,85 @@ const AdminDash = () => {
 
   return (
     <div className="admin-dash-container">
-      <div className="dashboard-title">
-        <h1>Dashboard Overview</h1>
-        <p>Waste sorting statistics</p>
+      <div className="dashboard-title-section">
+        <h1 className="main-title">Dashboard Overview</h1>
+        <p className="sub-title">Waste sorting statistics</p>
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon" style={{background: '#dcfce7'}}>
-            <span>📦</span>
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Total Items Sorted</p>
+          <div className="stat-icon-bg"><Icons.Total /></div>
+          <div className="stat-info">
+            <span className="stat-label">Total Items Sorted</span>
             <h2 className="stat-value">{stats.totalItems}</h2>
-            <span className="stat-subtitle">Today</span>
+            <span className="stat-footer">Today</span>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{background: '#dbeafe'}}>
-            <span>🗑️</span>
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Categories Detected</p>
+          <div className="stat-icon-bg"><Icons.Category /></div>
+          <div className="stat-info">
+            <span className="stat-label">Categories Detected</span>
             <h2 className="stat-value">{stats.categories}</h2>
-            <span className="stat-subtitle">Active categories</span>
+            <span className="stat-footer">Active categories</span>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{background: '#e0e7ff'}}>
-            <span>📊</span>
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Sorting Efficiency</p>
+          <div className="stat-icon-bg"><Icons.Efficiency /></div>
+          <div className="stat-info">
+            <span className="stat-label">Sorting Efficiency</span>
             <h2 className="stat-value">{stats.efficiency}%</h2>
-            <span className="stat-subtitle">Accuracy rate</span>
+            <span className="stat-footer">Accuracy rate</span>
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{background: '#fce7f3'}}>
-            <span>⏱️</span>
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Avg. Processing Time</p>
+          <div className="stat-icon-bg"><Icons.Time /></div>
+          <div className="stat-info">
+            <span className="stat-label">Avg. Processing Time</span>
             <h2 className="stat-value">{stats.avgProcessingTime}s</h2>
-            <span className="stat-subtitle">Per item</span>
+            <span className="stat-footer">Per item</span>
           </div>
         </div>
       </div>
 
-      <div className="charts-container">
-        <div className="chart-card distribution-card">
-          <h3>Today's Waste Distribution</h3>
-          <div className="bar-chart">
-            <div className="y-axis">
-              <span>250</span>
-              <span>200</span>
-              <span>150</span>
-              <span>100</span>
-              <span>50</span>
-              <span>0</span>
+      <div className="main-charts-layout">
+        <div className="chart-card-full distribution-section">
+          <h3 className="section-title">Today's Waste Distribution</h3>
+          <div className="visual-chart-area">
+            <div className="y-axis-labels">
+              <span>250</span><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span>
             </div>
-            <div className="bars-container">
+            <div className="bars-flex-container">
               {distribution.map((item, index) => (
-                <div key={index} className="bar-wrapper">
+                <div key={index} className="single-bar-column">
                   <div 
-                    className="bar" 
-                    style={{
-                      height: `${(item.count / maxCount) * 100}%`,
-                      background: index === 0 ? '#10b981' : index === 1 ? '#6ee7b7' : index === 2 ? '#86efac' : '#d1fae5'
+                    className="actual-bar" 
+                    style={{ 
+                      height: `${(item.count / 250) * 100}%`,
+                      backgroundColor: index === 0 ? '#86efac' : index === 1 ? '#6ee7b7' : '#10b981'
                     }}
                   ></div>
-                  <span className="bar-label">{item.name}</span>
+                  <span className="bar-name">{item.name}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="chart-card activity-card">
-          <h3>Recent Activity</h3>
-          <div className="activity-list">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity, index) => (
-                <div key={index} className="activity-item">
-                  <div className="activity-left">
-                    <h4>{activity.category}</h4>
-                    <p>{activity.count} items sorted</p>
-                  </div>
-                  <span className="activity-time">{activity.time}</span>
+        <div className="activity-card-full recent-activity-section">
+          <h3 className="section-title">Recent Activity</h3>
+          <div className="activity-scroll-list">
+            {recentActivity.map((activity, index) => (
+              <div key={index} className="activity-row">
+                <div className="activity-details">
+                  <span className="act-category">{activity.category}</span>
+                  <span className="act-count">{activity.count} items sorted</span>
                 </div>
-              ))
-            ) : (
-              <p className="no-activity">No recent activity</p>
-            )}
+                <span className="act-timestamp">{activity.time}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
