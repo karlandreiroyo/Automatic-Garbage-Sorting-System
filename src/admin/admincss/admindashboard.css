@@ -5,17 +5,108 @@
   width: 100vw;
   background-color: #f8fafc;
   overflow: hidden;
+  position: relative;
+}
+
+/* Mobile Header */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: #064e3b;
+  color: white;
+  z-index: 100;
+  padding: 0 20px;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-logo img {
+  width: 40px;
+  height: 40px;
+}
+
+.mobile-logo span {
+  font-weight: 600;
+  font-size: 1.1rem;
 }
 
 /* Sidebar Styles */
 .sidebar {
   width: 280px;
-  background-color: #064e3b; /* Deep green based on image */
+  background-color: #064e3b;
   color: white;
   display: flex;
   flex-direction: column;
   padding: 20px;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, width 0.3s ease;
+  z-index: 200;
+  height: 100vh;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Collapsed Sidebar State - Only apply transform on mobile */
+@media (max-width: 1024px) {
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 280px;
+    position: fixed;
+    left: 0;
+    top: 0;
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+}
+
+/* Desktop - Sidebar is always visible unless manually collapsed */
+@media (min-width: 1025px) {
+  .sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  .sidebar:not(.collapsed) {
+    width: 280px;
+  }
+}
+
+/* Sidebar Overlay for Mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 150;
+  display: none;
 }
 
 .sidebar-header {
@@ -50,14 +141,14 @@
 /* UPDATED: Vertical Logo Section */
 .sidebar-logo-container {
   display: flex;
-  flex-direction: column; /* Ginawang vertical ang stack */
-  align-items: center;    /* Center horizontally */
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   gap: 15px;
 }
 
 .sidebar-main-logo {
-  width: 90px;            /* Pinalaking logo */
+  width: 90px;
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
@@ -94,6 +185,8 @@
   transition: all 0.2s ease;
   font-weight: 500;
   color: #d1fae5;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .nav-item:hover {
@@ -102,7 +195,7 @@
 }
 
 .nav-item.active {
-  background-color: #059669; /* Active state green */
+  background-color: #059669;
   color: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -110,6 +203,8 @@
 .nav-icon {
   margin-right: 12px;
   font-size: 1.1rem;
+  min-width: 24px;
+  text-align: center;
 }
 
 /* Sidebar Footer */
@@ -131,6 +226,7 @@
   font-weight: 600;
   padding: 10px;
   transition: opacity 0.2s;
+  white-space: nowrap;
 }
 
 .sign-out-btn:hover {
@@ -161,12 +257,43 @@
   color: #a7f3d0;
 }
 
-/* Main Content Area */
+/* =========================== */
+/* MAIN CONTENT - CENTERED & SPACIOUS */
+/* =========================== */
+
+/* Main Content Area - Centered with proper spacing */
 .main-content {
   flex: 1;
-  padding: 40px;
+  padding: 30px;
   overflow-y: auto;
   background-color: #f8fafc;
+  transition: padding 0.3s ease;
+  height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center; /* Center horizontally */
+}
+
+/* Content container for centering */
+.content-center-wrapper {
+  width: 100%;
+  max-width: 1200px; /* Limit max width for large screens */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure child components fill the space properly */
+.main-content > * {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Remove excessive margins/padding from child components */
+.main-content > div {
+  width: 100%;
+  height: 100%;
 }
 
 /* Modal Styles */
@@ -214,3 +341,64 @@
 
 .btn-cancel { background: #f1f5f9; color: #475569; }
 .btn-confirm { background: #c62828; color: white; }
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .mobile-header {
+    display: flex;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    height: 100vh;
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay {
+    display: block;
+  }
+  
+  .main-content {
+    padding: 20px;
+    padding-top: 80px; /* Account for mobile header */
+    width: 100%;
+  }
+  
+  .main-content.mobile-expanded {
+    padding-top: 80px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .main-content {
+    padding: 40px; /* More padding on desktop */
+    margin-left: 280px; /* Keep sidebar space */
+    width: calc(100% - 280px);
+  }
+  
+  /* When sidebar is collapsed on desktop */
+  .sidebar.collapsed + .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 40px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .sidebar:not(.collapsed) {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .main-content {
+    padding: 15px;
+    padding-top: 70px;
+  }
+}

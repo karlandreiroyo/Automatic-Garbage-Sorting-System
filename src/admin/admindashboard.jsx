@@ -4,7 +4,7 @@
  * Features: Sidebar navigation, modal dialogs, and dynamic content rendering based on active tab
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient.jsx';
 import { useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
@@ -34,11 +34,58 @@ const AlertIcon = () =>
     <line x1="12" y1="16" x2="12.01" y2="16" />
   </svg>;
 
+const MenuIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 /* ================= MAIN ================= */
 
 const AdminDashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check screen size on mount and resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const mobile = window.innerWidth <= 1024;
+      setIsMobile(mobile);
+      // Only auto-collapse on mobile, desktop should show sidebar by default
+      if (mobile) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false); // Desktop: show sidebar
+      }
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  const handleNavClick = (tab) => {
+    setActiveTab(tab);
+    if (isMobile) {
+      setIsSidebarCollapsed(true);
+    }
+  };
 
   return (
     <div className="admin-container">
@@ -66,7 +113,21 @@ const AdminDashboard = ({ onLogout }) => {
         </div>
       )}
 
-      <div className="sidebar">
+      {/* Mobile Header with Hamburger - Only show on mobile */}
+      {isMobile && (
+        <div className="mobile-header">
+          <button className="hamburger-btn" onClick={toggleSidebar}>
+            {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
+          </button>
+          <div className="mobile-logo">
+            <img src={sidebarLogo} alt="Logo" />
+            <span>Admin Panel</span>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar with conditional class */}
+      <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="power-indicator">
             <span>ADMIN PANEL</span>
@@ -88,7 +149,7 @@ const AdminDashboard = ({ onLogout }) => {
         <nav className="sidebar-nav">
           <div
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleNavClick('dashboard')}
           >
             <span className="nav-icon"></span>
             Dashboard
@@ -96,7 +157,7 @@ const AdminDashboard = ({ onLogout }) => {
 
           <div
             className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
+            onClick={() => handleNavClick('users')}
           >
             <span className="nav-icon"></span>
             Waste Categories
@@ -104,7 +165,7 @@ const AdminDashboard = ({ onLogout }) => {
 
           <div
             className={`nav-item ${activeTab === 'data' ? 'active' : ''}`}
-            onClick={() => setActiveTab('data')}
+            onClick={() => handleNavClick('data')}
           >
             <span className="nav-icon"></span>
             Data Analytics
@@ -112,7 +173,7 @@ const AdminDashboard = ({ onLogout }) => {
 
           <div
             className={`nav-item ${activeTab === 'account' ? 'active' : ''}`}
-            onClick={() => setActiveTab('account')}
+            onClick={() => handleNavClick('account')}
           >
             <span className="nav-icon"></span>
             Accounts
@@ -120,7 +181,7 @@ const AdminDashboard = ({ onLogout }) => {
 
           <div
             className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bins')}
+            onClick={() => handleNavClick('bins')}
           >
             <span className="nav-icon"></span>
             Bin Monitoring
@@ -128,7 +189,7 @@ const AdminDashboard = ({ onLogout }) => {
 
           <div
             className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
+            onClick={() => handleNavClick('reports')}
           >
             <span className="nav-icon"></span>
             About
@@ -151,7 +212,12 @@ const AdminDashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      <div className="main-content">
+      {/* Overlay for mobile when sidebar is open */}
+      {!isSidebarCollapsed && isMobile && (
+        <div className="sidebar-overlay" onClick={() => setIsSidebarCollapsed(true)} />
+      )}
+
+      <div className={`main-content ${isSidebarCollapsed && isMobile ? 'mobile-expanded' : ''}`}>
         {activeTab === 'dashboard' && <AdminDash />}
         {activeTab === 'users' && <WasteCategories />}
         {activeTab === 'data' && <DataAnalytics />}
