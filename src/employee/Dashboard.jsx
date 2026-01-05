@@ -2,24 +2,38 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import '../employee/employeecss/App.css';
 
-import sidebarLogo from '../assets/whitelogo.png'; 
+import sidebarLogo from '../assets/whitelogo.png';
 
 import BinMonitoring from './BinMonitoring';
 import Notifications from './Notifications';
 import CollectionHistory from './CollectionHistory';
 import Profile from './Profile';
-import About from './About'; 
+import About from './About';
 
-const SignOutIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>;
-const AlertIcon = () => <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+const SignOutIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
 
 const Dashboard = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState('about'); 
+  const [activeTab, setActiveTab] = useState('about');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <div className="dashboard-container">
 
+      {/* LOGOUT MODAL */}
       {showLogoutModal && (
         <div className="modal-overlay">
           <div className="modal-box">
@@ -27,22 +41,29 @@ const Dashboard = ({ onLogout }) => {
             <h3>Sign Out?</h3>
             <p>Are you sure you want to end your session?</p>
             <div className="modal-actions">
-              <button className="btn-modal btn-cancel" onClick={() => setShowLogoutModal(false)}>No, Cancel</button>
-              <button className="btn-modal btn-confirm" onClick={onLogout}>Yes, Sign Out</button>
+              <button className="btn-modal btn-cancel" onClick={() => setShowLogoutModal(false)}>
+                No, Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={onLogout}>
+                Yes, Sign Out
+              </button>
             </div>
           </div>
         </div>
       )}
 
-<div className="sidebar">
+      {/* SIDEBAR */}
+      <div className="sidebar">
+
         <div className="sidebar-header">
           <div className="power-indicator">
             <span>SYSTEM POWER</span>
-            <div className="battery-icon"><div className="battery-level" style={{width: '100%'}}></div></div>
+            <div className="battery-icon">
+              <div className="battery-level" style={{ width: '100%' }}></div>
+            </div>
             <span>100%</span>
           </div>
 
-          {/* UPDATED: Vertical Logo Section para maging kamukha ng Admin Panel */}
           <div className="sidebar-logo-vertical">
             <img src={sidebarLogo} alt="Logo" className="sidebar-img-large" />
             <div className="logo-text-vertical">
@@ -54,19 +75,19 @@ const Dashboard = ({ onLogout }) => {
 
         <nav className="sidebar-nav">
           <div className={`nav-item ${activeTab === 'monitoring' ? 'active' : ''}`} onClick={() => setActiveTab('monitoring')}>
-            <span className="nav-icon">📊</span> Bin Monitoring
+            Bin Monitoring
           </div>
           <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
-            <span className="nav-icon">🔔</span> Notifications <span className="dot"></span>
+            Notifications
           </div>
           <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-            <span className="nav-icon">📜</span> Collection History
+            Collection History
           </div>
           <div className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            <span className="nav-icon">👤</span> Profile
+            Profile
           </div>
           <div className={`nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>
-            <span className="nav-icon">ℹ️</span> About
+            About
           </div>
         </nav>
 
@@ -74,17 +95,21 @@ const Dashboard = ({ onLogout }) => {
           <button className="sign-out-btn" onClick={() => setShowLogoutModal(true)}>
             <SignOutIcon /> Sign Out
           </button>
+
           <div className="today-status-card">
-            <p>Today's Status</p><h2>98.2%</h2><span>Sorting Accuracy</span>
+            <p>Today's Status</p>
+            <h2>98.2%</h2>
+            <span>Sorting Accuracy</span>
           </div>
         </div>
       </div>
 
+      {/* MAIN CONTENT */}
       <div className="main-content">
         <div className="content-body">
           {activeTab === 'monitoring' && <BinMonitoring />}
           {activeTab === 'notifications' && <Notifications />}
-          {activeTab === 'history' && <CollectionHistory />} 
+          {activeTab === 'history' && <CollectionHistory />}
           {activeTab === 'profile' && <Profile />}
           {activeTab === 'about' && <About />}
         </div>

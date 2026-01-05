@@ -27,7 +27,7 @@ const CollectionHistory = () => {
 
   const filteredList = filter === 'All' 
     ? historyData 
-    : historyData.filter(item => item.type.replace('-', ' ').includes(filter));
+    : historyData.filter(item => item.type === filter);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -64,7 +64,7 @@ const CollectionHistory = () => {
 
       {/* Filter Tabs */}
       <div className="filter-tabs">
-        {['All', 'Biodegradable', 'Non Biodegradable', 'Recyclable'].map(tab => (
+        {['All', 'Biodegradable', 'Non-Biodegradable', 'Recyclable'].map(tab => (
           <button key={tab} className={`filter-btn ${filter === tab ? 'active' : ''}`} onClick={() => { setFilter(tab); setCurrentPage(1); }}>{tab}</button>
         ))}
       </div>

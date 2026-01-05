@@ -165,6 +165,16 @@ const DataAnalytics = () => {
               </span>
             </div>
           </div>
+
+          <div className="chart-legend">
+            {distributionData.map((item, index) => (
+              <div key={index} className="legend-item">
+                <div className="legend-color" style={{ backgroundColor: item.color }}></div>
+                <span className="legend-label">{item.name}</span>
+                <span className="legend-value">{item.value}%</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="chart-card">

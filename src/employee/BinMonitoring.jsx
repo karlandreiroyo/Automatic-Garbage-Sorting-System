@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import "../employee/employeecss/BinMonitoring.css"; // Link the CSS file
 
 // --- ICONS (No changes) ---
@@ -36,8 +36,14 @@ export const GearIcon = () => (
   </svg>
 );
 
+const DrainAllIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+  </svg>
+);
+
 // --- BIN CARD COMPONENT ---
-const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon }) => {
+const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain }) => {
   return (
     <div className={`bin-card ${colorClass}`}>
       <div className="bin-left">
@@ -60,13 +66,12 @@ const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, statu
             <div className="fill-progress" style={{ height: "8px", width: `${fillLevel}%` }}></div>
           </div>
           
-          {/* UPDATED: Wrapper para magkatabi ang Last Collection at Button */}
           <div className="info-footer">
             <div className="last-collection">
               <span>Last Collection</span>
               <span className="collection-time">{lastCollection}</span>
             </div>
-            <button className="drain-btn" onClick={() => alert(`${title} bin is draining...`)}>
+            <button className="drain-btn" onClick={onDrain}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
               </svg>
@@ -85,20 +90,58 @@ const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, statu
 
 // --- MAIN COMPONENT ---
 const BinMonitoring = () => {
+  const [notification, setNotification] = useState("");
+  const [showActionRequired, setShowActionRequired] = useState(true);
+
+  const handleDrain = (binName) => {
+    setNotification(`${binName} bin is draining...`);
+    setTimeout(() => {
+      setNotification(`${binName} bin has been successfully drained!`);
+      setTimeout(() => setNotification(""), 3000);
+    }, 2000);
+  };
+
+  const handleDrainAll = () => {
+    setNotification("Draining all bins...");
+    setShowActionRequired(false); // Hide action required alert
+    setTimeout(() => {
+      setNotification("All bins have been successfully drained!");
+      setTimeout(() => setNotification(""), 3000);
+    }, 2000);
+  };
+
   return (
     <div className="bin-monitoring">
       <div className="header">
-        <h1>Real-Time Bin Monitoring</h1>
-        <p>Monitor bin fill levels in real-time</p>
+        <div className="header-text">
+          <h1>Real-Time Bin Monitoring</h1>
+          <p>Monitor bin fill levels in real-time</p>
+        </div>
+        <button className="drain-all-btn" onClick={handleDrainAll}>
+          <DrainAllIcon />
+          DRAIN ALL
+        </button>
       </div>
 
-      <div className="alert-box">
-        <span>⚠️</span>
-        <div>
-          <div>Action Required</div>
-          <p>1 bin full, 3 bins almost full</p>
+      {notification && (
+        <div className="alert-box" style={{ background: '#dcfce7', borderColor: '#86efac' }}>
+          <span>✓</span>
+          <div>
+            <div style={{ color: '#166534' }}>Notification</div>
+            <p style={{ color: '#15803d' }}>{notification}</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {showActionRequired && (
+        <div className="alert-box">
+          <span>⚠️</span>
+          <div>
+            <div>Action Required</div>
+            <p>1 bin full, 3 bins almost full</p>
+          </div>
+        </div>
+      )}
 
       <div className="bin-cards">
         <BinCard 
@@ -108,7 +151,8 @@ const BinMonitoring = () => {
           lastCollection="2 hours ago" 
           colorClass="green" 
           status="Almost Full" 
-          icon={LeafIcon} 
+          icon={LeafIcon}
+          onDrain={() => handleDrain("Biodegradable")}
         />
         <BinCard 
           title="Non Biodegradable" 
@@ -117,7 +161,8 @@ const BinMonitoring = () => {
           lastCollection="4 hours ago" 
           colorClass="red" 
           status="Full" 
-          icon={TrashIcon} 
+          icon={TrashIcon}
+          onDrain={() => handleDrain("Non Biodegradable")}
         />
         <BinCard 
           title="Recyclable" 
@@ -126,7 +171,8 @@ const BinMonitoring = () => {
           lastCollection="1 hour ago" 
           colorClass="blue" 
           status="Almost Full" 
-          icon={RecycleIcon} 
+          icon={RecycleIcon}
+          onDrain={() => handleDrain("Recyclable")}
         />
         <BinCard 
           title="Unsorted" 
@@ -135,7 +181,8 @@ const BinMonitoring = () => {
           lastCollection="1 hour ago" 
           colorClass="lime" 
           status="Almost Full" 
-          icon={GearIcon} 
+          icon={GearIcon}
+          onDrain={() => handleDrain("Unsorted")}
         />
       </div>
     </div>

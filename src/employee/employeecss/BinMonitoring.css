@@ -2,7 +2,7 @@
    BASE / DESKTOP VIEW
    ========================= */
 .bin-monitoring {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 32px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -11,16 +11,45 @@
 }
 
 /* HEADER */
-.header h1 {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-text h1 {
   font-size: 2rem;
   font-weight: 700;
   color: #111827;
   margin-bottom: 4px;
 }
 
-.header p {
+.header-text p {
   font-size: 0.95rem;
   color: #6b7280;
+}
+
+.drain-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background-color: #ef4444;
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.drain-all-btn:hover {
+  background-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
 /* ALERT */
@@ -49,61 +78,65 @@
 .bin-cards {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 /* CARD */
 .bin-card {
   display: flex;
-  background: #ffffff;
+  background: transparent;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #000000;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  height: 180px;
+  width: 100%;
 }
 
 /* LEFT */
 .bin-left {
   width: 280px;
-  padding: 20px;
+  padding: 20px 24px;
   color: white;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .bin-left-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: none;
 }
 
-.bin-status {
-  background: rgba(255,255,255,0.25);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.7rem;
-  font-weight: 500;
+.bin-left-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .bin-left-bottom h3 {
-  margin: 0 0 6px 0;
-  font-size: 1.4rem;
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
 }
 
 .bin-left-bottom p {
-  font-size: 0.85rem;
-  opacity: 0.9;
+  font-size: 1rem;
+  opacity: 0.95;
+  font-weight: 500;
 }
 
 /* RIGHT */
 .bin-right {
   flex: 1;
-  padding: 20px 24px;
+  padding: 20px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
+  background: #ffffff;
 }
 
 .bin-info {
@@ -170,26 +203,21 @@
   font-size: 0.75rem;
   font-weight: 800;
   cursor: pointer;
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: #6b7280;
+  color: white;
   transition: all 0.2s ease;
 }
 
 .drain-btn:hover {
+  background-color: #ef4444;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
-
-/* DRAIN HOVER PER COLOR */
-.green .drain-btn:hover { background-color: #10b981; color: white; }
-.red .drain-btn:hover { background-color: #ef4444; color: white; }
-.blue .drain-btn:hover { background-color: #3b82f6; color: white; }
-.lime .drain-btn:hover { background-color: #84cc16; color: white; }
 
 /* BIN VISUAL */
 .bin-visual {
-  width: 80px;
-  height: 100px;
+  width: 90px;
+  height: 110px;
   border-radius: 12px;
   border: 3px solid;
   position: relative;

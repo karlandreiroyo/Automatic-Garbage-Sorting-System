@@ -70,10 +70,17 @@ const MailIcon = () => (
 );
 
 const About = () => {
-  const [openSection, setOpenSection] = useState(null);
+  const [openSections, setOpenSections] = useState({
+    specs: false,
+    about: false,
+    team: false
+  });
 
   const toggleSection = (section) => {
-    setOpenSection(openSection === section ? null : section);
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   return (
@@ -116,7 +123,7 @@ const About = () => {
       {/* WASTE TYPE CARDS - ALWAYS VISIBLE */}
       <div className="cards-grid">
         {/* BIODEGRADABLE CARD */}
-        <div className="waste-card">
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
           <div className="card-header">
             <div className="card-icon-wrapper green">
               <LeafIcon />
@@ -139,7 +146,7 @@ const About = () => {
         </div>
 
         {/* RECYCLABLE CARD */}
-        <div className="waste-card">
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
           <div className="card-header">
             <div className="card-icon-wrapper blue">
               <RecycleIcon />
@@ -162,7 +169,7 @@ const About = () => {
         </div>
 
         {/* NON-BIODEGRADABLE CARD */}
-        <div className="waste-card">
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
           <div className="card-header">
             <div className="card-icon-wrapper gray">
               <TrashIcon />
@@ -188,17 +195,17 @@ const About = () => {
       {/* INFO SECTIONS - ALWAYS VISIBLE */}
       <div className="info-sections-grid">
         {/* SPECS */}
-        <div className="info-card">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
             <div className="info-icon-wrapper">
               <GearIcon />
             </div>
             <h3>Specs</h3>
-            <div className={`chevron ${openSection === 'specs' ? 'open' : ''}`}>
+            <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSection === 'specs' && (
+          {openSections.specs && (
             <div className="info-card-content">
               <div className="specs-grid">
                 <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
@@ -215,17 +222,17 @@ const About = () => {
         </div>
 
         {/* ABOUT PROJECT */}
-        <div className="info-card">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
             <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
-            <div className={`chevron ${openSection === 'about' ? 'open' : ''}`}>
+            <div className={`chevron ${openSections.about ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSection === 'about' && (
+          {openSections.about && (
             <div className="info-card-content">
               <p>
                 The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
@@ -244,17 +251,17 @@ const About = () => {
         </div>
 
         {/* TEAM MEMBERS */}
-        <div className="info-card">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
             <div className="info-icon-wrapper">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
-            <div className={`chevron ${openSection === 'team' ? 'open' : ''}`}>
+            <div className={`chevron ${openSections.team ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSection === 'team' && (
+          {openSections.team && (
             <div className="info-card-content">
               <div className="team-list">
                 <div className="team-member">
@@ -297,42 +304,50 @@ const About = () => {
           )}
         </div>
 
-        {/* CONTACT US */}
-        <div className="info-card">
-          <div className="info-card-header pink" onClick={() => toggleSection('contact')}>
-            <div className="info-icon-wrapper">
-              <MailIcon />
-            </div>
-            <h3>Contact Us</h3>
-            <div className={`chevron ${openSection === 'contact' ? 'open' : ''}`}>
-              <ChevronDown />
+      </div> {/* end of info-sections-grid */}
+
+      {/* FOOTER */}
+      <footer className="footer-container">
+        <div className="footer-content">
+          <div className="footer-item">
+            <MailIcon />
+            <div className="footer-text">
+              <strong>Email</strong>
+              <a href="mailto:info@sortingsystem.com">info@sortingsystem.com</a>
             </div>
           </div>
-          {openSection === 'contact' && (
-            <div className="info-card-content">
-              <div className="contact-info">
-                <div className="contact-item">
-                  <strong>Email:</strong>
-                  <a href="mailto:info@sortingsystem.com">info@sortingsystem.com</a>
-                </div>
-                <div className="contact-item">
-                  <strong>Phone:</strong>
-                  <span>+1 (555) 123-4567</span>
-                </div>
-                <div className="contact-item">
-                  <strong>Address:</strong>
-                  <span>Bahay ni Khyl Arcilla</span>
-                </div>
-                <div className="contact-item">
-                  <strong>Business Hours:</strong>
-                  <span>Kahit Kelan pwede Sa kanila</span>
-                </div>
-              </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <div className="footer-text">
+              <strong>Phone</strong>
+              <span>+1 (555) 123-4567</span>
             </div>
-          )}
+          </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <div className="footer-text">
+              <strong>Address</strong>
+              <span>Bahay ni Khyl Arcilla</span>
+            </div>
+          </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <div className="footer-text">
+              <strong>Business Hours</strong>
+              <span>Kahit Kelan pwede Sa kanila</span>
+            </div>
+          </div>
         </div>
+      </footer>
 
-      </div> {/* end of info-sections-grid */}
     </div> /* end of about-container */
   );
 };
