@@ -11,13 +11,6 @@ const Icons = {
 };
 
 const Notifications = () => {
-  const stats = [
-    { type: 'critical', label: 'Critical', count: 1 },
-    { type: 'warning', label: 'Warnings', count: 2 },
-    { type: 'info', label: 'Info', count: 1 },
-    { type: 'success', label: 'Success', count: 1 },
-  ];
-
   const [notifications, setNotifications] = useState([
     { id: 1, type: 'critical', title: 'Bin Full Alert', time: '2 minutes ago', message: 'Non-biodegradable bin has reached 100% capacity', subtext: 'Non-Biodegradable', isUnread: true },
     { id: 2, type: 'warning', title: 'Bin Almost Full', time: '15 minutes ago', message: 'Recyclable bin is at 85% capacity', subtext: 'Recyclable', isUnread: true },
@@ -26,21 +19,54 @@ const Notifications = () => {
     { id: 5, type: 'info', title: 'Scheduled Collection', time: '5 hours ago', message: 'Recyclable bin collection scheduled for tomorrow 9:00 AM', subtext: 'Recyclable', isUnread: false },
   ]);
 
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  const stats = [
+    { type: 'critical', label: 'Critical', count: notifications.filter(n => n.type === 'critical').length },
+    { type: 'warning', label: 'Warnings', count: notifications.filter(n => n.type === 'warning').length },
+    { type: 'info', label: 'Info', count: notifications.filter(n => n.type === 'info').length },
+    { type: 'success', label: 'Success', count: notifications.filter(n => n.type === 'success').length },
+  ];
+
+  const handleMarkAllRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, isUnread: false })));
+  };
+
+  const handleMarkRead = (id) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, isUnread: false } : n
+    ));
+  };
+
+  const handleFilterClick = (type) => {
+    setActiveFilter(activeFilter === type ? null : type);
+  };
+
+  const filteredNotifications = activeFilter 
+    ? notifications.filter(n => n.type === activeFilter)
+    : notifications;
+
+  const unreadCount = notifications.filter(n => n.isUnread).length;
+
   return (
     <div className="notifications-page-container">
       {/* Header */}
       <header className="page-header">
         <div className="header-text">
           <h1>Notifications</h1>
-          <p className="subtitle">2 unread notifications</p>
+          <p className="subtitle">{unreadCount} unread notifications</p>
         </div>
-        <button className="mark-all-btn">Mark all as read</button>
+        <button className="mark-all-btn" onClick={handleMarkAllRead}>Mark all as read</button>
       </header>
 
       {/* Stats */}
       <div className="stats-grid">
         {stats.map((stat, idx) => (
-          <div key={idx} className="stat-card">
+          <div 
+            key={idx} 
+            className={`stat-card ${activeFilter === stat.type ? 'active' : ''}`}
+            onClick={() => handleFilterClick(stat.type)}
+          >
             <div className={`icon-box ${stat.type}`}>{Icons[stat.type]}</div>
             <div className="stat-info">
               <span className="stat-label">{stat.label}</span>
@@ -52,8 +78,8 @@ const Notifications = () => {
 
       {/* Notification List */}
       <div className="notification-list">
-        {notifications.map((notif) => (
-          <div key={notif.id} className={`notif-card ${notif.type}`}>
+        {filteredNotifications.map((notif) => (
+          <div key={notif.id} className={`notif-card ${notif.type} ${notif.isUnread ? 'unread' : ''}`}>
             <div className={`notif-icon-box ${notif.type}`}>{Icons[notif.type]}</div>
             <div className="notif-content">
               <div className="notif-header">
@@ -70,7 +96,7 @@ const Notifications = () => {
             </div>
             <div className="notif-actions">
               <span className="time-text">{notif.time}</span>
-              {notif.isUnread && <button className="mark-read-btn">Mark read</button>}
+              {notif.isUnread && <button className="mark-read-btn" onClick={() => handleMarkRead(notif.id)}>Mark read</button>}
             </div>
           </div>
         ))}

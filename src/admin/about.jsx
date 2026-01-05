@@ -1,13 +1,7 @@
-/**
- * About Component
- * Displays information about the Automatic Garbage Sorting System
- * Features: Expandable waste category cards with examples, accordion sections for specs, project info, team, and contact
- */
-
 import React, { useState } from 'react';
 import './admincss/about.css';
 
-// Icon Components for waste categories and sections
+// Icon Components
 const LeafIcon = () => (
   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
@@ -29,28 +23,23 @@ const TrashIcon = () => (
   </svg>
 );
 
+const CheckCircle = ({ color = '#10b981' }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+  </svg>
+);
+
 const ChevronDown = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
   </svg>
 );
 
-/**
- * Check Circle Icon Component
- * Displays a checkmark icon with customizable color
- * @param {string} color - Hex color code for the icon (default: green)
- */
-const CheckCircle = ({ color = '#10b981' }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-  </svg>
-);
-
 const GearIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="3"></circle>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
   </svg>
 );
 
@@ -72,64 +61,64 @@ const UsersIcon = () => (
 );
 
 const MailIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
     <polyline points="22,6 12,13 2,6"></polyline>
   </svg>
 );
 
+const PhoneIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+  </svg>
+);
+
+const MapPinIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+    <circle cx="12" cy="10" r="3"></circle>
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
+  </svg>
+);
+
 const About = () => {
-  // State to track which sections are expanded/open
   const [openSections, setOpenSections] = useState({
-    biodegradable: false,
-    recyclable: false,
-    nonBiodegradable: false,
     specs: false,
     about: false,
-    team: false,
-    contact: false
+    team: false
   });
 
-  /**
-   * Toggles the open/closed state of a section
-   * @param {string} section - The section key to toggle
-   */
   const toggleSection = (section) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Example items for Biodegradable waste category
-
-  const biodegradableExamples = [
-    'Fruit and vegetable peels',
-    'Coffee grounds and tea bags',
-    'Eggshells and nutshells',
-    'Grass clippings and leaves',
-    'Paper napkins and cardboard',
-    'Wood chips and sawdust'
+  const biodegradableFeatures = [
+    'Converts to nutrient-rich compost',
+    'Decomposes in 2-6 months',
+    'Reduces landfill methane emissions',
+    'Perfect for garden fertilization'
   ];
 
-  // Example items for Non-Biodegradable waste category
-  const nonBiodegradableExamples = [
-    'Styrofoam and foam packaging',
-    'Plastic bags and wrappers',
-    'Batteries and electronics',
-    'Light bulbs and ceramics',
-    'Rubber and synthetic materials',
-    'Medical and hazardous waste'
+  const recyclableFeatures = [
+    'Saves up to 95% energy vs. new materials',
+    'Reduces raw material extraction',
+    'Creates jobs in recycling industry',
+    'Prevents ocean plastic pollution'
   ];
 
-  // Example items for Recyclable waste category
-  const recyclableExamples = [
-    'Plastic bottles (PET #1, HDPE #2)',
-    'Glass bottles and jars',
-    'Aluminum and steel cans',
-    'Cardboard boxes and paper',
-    'Newspapers and magazines',
-    'Clean food containers'
+  const nonBiodegradableFeatures = [
+    'Requires specialized disposal facilities',
+    'Prevents soil and water contamination',
+    'Proper sorting reduces toxic exposure',
+    'Encourages waste reduction habits'
   ];
 
-  // Main features for Specs section
   const specsFeatures = [
     'Automatic sorting',
     'Camera and sensor based detection',
@@ -137,7 +126,6 @@ const About = () => {
     'Compact design'
   ];
 
-  // Team members list
   const teamMembers = [
     'Team Leader: Royo Karl Andrei',
     'Arcilla Khyl',
@@ -146,18 +134,8 @@ const About = () => {
     'Santos John Ivan'
   ];
 
-  // Contact email addresses
-  const contactEmails = [
-    'royo@gmail.com',
-    'arcilla@gmail.com',
-    'barcelona@gmail.com',
-    'gamotia@gmail.com',
-    'santos@gmail.com'
-  ];
-
   return (
     <div className="about-container">
-      {/* HEADER */}
       <div className="about-header">
         <h1>
           <span className="title-dark">Automatic Garbage</span>{' '}
@@ -168,101 +146,75 @@ const About = () => {
         </p>
       </div>
 
-      {/* TAGLINE */}
       <div className="tagline-section">
         <h2>Smart waste for a Cleaner Tomorrow</h2>
       </div>
 
-      {/* Waste Category Cards with Expandable Examples */}
+      {/* Waste Category Cards */}
       <div className="waste-cards-grid">
-        {/* Biodegradable Category Card */}
-        <div className={`waste-card ${openSections.biodegradable ? 'expanded' : ''}`}>
-          <div className="waste-card-header" onClick={() => toggleSection('biodegradable')}>
-            <div className="waste-card-icon green">
+        <div className="waste-category-card">
+          <div className="card-header green-header">
+            <div className="card-icon green-icon">
               <LeafIcon />
             </div>
-            <div className="waste-card-content">
-              <h3>Biodegradable</h3>
-              <p>Organic waste that naturally decomposes</p>
-            </div>
-            <div className={`chevron ${openSections.biodegradable ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
+            <h3>Biodegradable</h3>
           </div>
-          {openSections.biodegradable && (
-            <div className="waste-card-body">
-              <ul className="examples-list">
-                {biodegradableExamples.map((example, index) => (
-                  <li key={index}>
-                    <CheckCircle color="#10b981" />
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <p className="card-description">
+            Organic waste that naturally decomposes, including food scraps, yard waste, and paper products.
+          </p>
+          <ul className="feature-list">
+            {biodegradableFeatures.map((feature, index) => (
+              <li key={index}>
+                <CheckCircle color="#10b981" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Recyclable Category Card */}
-        <div className={`waste-card ${openSections.recyclable ? 'expanded' : ''}`}>
-          <div className="waste-card-header" onClick={() => toggleSection('recyclable')}>
-            <div className="waste-card-icon blue">
+        <div className="waste-category-card">
+          <div className="card-header blue-header">
+            <div className="card-icon blue-icon">
               <RecycleIcon />
             </div>
-            <div className="waste-card-content">
-              <h3>Recyclable</h3>
-              <p>Materials that can be processed and reused</p>
-            </div>
-            <div className={`chevron ${openSections.recyclable ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
+            <h3>Recyclable</h3>
           </div>
-          {openSections.recyclable && (
-            <div className="waste-card-body">
-              <ul className="examples-list">
-                {recyclableExamples.map((example, index) => (
-                  <li key={index}>
-                    <CheckCircle color="#3b82f6" />
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <p className="card-description">
+            Materials that can be processed and reused, such as plastics, glass, metals, and cardboard.
+          </p>
+          <ul className="feature-list">
+            {recyclableFeatures.map((feature, index) => (
+              <li key={index}>
+                <CheckCircle color="#3b82f6" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Non-Biodegradable Category Card */}
-        <div className={`waste-card ${openSections.nonBiodegradable ? 'expanded' : ''}`}>
-          <div className="waste-card-header" onClick={() => toggleSection('nonBiodegradable')}>
-            <div className="waste-card-icon gray">
+        <div className="waste-category-card">
+          <div className="card-header gray-header">
+            <div className="card-icon gray-icon">
               <TrashIcon />
             </div>
-            <div className="waste-card-content">
-              <h3>Non-Biodegradable</h3>
-              <p>Waste that doesn't naturally decompose and requires special disposal methods.</p>
-            </div>
-            <div className={`chevron ${openSections.nonBiodegradable ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
+            <h3>Non-Biodegradable</h3>
           </div>
-          {openSections.nonBiodegradable && (
-            <div className="waste-card-body">
-              <ul className="examples-list">
-                {nonBiodegradableExamples.map((example, index) => (
-                  <li key={index}>
-                    <CheckCircle color="#6b7280" />
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <p className="card-description">
+            Waste that doesn't naturally decompose and requires special disposal methods.
+          </p>
+          <ul className="feature-list">
+            {nonBiodegradableFeatures.map((feature, index) => (
+              <li key={index}>
+                <CheckCircle color="#6b7280" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      {/* Accordion Sections for Additional Information */}
+      {/* Accordion Sections */}
       <div className="accordion-grid">
-        {/* Specs Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
             <div className="accordion-icon">
@@ -287,7 +239,6 @@ const About = () => {
           )}
         </div>
 
-        {/* About Project Accordion Section */}
         <div className="accordion-item">
           <div className="accordion-header orange" onClick={() => toggleSection('about')}>
             <div className="accordion-icon">
@@ -307,9 +258,8 @@ const About = () => {
           )}
         </div>
 
-        {/* Team Members Accordion Section */}
         <div className="accordion-item">
-          <div className="accordion-header gray" onClick={() => toggleSection('team')}>
+          <div className="accordion-header cyan" onClick={() => toggleSection('team')}>
             <div className="accordion-icon">
               <UsersIcon />
             </div>
@@ -328,29 +278,48 @@ const About = () => {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Contact Us Accordion Section */}
-        <div className="accordion-item">
-          <div className="accordion-header gray" onClick={() => toggleSection('contact')}>
-            <div className="accordion-icon">
-              <MailIcon />
-            </div>
-            <h3>Contact Us</h3>
-            <div className={`chevron ${openSections.contact ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
+      {/* Contact Section */}
+      <div className="contact-section">
+        <div className="contact-item">
+          <div className="contact-icon teal">
+            <MailIcon />
           </div>
-          {openSections.contact && (
-            <div className="accordion-content">
-              <ul className="contact-list">
-                {contactEmails.map((email, index) => (
-                  <li key={index}>
-                    <a href={`mailto:${email}`}>{email}</a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="contact-info">
+            <h4>EMAIL</h4>
+            <p>info@sortingsystem.com</p>
+          </div>
+        </div>
+
+        <div className="contact-item">
+          <div className="contact-icon teal">
+            <PhoneIcon />
+          </div>
+          <div className="contact-info">
+            <h4>PHONE</h4>
+            <p>+1 (555) 123-4567</p>
+          </div>
+        </div>
+
+        <div className="contact-item">
+          <div className="contact-icon teal">
+            <MapPinIcon />
+          </div>
+          <div className="contact-info">
+            <h4>ADDRESS</h4>
+            <p>Brgy. 176, Bagong Silang, Caloocan City, 1428</p>
+          </div>
+        </div>
+
+        <div className="contact-item">
+          <div className="contact-icon teal">
+            <ClockIcon />
+          </div>
+          <div className="contact-info">
+            <h4>BUSINESS HOURS</h4>
+            <p>Mon–Fri: 9AM–6PM<br />Sat: 9AM–1PM<br />Sun: Closed</p>
+          </div>
         </div>
       </div>
     </div>
@@ -358,4 +327,3 @@ const About = () => {
 };
 
 export default About;
-

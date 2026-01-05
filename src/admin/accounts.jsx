@@ -1,111 +1,85 @@
-/**
- * Accounts Component
- * Manages user accounts (employees and supervisors) with CRUD operations
- * Features: Search, filter by role/status, activate, archive, and delete users
- */
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/accounts.css';
 
-const Accounts = () => { 
-  // State for storing all users from database
-  const [users, setUsers] = useState([]);
-  // State for search input value
-  const [searchTerm, setSearchTerm] = useState('');
-  // State for role filter (all, supervisor, collector)
-  const [filterRole, setFilterRole] = useState('all');
-  // State for status filter (all, active, inactive)
-  const [filterStatus, setFilterStatus] = useState('all');
-  // State to control add employee modal visibility
-  const [showAddModal, setShowAddModal] = useState(false);
+// SVG Icons
+const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
+const CloseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>;
 
-  // Fetch users from database on component mount
+const Accounts = () => { 
+  const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    role: 'collector',
+    first_name: '',
+    last_name: '',
+    middle_name: '',
+    contact: '',
+  });
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  /**
-   * Fetches all users from the Supabase database
-   * Orders them by creation date (newest first)
-   */
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching users:', error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Activates a user account by setting status to 'active'
-   * @param {string} userId - The ID of the user to activate
-   */
-  const handleActivateAccount = async (userId) => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ status: 'active' })
-        .eq('id', userId);
+      setLoading(true);
+      const fullName = `${formData.first_name} ${formData.middle_name ? formData.middle_name + ' ' : ''}${formData.last_name}`.trim();
+      
+      const { error } = await supabase.from('users').insert([{
+        email: formData.email,
+        role: formData.role,
+        name: fullName,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        middle_name: formData.middle_name || null,
+        contact: formData.contact,
+        status: 'active'
+      }]);
 
       if (error) throw error;
+      
+      setShowAddModal(false);
+      setFormData({ email: '', role: 'collector', first_name: '', last_name: '', middle_name: '', contact: '' });
       fetchUsers();
+      alert('Employee account created successfully!');
     } catch (error) {
-      console.error('Error activating account:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  /**
-   * Archives a user account by setting status to 'inactive'
-   * @param {string} userId - The ID of the user to archive
-   */
-  const handleArchive = async (userId) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ status: 'inactive' })
-        .eq('id', userId);
-
-      if (error) throw error;
-      fetchUsers();
-    } catch (error) {
-      console.error('Error archiving user:', error);
-    }
-  };
-
-  /**
-   * Deletes a user account from the database
-   * Shows confirmation dialog before deletion
-   * @param {string} userId - The ID of the user to delete
-   */
-  const handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .delete()
-          .eq('id', userId);
-
-        if (error) throw error;
-        fetchUsers();
-      } catch (error) {
-        console.error('Error deleting user:', error);
-      }
-    }
-  };
-
-  /**
-   * Filters users based on search term, role, and status
-   * Returns users that match all filter criteria
-   */
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (user.name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || user.role?.toLowerCase() === filterRole.toLowerCase();
     const matchesStatus = filterStatus === 'all' || user.status?.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesRole && matchesStatus;
@@ -113,107 +87,139 @@ const Accounts = () => {
 
   return (
     <div className="accounts-container">
-      {/* Header Section with Title and Add Button */}
+      
+      {/* --- ADD EMPLOYEE MODAL (CENTERED) --- */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setShowAddModal(false)}>
+              <CloseIcon />
+            </button>
+            
+            <div className="modal-header">
+              <div className="modal-icon-circle">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                </svg>
+              </div>
+              <div className="modal-title-desc">
+                <h2>Add New Employee</h2>
+                <p>Register a new system supervisor or collector</p>
+              </div>
+            </div>
+            
+            <form onSubmit={handleAddEmployee} className="employee-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input type="text" name="first_name" value={formData.first_name} onChange={handleInputChange} placeholder="e.g. Juan" required />
+                </div>
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange} placeholder="e.g. Dela Cruz" required />
+                </div>
+                <div className="form-group">
+                  <label>Middle Name</label>
+                  <input type="text" name="middle_name" value={formData.middle_name} onChange={handleInputChange} placeholder="Optional" />
+                </div>
+                <div className="form-group">
+                  <label>Account Role</label>
+                  <select name="role" value={formData.role} onChange={handleInputChange}>
+                    <option value="collector">Collector</option>
+                    <option value="supervisor">Supervisor</option>
+                  </select>
+                </div>
+                <div className="form-group full-width-group">
+                  <label>Email Address</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="juan.delacruz@company.com" required />
+                </div>
+                <div className="form-group full-width-group">
+                  <label>Contact Number</label>
+                  <input type="tel" name="contact" value={formData.contact} onChange={handleInputChange} placeholder="+63 9XX XXX XXXX" />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Processing...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- PAGE HEADER --- */}
       <div className="accounts-header">
         <div>
           <h1>Account Management</h1>
-          <p>Employees and Supervisors Management</p>
+          <p>Manage and monitor all employee accounts</p>
         </div>
         <button className="add-employee-btn" onClick={() => setShowAddModal(true)}>
-          + Add Employee
+          <AddIcon /> Add Employee
         </button>
       </div>
 
-      {/* Filter and Search Section */}
+      {/* --- FILTERS --- */}
       <div className="filters-row">
-        <input
-          type="text"
-          placeholder="Search Bar"
-          className="search-input"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+        <input 
+          type="text" 
+          placeholder="Search by employee name..." 
+          className="search-input" 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
         />
-        <select 
-          className="filter-select"
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
-        >
-          <option value="all">Choose Role</option>
+        <select className="filter-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+          <option value="all">All Roles</option>
           <option value="supervisor">Supervisor</option>
           <option value="collector">Collector</option>
         </select>
-        <select 
-          className="filter-select"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="all">Choose Status</option>
+        <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
       </div>
 
-      {/* Users Table */}
+      {/* --- DATA TABLE --- */}
       <div className="accounts-table">
-        {/* Table Header */}
         <div className="table-header">
-          <div className="th-name">Name</div>
-          <div className="th-role">Role</div>
-          <div className="th-status">Status</div>
-          <div className="th-actions">Actions</div>
+          <div>Employee Name</div>
+          <div>Role</div>
+          <div>Status</div>
+          <div>Actions</div>
         </div>
-
-        {/* Table Body with User Rows */}
         <div className="table-body">
-          {filteredUsers.map(user => (
-            <div key={user.id} className="table-row">
-              <div className="td-name">
-                <div className="user-avatar">
-                  {user.name?.charAt(0).toUpperCase() || '?'}
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map(user => (
+              <div key={user.id} className="table-row">
+                <div className="td-name">
+                  <div className="user-avatar">{user.name?.charAt(0).toUpperCase()}</div>
+                  <span>{user.name}</span>
                 </div>
-                <span>{user.name || 'Unknown'}</span>
+                <div className="td-role" style={{textTransform: 'capitalize'}}>{user.role}</div>
+                <div>
+                  <span className={`status-badge ${user.status?.toLowerCase()}`}>
+                    {user.status}
+                  </span>
+                </div>
+                <div className="td-actions">
+                  <button className="action-btn activate-btn" disabled={user.status === 'active'}>
+                    Activate
+                  </button>
+                  <button className="icon-btn">✏️</button>
+                  <button className="icon-btn">🗑️</button>
+                </div>
               </div>
-              <div className="td-role">{user.role || 'N/A'}</div>
-              <div className="td-status">
-                <span className={`status-badge ${user.status?.toLowerCase()}`}>
-                  {user.status?.toUpperCase() || 'UNKNOWN'}
-                </span>
-              </div>
-              <div className="td-actions">
-                <button 
-                  className="action-btn activate-btn"
-                  onClick={() => handleActivateAccount(user.id)}
-                  disabled={user.status === 'active'}
-                >
-                  ACTIVATE ACCOUNT
-                </button>
-                <button 
-                  className="action-btn archive-btn"
-                  onClick={() => handleArchive(user.id)}
-                >
-                  ARCHIVE
-                </button>
-                <button className="icon-btn view-btn">
-                  👁️
-                </button>
-                <button 
-                  className="icon-btn edit-btn"
-                  onClick={() => handleDelete(user.id)}
-                >
-                  ✏️
-                </button>
-              </div>
+            ))
+          ) : (
+            <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>
+              {loading ? 'Fetching records...' : 'No employee accounts found.'}
             </div>
-          ))}
+          )}
         </div>
       </div>
-
-      {/* No Results Message */}
-      {filteredUsers.length === 0 && (
-        <div className="no-results">
-          <p>No users found</p>
-        </div>
-      )}
     </div>
   );
 };

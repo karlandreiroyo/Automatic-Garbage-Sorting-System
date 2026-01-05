@@ -52,25 +52,27 @@ const GearIcon = () => (
  * @returns {JSX.Element} Battery icon with fill level
  */
 const BatteryIcon = ({ level }) => {
-  /**
-   * Determines battery color based on level
-   * Green (>=80%), Yellow (50-79%), Red (<50%)
-   * @returns {string} Hex color code
-   */
-  const getColor = () => {
-    if (level >= 80) return '#10b981';
-    if (level >= 50) return '#f59e0b';
-    return '#ef4444';
-  };
-
   return (
     <div className="battery-icon-wrapper">
-      <div className="battery-outline" style={{ borderColor: getColor() }}>
-        <div className="battery-fill" style={{ width: `${level}%`, backgroundColor: getColor() }}></div>
+      <div className="battery-outline" style={{ borderColor: 'white' }}>
+        <div className="battery-fill" style={{ width: `${level}%`, backgroundColor: 'white' }}></div>
       </div>
-      <span style={{ color: getColor() }}>{level}%</span>
+      <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>{level}%</span>
     </div>
   );
+};
+
+/**
+ * Gets color based on fill level percentage
+ * 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green
+ * @param {number} fillLevel - Fill level percentage (0-100)
+ * @returns {string} Hex color code
+ */
+const getFillLevelColor = (fillLevel) => {
+  if (fillLevel >= 50) return '#10b981'; // Green
+  if (fillLevel >= 30) return '#eab308'; // Yellow
+  if (fillLevel >= 15) return '#f97316'; // Orange
+  return '#ef4444'; // Red
 };
 
 /**
@@ -80,7 +82,7 @@ const BatteryIcon = ({ level }) => {
  * @param {Function} onClick - Callback when bin is clicked
  * @param {Function} onDrain - Callback when drain button is clicked
  */
-const BinListCard = ({ bin, onClick, onDrain }) => {
+const BinListCard = ({ bin, onClick }) => {
   /**
    * Gets status text based on fill level
    * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
@@ -106,40 +108,62 @@ const BinListCard = ({ bin, onClick, onDrain }) => {
 
   return (
     <div className="bin-list-card" onClick={onClick}>
-      <div className="bin-list-header">
-        <div className="system-power">
-          <span>SYSTEM POWER</span>
-          <BatteryIcon level={bin.systemPower} />
-        </div>
-        <span className={`status-badge ${getStatusClass()}`}>{getStatus()}</span>
-      </div>
-      <div className="bin-list-content">
-        <h2>{bin.name}</h2>
-        <p>Capacity: {bin.capacity}</p>
-        <div className="bin-list-fill-info">
-          <div>
-            <span>Fill Level</span>
+      {/* Left Panel - Green Section */}
+      <div className="bin-list-left-panel">
+        <div className="bin-list-system-power">
+          <span className="system-power-label">SYSTEM POWER</span>
+          <div className="system-power-content">
+            <BatteryIcon level={bin.systemPower} />
           </div>
-          <div className="fill-bar">
-            <div className="fill-progress" style={{ width: `${bin.fillLevel}%` }}></div>
+        </div>
+        <div className="bin-list-title-section">
+          <h1 className="bin-list-title">{bin.name}</h1>
+          <p className="bin-list-capacity">Capacity: {bin.capacity}</p>
+        </div>
+        <span className={`bin-list-status-badge ${getStatusClass()}`}>
+          <span className="status-dot"></span>
+          {getStatus()}
+        </span>
+      </div>
+
+      {/* Right Panel - White Section */}
+      <div className="bin-list-right-panel">
+        <div className="bin-list-fill-section">
+          <span className="fill-level-label">Fill Level</span>
+          <div className="bin-list-progress-container">
+            <div className="bin-list-fill-bar">
+              <div 
+                className="bin-list-fill-progress" 
+                style={{ 
+                  width: `${bin.fillLevel}%`,
+                  backgroundColor: getFillLevelColor(bin.fillLevel)
+                }}
+              ></div>
+            </div>
+            <span 
+              className="bin-list-fill-percentage"
+              style={{ color: getFillLevelColor(bin.fillLevel) }}
+            >
+              {bin.fillLevel}%
+            </span>
           </div>
-          <span className="last-update">{bin.lastUpdate}</span>
+          <span className="bin-list-last-update">{bin.lastUpdate}</span>
+        </div>
+        <div className="bin-list-visual">
+          <div className="bin-list-icon-visual">
+            <div 
+              className="bin-list-fill-section-visual" 
+              style={{ 
+                height: `${bin.fillLevel}%`,
+                backgroundColor: getFillLevelColor(bin.fillLevel)
+              }}
+            >
+              <span className="bin-list-percentage-text">{bin.fillLevel}%</span>
+            </div>
+            <div className="bin-list-empty-section-visual"></div>
+          </div>
         </div>
       </div>
-      <div className="bin-list-icon">
-        <div className="bin-icon-visual" style={{ height: `${bin.fillLevel}%` }}>
-          <span>{bin.fillLevel}%</span>
-        </div>
-      </div>
-      <button 
-        className="drain-list-bin-btn" 
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent triggering the card click
-          onDrain(bin.id);
-        }}
-      >
-        Drain
-      </button>
     </div>
   );
 };
@@ -150,7 +174,7 @@ const BinListCard = ({ bin, onClick, onDrain }) => {
  * Shows category, fill level, last collection time, and visual bin representation
  * @param {Object} bin - Bin data object with category information
  */
-const BinDetailCard = ({ bin }) => {
+const BinDetailCard = ({ bin, onDrain }) => {
   /**
    * Gets status text based on fill level
    * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
@@ -177,34 +201,60 @@ const BinDetailCard = ({ bin }) => {
   return (
     <div className={`bin-detail-card ${bin.colorClass}`}>
       <div className="bin-detail-left">
-        <div className="bin-detail-icon">
-          {bin.icon}
-        </div>
         <div className="bin-detail-info">
           <h3>{bin.category}</h3>
           <p>Capacity: {bin.capacity}</p>
         </div>
       </div>
-      <div className="bin-detail-right">
-        <div className="bin-detail-status">
-          <span className={`status-badge ${getStatusClass()}`}>{getStatus()}</span>
-        </div>
-        <div className="bin-detail-fill-wrapper">
-          <div className="bin-detail-fill">
-            <span>Fill Level</span>
-            <span className="fill-percent">{bin.fillLevel}%</span>
+      <div className="bin-detail-middle">
+        <div className="bin-detail-fill-info">
+          <div className="fill-level-header">
+            <span className="fill-level-label">Fill Level</span>
+            <span 
+              className="fill-percent" 
+              style={{ color: getFillLevelColor(bin.fillLevel) }}
+            >
+              {bin.fillLevel}%
+            </span>
           </div>
           <div className="fill-bar">
-            <div className="fill-progress" style={{ width: `${bin.fillLevel}%` }}></div>
+            <div 
+              className="fill-progress" 
+              style={{ 
+                width: `${bin.fillLevel}%`,
+                backgroundColor: getFillLevelColor(bin.fillLevel)
+              }}
+            ></div>
           </div>
-          <div className="last-collection">
-            <span>Last Collection</span>
-            <span>{bin.lastCollection}</span>
+          <div className="last-collection-row">
+            <div className="last-collection">
+              <span>Last Collection</span>
+              <span className="collection-time">{bin.lastCollection}</span>
+            </div>
+            <button className="drain-bin-btn" onClick={(e) => {
+              e.stopPropagation();
+              if (onDrain) onDrain(bin.id);
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+              </svg>
+              DRAIN
+            </button>
           </div>
         </div>
+      </div>
+      <div className="bin-detail-right">
         <div className="bin-visual">
-          <div className="bin-fill" style={{ height: `${bin.fillLevel}%` }}></div>
-          <div className="bin-icon">{bin.icon}</div>
+          <div 
+            className="bin-fill-section" 
+            style={{ 
+              height: `${bin.fillLevel}%`,
+              backgroundColor: getFillLevelColor(bin.fillLevel)
+            }}
+          >
+            <span className="bin-percentage-text">{bin.fillLevel}%</span>
+          </div>
+          <div className="bin-empty-section"></div>
         </div>
       </div>
     </div>
@@ -604,10 +654,21 @@ const BinMonitoring = () => {
         console.warn('Bins table may not exist:', error);
       }
 
-      // Only update the list view bins, not the category bins
+      // Update the bin and all its category bins
       setBins(prevBins =>
         prevBins.map(bin =>
-          bin.id === binId ? { ...bin, fillLevel: 0, lastUpdate: 'Just now' } : bin
+          bin.id === binId
+            ? {
+                ...bin,
+                fillLevel: 0,
+                lastUpdate: 'Just now',
+                categoryBins: bin.categoryBins.map(catBin => ({
+                  ...catBin,
+                  fillLevel: 0,
+                  lastCollection: 'Just now'
+                }))
+              }
+            : bin
         )
       );
     } catch (error) {
@@ -615,7 +676,18 @@ const BinMonitoring = () => {
       // Still update local state even if database update fails
       setBins(prevBins =>
         prevBins.map(bin =>
-          bin.id === binId ? { ...bin, fillLevel: 0, lastUpdate: 'Just now' } : bin
+          bin.id === binId
+            ? {
+                ...bin,
+                fillLevel: 0,
+                lastUpdate: 'Just now',
+                categoryBins: bin.categoryBins.map(catBin => ({
+                  ...catBin,
+                  fillLevel: 0,
+                  lastCollection: 'Just now'
+                }))
+              }
+            : bin
         )
       );
     }
@@ -733,8 +805,32 @@ const BinMonitoring = () => {
     </svg>
   );
 
-  // Render detail view when a bin is clicked
-  if (view === 'detail') {
+  /**
+   * Gets status text based on fill level for the main bin
+   * @param {number} fillLevel - Fill level percentage
+   * @returns {string} Status text
+   */
+  const getMainBinStatus = (fillLevel) => {
+    if (fillLevel >= 90) return 'Full';
+    if (fillLevel >= 75) return 'Almost Full';
+    if (fillLevel >= 50) return 'Normal';
+    return 'Empty';
+  };
+
+  /**
+   * Gets CSS class for status badge based on fill level
+   * @param {number} fillLevel - Fill level percentage
+   * @returns {string} CSS class name
+   */
+  const getMainBinStatusClass = (fillLevel) => {
+    if (fillLevel >= 90) return 'status-full';
+    if (fillLevel >= 75) return 'status-almost-full';
+    if (fillLevel >= 50) return 'status-normal';
+    return 'status-empty';
+  };
+
+  // Render detail view when a bin is clicked - Shows category bins
+  if (view === 'detail' && selectedBin) {
     return (
       <div className="bin-monitoring-container">
         {/* Drain All Confirmation Modal */}
@@ -758,46 +854,51 @@ const BinMonitoring = () => {
           </div>
         )}
 
-        {/* Detail View Header with Back and Drain All buttons */}
+        {/* Detail View Header */}
         <div className="bin-monitoring-header">
-          <div>
-            <h1>Real-Time Bin Monitoring</h1>
+          <div className="header-left-detail">
+            <h1 className="bin-name-header">{selectedBin?.name || 'BIN'}</h1>
             <p>Monitor bin fill levels in real-time</p>
           </div>
           <div className="header-actions">
             <button className="action-btn back-btn" onClick={handleBack}>Back</button>
-            <button className="action-btn drain-btn" onClick={handleDrainAll}>Drain All</button>
+            <button className="action-btn drain-all-btn" onClick={handleDrainAll}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+              </svg>
+              DRAIN ALL
+            </button>
           </div>
         </div>
 
-        {/* Bin Status Summary */}
-        <div className="bin-status-summary">
-          <h2>{selectedBin?.name || 'BIN'}</h2>
-          <div className="action-required-alert">
-            <span className="warning-icon">⚠️</span>
-            <div>
-              <span className="action-text">Action Required</span>
-              <p>{full} bin full, {almostFull} bins almost full</p>
-            </div>
+        {/* Action Required Alert */}
+        <div className="action-required-alert">
+          <span className="warning-icon">⚠️</span>
+          <div>
+            <span className="action-text">Action Required</span>
+            <p>{full} bin full, {almostFull} bins almost full</p>
           </div>
         </div>
 
         {/* Category Bin Cards with Drain Buttons - Shows only selected bin's category bins */}
         <div className="bin-detail-cards">
           {currentCategoryBins.map(catBin => (
-            <div key={catBin.id} className="bin-detail-wrapper">
-              <BinDetailCard bin={catBin} />
-              <button className="drain-bin-btn" onClick={() => handleDrain(catBin.id)}>
-                Drain
-              </button>
-            </div>
+            <BinDetailCard 
+              key={catBin.id} 
+              bin={catBin} 
+              onDrain={handleDrain}
+            />
           ))}
         </div>
       </div>
     );
   }
 
-  // Render list view (default)
+  // Calculate action required for main bins
+  const mainBinsFull = bins.filter(b => b.fillLevel >= 90).length;
+  const mainBinsAlmostFull = bins.filter(b => b.fillLevel >= 75 && b.fillLevel < 90).length;
+
+  // Render list view (default) - Shows main bins (Bin 1, Bin 2, etc.)
   return (
     <div className="bin-monitoring-container">
       {/* List View Header */}
@@ -813,7 +914,7 @@ const BinMonitoring = () => {
         <span className="warning-icon">⚠️</span>
         <div>
           <span className="action-text">Action Required</span>
-          <p>{full} bin full, {almostFull} bins almost full</p>
+          <p>{mainBinsFull} bin full, {mainBinsAlmostFull} bins almost full</p>
         </div>
       </div>
 
@@ -824,7 +925,6 @@ const BinMonitoring = () => {
             key={bin.id} 
             bin={bin} 
             onClick={() => handleBinClick(bin)} 
-            onDrain={handleDrainListBin}
           />
         ))}
       </div>
@@ -833,4 +933,3 @@ const BinMonitoring = () => {
 };
 
 export default BinMonitoring;
-

@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import "../employee/employeecss/BinMonitoring.css"; // Link the CSS file
 
-// --- ICONS ---
+// --- ICONS (No changes) ---
 export const LeafIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
@@ -36,8 +36,27 @@ export const GearIcon = () => (
   </svg>
 );
 
+const DrainAllIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+  </svg>
+);
+
+/**
+ * Gets color based on fill level percentage
+ * 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green
+ * @param {number} fillLevel - Fill level percentage (0-100)
+ * @returns {string} Hex color code
+ */
+const getFillLevelColor = (fillLevel) => {
+  if (fillLevel >= 50) return '#10b981'; // Green
+  if (fillLevel >= 30) return '#eab308'; // Yellow
+  if (fillLevel >= 15) return '#f97316'; // Orange
+  return '#ef4444'; // Red
+};
+
 // --- BIN CARD COMPONENT ---
-const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon }) => {
+const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain }) => {
   return (
     <div className={`bin-card ${colorClass}`}>
       <div className="bin-left">
@@ -54,19 +73,48 @@ const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, statu
         <div className="bin-info">
           <div className="fill-level">
             <span>Fill Level</span>
-            <span className="fill-percent">{fillLevel}%</span>
+            <span 
+              className="fill-percent" 
+              style={{ color: getFillLevelColor(fillLevel) }}
+            >
+              {fillLevel}%
+            </span>
           </div>
           <div className="fill-bar">
-            <div className="fill-progress" style={{ height: "8px", width: `${fillLevel}%` }}></div>
+            <div 
+              className="fill-progress" 
+              style={{ 
+                height: "8px", 
+                width: `${fillLevel}%`,
+                backgroundColor: getFillLevelColor(fillLevel)
+              }}
+            ></div>
           </div>
-          <div className="last-collection">
-            <span>Last Collection</span>
-            <span>{lastCollection}</span>
+          
+          <div className="info-footer">
+            <div className="last-collection">
+              <span>Last Collection</span>
+              <span className="collection-time">{lastCollection}</span>
+            </div>
+            <button className="drain-btn" onClick={onDrain}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
+              </svg>
+              DRAIN
+            </button>
           </div>
         </div>
         <div className="bin-visual">
-          <div className="bin-fill" style={{ height: `${fillLevel}%` }}></div>
-          <div className="bin-icon"><Icon /></div>
+          <div 
+            className="bin-fill-section" 
+            style={{ 
+              height: `${fillLevel}%`,
+              backgroundColor: getFillLevelColor(fillLevel)
+            }}
+          >
+            <span className="bin-percentage-text">{fillLevel}%</span>
+          </div>
+          <div className="bin-empty-section"></div>
         </div>
       </div>
     </div>
@@ -75,20 +123,58 @@ const BinCard = ({ title, capacity, fillLevel, lastCollection, colorClass, statu
 
 // --- MAIN COMPONENT ---
 const BinMonitoring = () => {
+  const [notification, setNotification] = useState("");
+  const [showActionRequired, setShowActionRequired] = useState(true);
+
+  const handleDrain = (binName) => {
+    setNotification(`${binName} bin is draining...`);
+    setTimeout(() => {
+      setNotification(`${binName} bin has been successfully drained!`);
+      setTimeout(() => setNotification(""), 3000);
+    }, 2000);
+  };
+
+  const handleDrainAll = () => {
+    setNotification("Draining all bins...");
+    setShowActionRequired(false); // Hide action required alert
+    setTimeout(() => {
+      setNotification("All bins have been successfully drained!");
+      setTimeout(() => setNotification(""), 3000);
+    }, 2000);
+  };
+
   return (
     <div className="bin-monitoring">
       <div className="header">
-        <h1>Real-Time Bin Monitoring</h1>
-        <p>Monitor bin fill levels in real-time</p>
+        <div className="header-text">
+          <h1>Real-Time Bin Monitoring</h1>
+          <p>Monitor bin fill levels in real-time</p>
+        </div>
+        <button className="drain-all-btn" onClick={handleDrainAll}>
+          <DrainAllIcon />
+          DRAIN ALL
+        </button>
       </div>
 
-      <div className="alert-box">
-        <span>⚠️</span>
-        <div>
-          <div>Action Required</div>
-          <p>1 bin full, 3 bins almost full</p>
+      {notification && (
+        <div className="alert-box" style={{ background: '#dcfce7', borderColor: '#86efac' }}>
+          <span>✓</span>
+          <div>
+            <div style={{ color: '#166534' }}>Notification</div>
+            <p style={{ color: '#15803d' }}>{notification}</p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {showActionRequired && (
+        <div className="alert-box">
+          <span>⚠️</span>
+          <div>
+            <div>Action Required</div>
+            <p>1 bin full, 3 bins almost full</p>
+          </div>
+        </div>
+      )}
 
       <div className="bin-cards">
         <BinCard 
@@ -98,7 +184,8 @@ const BinMonitoring = () => {
           lastCollection="2 hours ago" 
           colorClass="green" 
           status="Almost Full" 
-          icon={LeafIcon} 
+          icon={LeafIcon}
+          onDrain={() => handleDrain("Biodegradable")}
         />
         <BinCard 
           title="Non Biodegradable" 
@@ -107,7 +194,8 @@ const BinMonitoring = () => {
           lastCollection="4 hours ago" 
           colorClass="red" 
           status="Full" 
-          icon={TrashIcon} 
+          icon={TrashIcon}
+          onDrain={() => handleDrain("Non Biodegradable")}
         />
         <BinCard 
           title="Recyclable" 
@@ -116,7 +204,8 @@ const BinMonitoring = () => {
           lastCollection="1 hour ago" 
           colorClass="blue" 
           status="Almost Full" 
-          icon={RecycleIcon} 
+          icon={RecycleIcon}
+          onDrain={() => handleDrain("Recyclable")}
         />
         <BinCard 
           title="Unsorted" 
@@ -125,7 +214,8 @@ const BinMonitoring = () => {
           lastCollection="1 hour ago" 
           colorClass="lime" 
           status="Almost Full" 
-          icon={GearIcon} 
+          icon={GearIcon}
+          onDrain={() => handleDrain("Unsorted")}
         />
       </div>
     </div>

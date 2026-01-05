@@ -24,7 +24,6 @@ const TrashIcon = () => (
   </svg>
 );
 
-// UI Icons
 const ChevronDown = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9"></polyline>
@@ -72,17 +71,16 @@ const MailIcon = () => (
 
 const About = () => {
   const [openSections, setOpenSections] = useState({
-    cardBio: false,
-    cardRecycle: false,
-    cardNonBio: false,
     specs: false,
     about: false,
-    team: false,
-    contact: false
+    team: false
   });
 
   const toggleSection = (section) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   return (
@@ -122,99 +120,84 @@ const About = () => {
         <h2 className="tagline">Smart waste for a Cleaner Tomorrow</h2>
       </div>
 
-      {/* WASTE TYPE CARDS */}
+      {/* WASTE TYPE CARDS - ALWAYS VISIBLE */}
       <div className="cards-grid">
         {/* BIODEGRADABLE CARD */}
-        <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardBio')}>
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
+          <div className="card-header">
             <div className="card-icon-wrapper green">
               <LeafIcon />
             </div>
             <div className="card-title-section">
               <h3>Biodegradable</h3>
             </div>
-            <div className={`chevron ${openSections.cardBio ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardBio && (
-            <div className="card-content">
-              <p className="card-description">
-                Organic waste that naturally decomposes, including food scraps, yard waste, and paper products.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Converts to nutrient-rich compost</span></li>
-                <li><CheckCircle /> <span>Decomposes in 2-6 months</span></li>
-                <li><CheckCircle /> <span>Reduces landfill methane emissions</span></li>
-                <li><CheckCircle /> <span>Perfect for garden fertilization</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Organic waste that naturally decomposes, including food scraps, yard waste, and paper products.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Converts to nutrient-rich compost</span></li>
+              <li><CheckCircle /> <span>Decomposes in 2-6 months</span></li>
+              <li><CheckCircle /> <span>Reduces landfill methane emissions</span></li>
+              <li><CheckCircle /> <span>Perfect for garden fertilization</span></li>
+            </ul>
+          </div>
         </div>
 
         {/* RECYCLABLE CARD */}
-        <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardRecycle')}>
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
+          <div className="card-header">
             <div className="card-icon-wrapper blue">
               <RecycleIcon />
             </div>
             <div className="card-title-section">
               <h3>Recyclable</h3>
             </div>
-            <div className={`chevron ${openSections.cardRecycle ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardRecycle && (
-            <div className="card-content">
-              <p className="card-description">
-                Materials that can be processed and reused, such as plastics, glass, metals, and cardboard.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Saves up to 95% energy vs. new materials</span></li>
-                <li><CheckCircle /> <span>Reduces raw material extraction</span></li>
-                <li><CheckCircle /> <span>Creates jobs in recycling industry</span></li>
-                <li><CheckCircle /> <span>Prevents ocean plastic pollution</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Materials that can be processed and reused, such as plastics, glass, metals, and cardboard.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Saves up to 95% energy vs. new materials</span></li>
+              <li><CheckCircle /> <span>Reduces raw material extraction</span></li>
+              <li><CheckCircle /> <span>Creates jobs in recycling industry</span></li>
+              <li><CheckCircle /> <span>Prevents ocean plastic pollution</span></li>
+            </ul>
+          </div>
         </div>
 
         {/* NON-BIODEGRADABLE CARD */}
-        <div className="waste-card">
-          <div className="card-header" onClick={() => toggleSection('cardNonBio')}>
+        <div className="waste-card" style={{ border: '2px solid #000000' }}>
+          <div className="card-header">
             <div className="card-icon-wrapper gray">
               <TrashIcon />
             </div>
             <div className="card-title-section">
               <h3>Non-Biodegradable</h3>
             </div>
-            <div className={`chevron ${openSections.cardNonBio ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.cardNonBio && (
-            <div className="card-content">
-              <p className="card-description">
-                Waste that doesn't naturally decompose and requires special disposal methods.
-              </p>
-              <ul className="feature-list">
-                <li><CheckCircle /> <span>Requires specialized disposal facilities</span></li>
-                <li><CheckCircle /> <span>Prevents soil and water contamination</span></li>
-                <li><CheckCircle /> <span>Proper sorting reduces toxic exposure</span></li>
-                <li><CheckCircle /> <span>Encourages waste reduction habits</span></li>
-              </ul>
-            </div>
-          )}
+          <div className="card-content">
+            <p className="card-description">
+              Waste that doesn't naturally decompose and requires special disposal methods.
+            </p>
+            <ul className="feature-list">
+              <li><CheckCircle /> <span>Requires specialized disposal facilities</span></li>
+              <li><CheckCircle /> <span>Prevents soil and water contamination</span></li>
+              <li><CheckCircle /> <span>Proper sorting reduces toxic exposure</span></li>
+              <li><CheckCircle /> <span>Encourages waste reduction habits</span></li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* ACCORDION SECTIONS */}
-      <div className="accordion-grid">
+      {/* INFO SECTIONS - ALWAYS VISIBLE */}
+      <div className="info-sections-grid">
         {/* SPECS */}
-        <div className="accordion-item">
-          <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
+          <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
+            <div className="info-icon-wrapper">
               <GearIcon />
             </div>
             <h3>Specs</h3>
@@ -223,49 +206,25 @@ const About = () => {
             </div>
           </div>
           {openSections.specs && (
-            <div className="accordion-content">
+            <div className="info-card-content">
               <div className="specs-grid">
-                <div className="spec-item">
-                  <strong>Dimensions:</strong>
-                  <span>120cm x 80cm x 150cm</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Weight:</strong>
-                  <span>85kg</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Power:</strong>
-                  <span>220V AC, 500W</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Capacity:</strong>
-                  <span>300L total (3 x 100L bins)</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Sorting Speed:</strong>
-                  <span>30 items/minute</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Accuracy:</strong>
-                  <span>98.2% classification rate</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Sensors:</strong>
-                  <span>AI camera, ultrasonic, weight</span>
-                </div>
-                <div className="spec-item">
-                  <strong>Connectivity:</strong>
-                  <span>Wi-Fi, Bluetooth, IoT enabled</span>
-                </div>
+                <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
+                <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
+                <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
+                <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
+                <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
+                <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
+                <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
+                <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
               </div>
             </div>
           )}
         </div>
 
         {/* ABOUT PROJECT */}
-        <div className="accordion-item">
-          <div className="accordion-header yellow" onClick={() => toggleSection('about')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
+          <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
+            <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
@@ -274,7 +233,7 @@ const About = () => {
             </div>
           </div>
           {openSections.about && (
-            <div className="accordion-content">
+            <div className="info-card-content">
               <p>
                 The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
                 waste management through artificial intelligence and automation. Our system uses advanced 
@@ -292,9 +251,9 @@ const About = () => {
         </div>
 
         {/* TEAM MEMBERS */}
-        <div className="accordion-item">
-          <div className="accordion-header cyan" onClick={() => toggleSection('team')}>
-            <div className="accordion-icon-wrapper">
+        <div className="info-card" style={{ border: '2px solid #000000' }}>
+          <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
+            <div className="info-icon-wrapper">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
@@ -303,7 +262,7 @@ const About = () => {
             </div>
           </div>
           {openSections.team && (
-            <div className="accordion-content">
+            <div className="info-card-content">
               <div className="team-list">
                 <div className="team-member">
                   <div className="member-avatar">KR</div>
@@ -337,7 +296,7 @@ const About = () => {
                   <div className="member-avatar">JS</div>
                   <div className="member-info">
                     <strong>John Ivan Santos</strong>
-                    <span>Frontend</span>
+                    <span>Frontend</span>              
                   </div>
                 </div>
               </div>
@@ -345,42 +304,51 @@ const About = () => {
           )}
         </div>
 
-        {/* CONTACT US */}
-        <div className="accordion-item">
-          <div className="accordion-header pink" onClick={() => toggleSection('contact')}>
-            <div className="accordion-icon-wrapper">
-              <MailIcon />
-            </div>
-            <h3>Contact Us</h3>
-            <div className={`chevron ${openSections.contact ? 'open' : ''}`}>
-              <ChevronDown />
+      </div> {/* end of info-sections-grid */}
+
+      {/* FOOTER */}
+      <footer className="footer-container">
+        <div className="footer-content">
+          <div className="footer-item">
+            <MailIcon />
+            <div className="footer-text">
+              <strong>Email</strong>
+              <a href="mailto:info@sortingsystem.com">info@sortingsystem.com</a>
             </div>
           </div>
-          {openSections.contact && (
-            <div className="accordion-content">
-              <div className="contact-info">
-                <div className="contact-item">
-                  <strong>Email:</strong>
-                  <a href="mailto:info@sortingsystem.com">info@sortingsystem.com</a>
-                </div>
-                <div className="contact-item">
-                  <strong>Phone:</strong>
-                  <span>+1 (555) 123-4567</span>
-                </div>
-                <div className="contact-item">
-                  <strong>Address:</strong>
-                  <span>Bahay ni Khyl Arcilla</span>
-                </div>
-                <div className="contact-item">
-                  <strong>Business Hours:</strong>
-                  <span>Kahit Kelan pwede Sa kanila</span>
-                </div>
-              </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <div className="footer-text">
+              <strong>Phone</strong>
+              <span>+1 (555) 123-4567</span>
             </div>
-          )}
+          </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <div className="footer-text">
+              <strong>Address</strong>
+              <span>Brgy. 176, Bagong Silang, Caloocan City, 1428</span>
+            </div>
+          </div>
+          <div className="footer-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <div className="footer-text">
+              <strong>Business Hours</strong>
+              <span>Mon–Fri: 9AM–6PM<br />Sat: 9AM–1PM<br />Sun: Closed</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </footer>
+
+    </div> /* end of about-container */
   );
 };
 

@@ -5,5 +5,5 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-// install the library and paste this to your terminal
+// to install the library, paste this to your terminal
 // "npm install @supabase\supabase-js"

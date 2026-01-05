@@ -2,7 +2,6 @@
  * Waste Categories Component
  * Displays waste sorting statistics by category with time-based filtering
  * Shows: Biodegradable, Non-Biodegradable, Recycle, and Unsorted categories
- * Features: Daily, Weekly, Monthly time filters and progress bars
  */
 
 import React, { useState, useEffect } from 'react';
@@ -24,7 +23,6 @@ const WasteCategories = () => {
 
   /**
    * Fetches waste items from database and calculates category counts
-   * Applies time filter based on selected period
    */
   const fetchWasteData = async () => {
     try {
@@ -34,17 +32,14 @@ const WasteCategories = () => {
 
       // Apply time filter based on selected period
       if (timeFilter === 'daily') {
-        // Filter for today's data
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         query = query.gte('created_at', today.toISOString());
       } else if (timeFilter === 'weekly') {
-        // Filter for last 7 days
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
         query = query.gte('created_at', weekAgo.toISOString());
       } else if (timeFilter === 'monthly') {
-        // Filter for last 30 days
         const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         query = query.gte('created_at', monthAgo.toISOString());
@@ -54,7 +49,6 @@ const WasteCategories = () => {
 
       if (error) throw error;
 
-      // Calculate category counts from fetched data
       const categoryCounts = {
         Biodegradable: 0,
         'Non-Biodegradable': 0,
@@ -62,24 +56,20 @@ const WasteCategories = () => {
         Unsorted: 0
       };
 
-      // Count items by category
       if (data) {
         data.forEach(item => {
           const category = item.category || 'Unsorted';
           if (categoryCounts.hasOwnProperty(category)) {
             categoryCounts[category]++;
           } else {
-            // Items with unknown categories go to Unsorted
             categoryCounts.Unsorted++;
           }
         });
       }
 
-      // Calculate total items and update state
       const total = data ? data.length : 0;
       setTotalItems(total);
 
-      // Format data for display with colors and icons
       const formattedData = [
         {
           name: 'Biodegradable',
@@ -110,7 +100,6 @@ const WasteCategories = () => {
       setWasteData(formattedData);
     } catch (error) {
       console.error('Error fetching waste data:', error);
-      // Set default data if error occurs
       setWasteData([
         { name: 'Biodegradable', count: 10, color: '#10b981', icon: '🌿' },
         { name: 'Non-Biodegradable', count: 15, color: '#ef4444', icon: '📦' },
@@ -124,7 +113,6 @@ const WasteCategories = () => {
   /**
    * Gets the maximum count from all categories
    * Used to calculate progress bar percentages
-   * @returns {number} Maximum count value
    */
   const getMaxCount = () => {
     if (wasteData.length === 0) return 1;
@@ -137,7 +125,7 @@ const WasteCategories = () => {
       <div className="waste-categories-header">
         <div>
           <h1>Waste Categories</h1>
-          <p>{totalItems} items sorted</p>
+          <p className="total-items-text">{totalItems} items sorted</p>
         </div>
       </div>
 
@@ -163,13 +151,11 @@ const WasteCategories = () => {
         </button>
       </div>
 
-      {/* Category Cards Grid */}
+      {/* Category Cards Grid - Now optimized for 2 columns */}
       <div className="categories-grid">
         {wasteData.map((category, index) => {
-          // Calculate progress bar percentage relative to max count
           const maxCount = getMaxCount();
           const percentage = maxCount > 0 ? (category.count / maxCount) * 100 : 0;
-          // Adjust color for unsorted category (darker gray)
           const progressColor = category.color === '#6b7280' ? '#4b5563' : category.color;
 
           return (
