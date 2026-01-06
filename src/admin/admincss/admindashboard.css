@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+/* =========================== */
+/* CSS STYLES */
+/* =========================== */
+
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 /* Layout and Containers */
 .admin-container {
   display: flex;
@@ -52,13 +59,20 @@
   font-size: 1.1rem;
 }
 
+<<<<<<< HEAD
 /* Sidebar Styles */
 .sidebar {
   width: 280px;
+=======
+/* Sidebar Styles - Fixed on left */
+.sidebar {
+  width: 320px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   background-color: #064e3b;
   color: white;
   display: flex;
   flex-direction: column;
+<<<<<<< HEAD
   padding: 20px;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, width 0.3s ease;
@@ -76,6 +90,23 @@
     position: fixed;
     left: 0;
     top: 0;
+=======
+  padding: 25px;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  z-index: 200;
+  height: 100vh;
+  position: fixed; /* Fixed position */
+  left: 0;
+  top: 0;
+  flex-shrink: 0;
+}
+
+/* Collapsed Sidebar State */
+@media (max-width: 1024px) {
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
   
   .sidebar:not(.collapsed) {
@@ -83,6 +114,7 @@
   }
 }
 
+<<<<<<< HEAD
 /* Desktop - Sidebar is always visible unless manually collapsed */
 @media (min-width: 1025px) {
   .sidebar.collapsed {
@@ -94,6 +126,16 @@
   
   .sidebar:not(.collapsed) {
     width: 280px;
+=======
+/* Desktop - Sidebar is always visible */
+@media (min-width: 1025px) {
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
 }
 
@@ -113,6 +155,7 @@
   margin-bottom: 40px;
 }
 
+<<<<<<< HEAD
 /* Power Indicator */
 .power-indicator {
   display: flex;
@@ -138,33 +181,53 @@
   background-color: #10b981;
 }
 
+=======
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 /* UPDATED: Vertical Logo Section */
 .sidebar-logo-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+<<<<<<< HEAD
   gap: 15px;
 }
 
 .sidebar-main-logo {
   width: 90px;
+=======
+  gap: 20px;
+}
+
+.sidebar-main-logo {
+  width: 110px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
 }
 
 .logo-text-stacked h3 {
+<<<<<<< HEAD
   font-size: 1.5rem;
+=======
+  font-size: 1.6rem;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   font-weight: 800;
   margin: 0;
   letter-spacing: 0.5px;
 }
 
 .logo-text-stacked p {
+<<<<<<< HEAD
   font-size: 0.85rem;
   color: #6ee7b7;
   margin: 4px 0 0 0;
+=======
+  font-size: 0.95rem;
+  color: #6ee7b7;
+  margin: 6px 0 0 0;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   font-weight: 500;
 }
 
@@ -173,20 +236,37 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+<<<<<<< HEAD
   gap: 8px;
+=======
+  gap: 10px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .nav-item {
   display: flex;
   align-items: center;
+<<<<<<< HEAD
   padding: 12px 15px;
   border-radius: 10px;
+=======
+  padding: 15px 20px;
+  border-radius: 12px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
   color: #d1fae5;
   white-space: nowrap;
   overflow: hidden;
+<<<<<<< HEAD
+=======
+  font-size: 1.05rem;
+}
+
+.nav-item * {
+  color: inherit; /* Ensure all child elements inherit color */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .nav-item:hover {
@@ -201,10 +281,43 @@
 }
 
 .nav-icon {
+<<<<<<< HEAD
   margin-right: 12px;
   font-size: 1.1rem;
   min-width: 24px;
   text-align: center;
+=======
+<<<<<<< HEAD
+  margin-right: 12px;
+  font-size: 1.1rem;
+  min-width: 20px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit; /* Ensure icon inherits text color */
+  visibility: visible;
+  opacity: 1;
+}
+
+.nav-icon svg {
+  width: 100%;
+  height: 100%;
+  color: inherit; /* Ensure SVG inherits color */
+  stroke: currentColor !important; /* Explicitly set stroke to currentColor */
+  fill: none !important; /* Ensure no fill */
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block;
+=======
+  margin-right: 15px;
+  font-size: 1.2rem;
+  min-width: 28px;
+  text-align: center;
+>>>>>>> e77c790c2b4b7f441024fd6e7957f839a9e1f795
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Sidebar Footer */
@@ -218,15 +331,26 @@
 .sign-out-btn {
   display: flex;
   align-items: center;
+<<<<<<< HEAD
   gap: 10px;
+=======
+  gap: 12px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   background: none;
   border: none;
   color: #ecfdf5;
   cursor: pointer;
   font-weight: 600;
+<<<<<<< HEAD
   padding: 10px;
   transition: opacity 0.2s;
   white-space: nowrap;
+=======
+  padding: 12px;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  font-size: 1.05rem;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .sign-out-btn:hover {
@@ -235,29 +359,47 @@
 
 .today-status-card {
   background-color: rgba(255, 255, 255, 0.05);
+<<<<<<< HEAD
   padding: 15px;
+=======
+  padding: 18px;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .today-status-card p {
+<<<<<<< HEAD
   font-size: 0.75rem;
+=======
+  font-size: 0.85rem;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   color: #6ee7b7;
   margin: 0;
 }
 
 .today-status-card h2 {
+<<<<<<< HEAD
   font-size: 1.6rem;
   margin: 5px 0;
+=======
+  font-size: 1.8rem;
+  margin: 8px 0;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   color: white;
 }
 
 .today-status-card span {
+<<<<<<< HEAD
   font-size: 0.7rem;
+=======
+  font-size: 0.8rem;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   color: #a7f3d0;
 }
 
 /* =========================== */
+<<<<<<< HEAD
 /* MAIN CONTENT - CENTERED & SPACIOUS */
 /* =========================== */
 
@@ -280,11 +422,72 @@
   max-width: 1200px; /* Limit max width for large screens */
   display: flex;
   flex-direction: column;
+=======
+/* MAIN CONTENT - WITH SMALL MARGIN FROM SIDEBAR */
+/* =========================== */
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+<<<<<<< HEAD
+  padding: 8px; /* Reduced from 16px to maximize space */
+=======
+>>>>>>> e77c790c2b4b7f441024fd6e7957f839a9e1f795
+  overflow-y: auto;
+  overflow-x: hidden;
+<<<<<<< HEAD
+  display: flex;
+  justify-content: flex-start; /* Keep content at the top-left */
+  align-items: stretch; /* Stretch children to fill width */
+  align-content: flex-start; /* Prevent centering when zoomed out */
+  width: 100%;
+  min-width: 0; /* Prevent flex overflow */
+  box-sizing: border-box;
+=======
+  background-color: #f8fafc;
+  height: 100vh;
+  position: relative;
+  padding: 0;
+  margin: 0;
+>>>>>>> e77c790c2b4b7f441024fd6e7957f839a9e1f795
+}
+
+/* On Desktop - Add small margin from sidebar */
+@media (min-width: 1025px) {
+  .main-content {
+<<<<<<< HEAD
+    padding: 6px; /* Reduced from 12px */
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 4px; /* Reduced from 8px */
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 4px; /* Reduced from 8px */
+  }
+}
+
+/* Content container - Full width */
+.content-center-wrapper {
+  width: 100%;
+  max-width: none; /* Changed from 100% to none to allow unlimited expansion */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  flex: 1; /* Allow wrapper to expand */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Ensure child components fill the space properly */
 .main-content > * {
   width: 100%;
+<<<<<<< HEAD
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -294,6 +497,58 @@
 .main-content > div {
   width: 100%;
   height: 100%;
+=======
+  max-width: none; /* Changed from 100% to none to allow expansion */
+  flex: 1;
+=======
+    margin-left: 340px; /* Sidebar width (320px) + 20px margin */
+    width: calc(100% - 340px);
+    padding: 30px; /* Add padding to main content itself */
+  }
+  
+  /* When sidebar is collapsed */
+  .sidebar.collapsed + .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 30px;
+  }
+}
+
+/* Child components inside main content */
+.main-content > * {
+  width: 100%;
+  height: 100%;
+>>>>>>> e77c790c2b4b7f441024fd6e7957f839a9e1f795
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent overflow */
+}
+
+/* For mobile */
+@media (max-width: 1024px) {
+  .mobile-header {
+    display: flex;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay {
+    display: block;
+  }
+  
+  .main-content {
+    padding-top: 60px; /* Space for mobile header */
+    padding: 20px; /* Mobile padding */
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Modal Styles */
@@ -307,7 +562,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   z-index: 1000;
+=======
+  z-index: 2000;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   backdrop-filter: blur(4px);
 }
 
@@ -342,6 +601,7 @@
 .btn-cancel { background: #f1f5f9; color: #475569; }
 .btn-confirm { background: #c62828; color: white; }
 
+<<<<<<< HEAD
 /* Responsive Styles */
 @media (max-width: 1024px) {
   .mobile-header {
@@ -383,11 +643,55 @@
   }
   
   /* When sidebar is collapsed on desktop */
+=======
+/* Small mobile devices (480px and below) */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 280px;
+  }
+  
+  .main-content {
+    padding-top: 60px;
+    padding: 15px;
+  }
+  
+  .sidebar-logo-container {
+    gap: 15px;
+  }
+  
+  .sidebar-main-logo {
+    width: 90px;
+  }
+  
+  .logo-text-stacked h3 {
+    font-size: 1.4rem;
+  }
+  
+  .nav-item {
+    padding: 12px 15px;
+    font-size: 1rem;
+  }
+}
+
+/* Large Desktop (1440px and above) */
+@media (min-width: 1440px) {
+  .sidebar {
+    width: 340px;
+  }
+  
+  .main-content {
+    margin-left: 360px; /* 340px sidebar + 20px margin */
+    width: calc(100% - 360px);
+    padding: 40px; /* More padding on large screens */
+  }
+  
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   .sidebar.collapsed + .main-content {
     margin-left: 0;
     width: 100%;
     padding: 40px;
   }
+<<<<<<< HEAD
 }
 
 /* Small mobile devices */
@@ -400,5 +704,14 @@
   .main-content {
     padding: 15px;
     padding-top: 70px;
+=======
+  
+  .sidebar-main-logo {
+    width: 120px;
+  }
+  
+  .logo-text-stacked h3 {
+    font-size: 1.7rem;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
 }

@@ -49,6 +49,55 @@ const CloseIcon = () => (
   </svg>
 );
 
+<<<<<<< HEAD
+=======
+// Sidebar Navigation Icons
+const DashboardIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7"/>
+    <rect x="14" y="3" width="7" height="7"/>
+    <rect x="14" y="14" width="7" height="7"/>
+    <rect x="3" y="14" width="7" height="7"/>
+  </svg>
+);
+
+const WasteCategoriesIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18M3 12h18M3 18h18"/>
+  </svg>
+);
+
+const DataAnalyticsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="20" x2="18" y2="10"/>
+    <line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="14"/>
+  </svg>
+);
+
+const AccountsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
+const BinMonitoringIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+  </svg>
+);
+
+const AboutIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="16" x2="12" y2="12"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+);
+
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 /* ================= MAIN ================= */
 
 const AdminDashboard = ({ onLogout }) => {
@@ -62,11 +111,18 @@ const AdminDashboard = ({ onLogout }) => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth <= 1024;
       setIsMobile(mobile);
+<<<<<<< HEAD
       // Only auto-collapse on mobile, desktop should show sidebar by default
       if (mobile) {
         setIsSidebarCollapsed(true);
       } else {
         setIsSidebarCollapsed(false); // Desktop: show sidebar
+=======
+      if (mobile) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false);
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
       }
     };
     
@@ -129,6 +185,7 @@ const AdminDashboard = ({ onLogout }) => {
       {/* Sidebar with conditional class */}
       <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
+<<<<<<< HEAD
           <div className="power-indicator">
             <span>ADMIN PANEL</span>
             <div className="battery-icon">
@@ -137,6 +194,8 @@ const AdminDashboard = ({ onLogout }) => {
             <span>ACTIVE</span>
           </div>
 
+=======
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
             <div className="logo-text-stacked">
@@ -151,7 +210,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => handleNavClick('dashboard')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><DashboardIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Dashboard
           </div>
 
@@ -159,7 +222,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => handleNavClick('users')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><WasteCategoriesIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Waste Categories
           </div>
 
@@ -167,7 +234,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'data' ? 'active' : ''}`}
             onClick={() => handleNavClick('data')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><DataAnalyticsIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Data Analytics
           </div>
 
@@ -175,7 +246,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'account' ? 'active' : ''}`}
             onClick={() => handleNavClick('account')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><AccountsIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Accounts
           </div>
 
@@ -183,7 +258,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`}
             onClick={() => handleNavClick('bins')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><BinMonitoringIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Bin Monitoring
           </div>
 
@@ -191,7 +270,11 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => handleNavClick('reports')}
           >
+<<<<<<< HEAD
             <span className="nav-icon"></span>
+=======
+            <div className="nav-icon"><AboutIcon /></div>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             About
           </div>
         </nav>

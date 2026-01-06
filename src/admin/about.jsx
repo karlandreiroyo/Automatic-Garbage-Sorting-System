@@ -88,6 +88,7 @@ const ClockIcon = () => (
 );
 
 const About = () => {
+<<<<<<< HEAD
   const [openSections, setOpenSections] = useState({
     specs: false,
     about: false,
@@ -96,6 +97,32 @@ const About = () => {
 
   const toggleSection = (section) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+=======
+  // State for accordion sections
+  const [isSpecsOpen, setIsSpecsOpen] = useState(false);
+  const [isAboutProjectOpen, setIsAboutProjectOpen] = useState(false);
+  const [isTeamMembersOpen, setIsTeamMembersOpen] = useState(false);
+
+  /**
+   * Toggle Specs section
+   */
+  const toggleSpecs = () => {
+    setIsSpecsOpen(prev => !prev);
+  };
+
+  /**
+   * Toggle About Project section
+   */
+  const toggleAboutProject = () => {
+    setIsAboutProjectOpen(prev => !prev);
+  };
+
+  /**
+   * Toggle Team Members section
+   */
+  const toggleTeamMembers = () => {
+    setIsTeamMembersOpen(prev => !prev);
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   };
 
   const biodegradableFeatures = [
@@ -215,17 +242,42 @@ const About = () => {
 
       {/* Accordion Sections */}
       <div className="accordion-grid">
+<<<<<<< HEAD
         <div className="accordion-item">
           <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
+=======
+        {/* Specs Accordion */}
+        <div className="accordion-item">
+          <div 
+            className="accordion-header purple" 
+            onClick={toggleSpecs}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSpecs();
+              }
+            }}
+          >
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <div className="accordion-icon">
               <GearIcon />
             </div>
             <h3>Specs</h3>
+<<<<<<< HEAD
             <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
           {openSections.specs && (
+=======
+            <div className={`chevron ${isSpecsOpen ? 'open' : ''}`}>
+              <ChevronDown />
+            </div>
+          </div>
+          {isSpecsOpen ? (
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <div className="accordion-content">
               <div className="specs-list">
                 <h4>Main Features:</h4>
@@ -236,15 +288,36 @@ const About = () => {
                 </ul>
               </div>
             </div>
+<<<<<<< HEAD
           )}
         </div>
 
         <div className="accordion-item">
           <div className="accordion-header orange" onClick={() => toggleSection('about')}>
+=======
+          ) : null}
+        </div>
+
+        {/* About Project Accordion */}
+        <div className="accordion-item">
+          <div 
+            className="accordion-header orange" 
+            onClick={toggleAboutProject}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleAboutProject();
+              }
+            }}
+          >
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <div className="accordion-icon">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
+<<<<<<< HEAD
             <div className={`chevron ${openSections.about ? 'open' : ''}`}>
               <ChevronDown />
             </div>
@@ -260,15 +333,55 @@ const About = () => {
 
         <div className="accordion-item">
           <div className="accordion-header cyan" onClick={() => toggleSection('team')}>
+=======
+            <div className={`chevron ${isAboutProjectOpen ? 'open' : ''}`}>
+              <ChevronDown />
+            </div>
+          </div>
+          {isAboutProjectOpen ? (
+            <div className="accordion-content">
+              <p>
+                This automatic garbage sorting system is designed to revolutionize waste management through intelligent automation. The system efficiently separates waste into different categories, promoting environmental sustainability and proper waste disposal practices.
+              </p>
+              <p>
+                Our goal is to create a smart solution that reduces manual labor, improves sorting accuracy, and helps communities adopt better waste management habits for a cleaner future.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Team Members Accordion */}
+        <div className="accordion-item">
+          <div 
+            className="accordion-header cyan" 
+            onClick={toggleTeamMembers}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTeamMembers();
+              }
+            }}
+          >
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <div className="accordion-icon">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
+<<<<<<< HEAD
             <div className={`chevron ${openSections.team ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
           {openSections.team && (
+=======
+            <div className={`chevron ${isTeamMembersOpen ? 'open' : ''}`}>
+              <ChevronDown />
+            </div>
+          </div>
+          {isTeamMembersOpen ? (
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <div className="accordion-content">
               <ul className="team-list">
                 {teamMembers.map((member, index) => (
@@ -276,6 +389,7 @@ const About = () => {
                 ))}
               </ul>
             </div>
+<<<<<<< HEAD
           )}
         </div>
       </div>
@@ -287,21 +401,45 @@ const About = () => {
             <MailIcon />
           </div>
           <div className="contact-info">
+=======
+          ) : null}
+        </div>
+      </div>
+
+      {/* Contact Footer Section */}
+      <div className="contact-footer">
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
+            <MailIcon />
+          </div>
+          <div className="footer-content">
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <h4>EMAIL</h4>
             <p>info@sortingsystem.com</p>
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="contact-item">
           <div className="contact-icon teal">
             <PhoneIcon />
           </div>
           <div className="contact-info">
+=======
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
+            <PhoneIcon />
+          </div>
+          <div className="footer-content">
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             <h4>PHONE</h4>
             <p>+1 (555) 123-4567</p>
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="contact-item">
           <div className="contact-icon teal">
             <MapPinIcon />
@@ -319,6 +457,29 @@ const About = () => {
           <div className="contact-info">
             <h4>BUSINESS HOURS</h4>
             <p>Mon–Fri: 9AM–6PM<br />Sat: 9AM–1PM<br />Sun: Closed</p>
+=======
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
+            <MapPinIcon />
+          </div>
+          <div className="footer-content">
+            <h4>ADDRESS</h4>
+            <p>Brgy. 176, Bagong Silang,<br />Caloocan City, 1428</p>
+          </div>
+        </div>
+
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
+            <ClockIcon />
+          </div>
+          <div className="footer-content">
+            <h4>BUSINESS HOURS</h4>
+            <p>Mon-Fri: 9AM-6PM<br />Sat: 9AM-1PM<br />Sun: Closed</p>
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
           </div>
         </div>
       </div>
@@ -326,4 +487,8 @@ const About = () => {
   );
 };
 
+<<<<<<< HEAD
 export default About;
+=======
+export default About;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7

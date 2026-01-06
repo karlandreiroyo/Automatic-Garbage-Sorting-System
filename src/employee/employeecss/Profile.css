@@ -1,5 +1,9 @@
 .profile-container { 
+<<<<<<< HEAD
   max-width: 1400px;
+=======
+  max-width: 1400px; /* Nilakihan para sakop ang screen */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   margin: 0 auto; 
   padding: 30px 50px; 
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -15,7 +19,11 @@
   align-items: flex-start;
 }
 
+<<<<<<< HEAD
 /* LEFT SIDE */
+=======
+/* LEFT SIDE - Naging parang Card na ito */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 .profile-left { 
   width: 350px; 
   background: white;
@@ -51,7 +59,11 @@
 .meta-info { width: 100%; border-top: 1px solid #f3f4f6; padding-top: 25px; display: flex; flex-direction: column; gap: 15px; }
 .meta-item { display: flex; align-items: center; gap: 12px; color: #4b5563; font-size: 0.9rem; }
 
+<<<<<<< HEAD
 /* RIGHT SIDE */
+=======
+/* RIGHT SIDE - Full space utilization */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 .profile-right { flex: 1; display: flex; flex-direction: column; gap: 25px; }
 
 .info-section-card {
@@ -64,11 +76,19 @@
 
 .personal-info-grid {
   display: grid;
+<<<<<<< HEAD
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-top: 20px;
 }
 .full-width { grid-column: span 2; }
+=======
+  grid-template-columns: 1fr 1fr; /* Hati sa dalawa ang space */
+  gap: 20px;
+  margin-top: 20px;
+}
+.full-width { grid-column: span 2; } /* Email occupies full row */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .section-header h3, .info-section-card h3 { font-size: 1.1rem; font-weight: 700; color: #111; margin-bottom: 15px; }
@@ -88,6 +108,10 @@
 }
 .form-input-box:enabled { background: #fff; border-color: #008751; box-shadow: 0 0 0 4px rgba(0,135,81,0.05); color: #111; }
 
+<<<<<<< HEAD
+=======
+/* Lower sections side-by-side */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 .bottom-sections-flex { display: flex; gap: 25px; }
 .flex-1 { flex: 1; }
 
@@ -115,6 +139,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 .security-action:hover { border-color: #008751; color: #008751; background: #ecfdf5; }
 .security-action span { font-weight: 600; font-size: 0.95rem; }
 
+<<<<<<< HEAD
 /* --- MODAL STYLES --- */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -181,6 +206,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+=======
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 /* Responsive */
 @media (max-width: 1024px) {
   .profile-content { flex-direction: column; align-items: stretch; }

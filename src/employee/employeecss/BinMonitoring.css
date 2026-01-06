@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* =========================================
    1. MAIN CONTAINER (OPTIMIZED FOR NO GAPS)
    ========================================= */
@@ -12,10 +13,156 @@
   color: #1f2937;
   animation: fadeIn 0.4s ease-out;
   min-height: 80vh; 
+=======
+/* =========================
+   BASE / DESKTOP VIEW
+   ========================= */
+.bin-monitoring {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 32px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f9fafb;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-text h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.header-text p {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+.drain-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background-color: #ef4444;
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.drain-all-btn:hover {
+  background-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* ALERT */
+.alert-box {
+  display: flex;
+  gap: 12px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 24px 0;
+}
+
+.alert-box div > div {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.alert-box p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #78350f;
+}
+
+/* BIN CARDS */
+.bin-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* CARD */
+.bin-card {
+  display: flex;
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #000000;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  height: 180px;
+  width: 100%;
+}
+
+/* LEFT */
+.bin-left {
+  width: 280px;
+  padding: 20px 24px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.bin-left-top {
+  display: none;
+}
+
+.bin-left-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.bin-left-bottom h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.bin-left-bottom p {
+  font-size: 1rem;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+/* RIGHT */
+.bin-right {
+  flex: 1;
+  padding: 20px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 28px;
+  background: #ffffff;
+}
+
+.bin-info {
+  flex: 1;
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   display: flex;
   flex-direction: column;
 }
 
+<<<<<<< HEAD
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -167,3 +314,175 @@
 .modal-btn-group button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; }
 .btn-cancel { background: #f3f4f6; color: #374151; }
 .btn-confirm { background: #ef4444; color: white; }
+=======
+.fill-level {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.fill-percent {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.fill-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.fill-progress {
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* --- UPDATED: FOOTER AREA (DRAIN SIDE-BY-SIDE) --- */
+.info-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; /* Pantay sa baba */
+  margin-top: auto;
+}
+
+.last-collection {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.collection-time {
+  font-weight: 600;
+  color: #374151;
+  margin-top: 2px;
+}
+
+.drain-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  background-color: #6b7280;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.drain-btn:hover {
+  background-color: #ef4444;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* BIN VISUAL */
+.bin-visual {
+  width: 90px;
+  height: 110px;
+  border-radius: 12px 12px 0 0; /* Rounded top corners only */
+  border: 2px solid #000000;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #9ca3af; /* Gray background for empty section */
+}
+
+.bin-fill-section {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 2px solid #ffffff; /* White separator line */
+  z-index: 1;
+}
+
+.bin-empty-section {
+  width: 100%;
+  height: 100%;
+  background: #9ca3af; /* Gray for empty portion */
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.bin-percentage-text {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  position: relative;
+}
+
+.bin-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+.bin-icon {
+  position: relative;
+  z-index: 1;
+  opacity: 0.3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* COLORS */
+/* Left side background colors remain based on category */
+.green .bin-left { background: #10b981; }
+.green .bin-visual { border-color: #000000; }
+
+.red .bin-left { background: #ef4444; }
+.red .bin-visual { border-color: #000000; }
+
+.blue .bin-left { background: #3b82f6; }
+.blue .bin-visual { border-color: #000000; }
+
+.lime .bin-left { background: #84cc16; }
+.lime .bin-visual { border-color: #000000; }
+
+/* Fill progress and bin-fill colors are now dynamically set via inline styles */
+/* based on fill level: 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green */
+
+
+/* =========================
+   📱 MOBILE VIEW (RESPONSIVE)
+   ========================= */
+@media (max-width: 480px) {
+  .bin-monitoring { padding: 16px; }
+  .header h1 { font-size: 1.4rem; }
+  .bin-card { flex-direction: column; }
+  .bin-left { width: 100%; padding: 16px; }
+  .bin-right { padding: 16px; gap: 12px; }
+  .bin-visual { width: 65px; height: 85px; }
+  
+  /* Sa mobile, ibabalik natin sa stack layout para hindi masikip */
+  .info-footer {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .drain-btn {
+    flex: 1; /* Para mahaba ang button sa mobile */
+    justify-content: center;
+  }
+}
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7

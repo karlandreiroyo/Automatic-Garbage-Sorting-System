@@ -14,16 +14,29 @@
   justify-content: center;
   align-items: center;
   text-align: center;
+<<<<<<< HEAD
   padding: 2rem;
+=======
+  padding: 1rem; /* Reduced from 2rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .left-panel h1 {
   font-size: 2rem;
   line-height: 2.5rem;
+<<<<<<< HEAD
 }
 
 .illustration-container {
   margin-top: 2rem;
+=======
+  margin: 0; /* Remove default margins */
+  margin-bottom: 0.5rem; /* Add small bottom margin */
+}
+
+.illustration-container {
+  margin-top: 1rem; /* Reduced from 2rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .hero-image {
@@ -41,28 +54,48 @@
 }
 
 .form-container {
+<<<<<<< HEAD
   width: 80%;
   max-width: 400px;
   background-color: white;
   padding: 2rem;
+=======
+  width: 90%; /* Increased from 80% */
+  max-width: 400px;
+  background-color: white;
+  padding: 1.5rem; /* Reduced from 2rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 12px;
   box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
 }
 
 .form-container h2 {
   text-align: center;
+<<<<<<< HEAD
   margin-bottom: 1.5rem;
+=======
+  margin-bottom: 1rem; /* Reduced from 1.5rem */
+  margin-top: 0; /* Remove top margin */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Input groups */
 .input-group {
+<<<<<<< HEAD
   margin-bottom: 1rem;
+=======
+  margin-bottom: 0.75rem; /* Reduced from 1rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   display: flex;
   flex-direction: column;
 }
 
 .input-group label {
+<<<<<<< HEAD
   margin-bottom: 0.5rem;
+=======
+  margin-bottom: 0.35rem; /* Reduced from 0.5rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   font-weight: bold;
 }
 
@@ -101,7 +134,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+<<<<<<< HEAD
   margin-bottom: 1rem;
+=======
+  margin-bottom: 0.75rem; /* Reduced from 1rem */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .options-row a {
@@ -124,7 +161,12 @@
   color: white;
   font-weight: bold;
   cursor: pointer;
+<<<<<<< HEAD
   margin-bottom: 1rem;
+=======
+  margin-bottom: 0.5rem; /* Reduced from 1rem */
+  margin-top: 0.5rem; /* Add small top margin */
+>>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Role selection cards */
