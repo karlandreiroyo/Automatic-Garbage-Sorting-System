@@ -88,7 +88,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
     setLoading(true);
 
     try {
-      // Step 1: Sign in with Supabase Auth
+      // 1. Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
@@ -100,10 +100,10 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // Step 2: Get user details from the users table
+      // 2. Get user details AND status from the users table
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('role, email, first_name, last_name')
+        .select('role, email, first_name, last_name, status') // Added 'status'
         .eq('auth_id', authData.user.id)
         .single();
 
@@ -113,7 +113,16 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // Step 3: Convert database role to React role
+      // 3. Check if account is INACTIVE
+      if (userData.status === 'INACTIVE') {
+        // Sign out immediately so they don't keep an active auth session
+        await supabase.auth.signOut(); 
+        alert('Your account is inactive. Please contact the administrator to regain access.');
+        setLoading(false);
+        return;
+      }
+
+      // 4. Convert database role to React role
       let reactRole;
       if (userData.role === 'ADMIN') {
         reactRole = 'admin';
@@ -127,7 +136,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // Step 4: Store user info in localStorage
+      // 5. Store user info and redirect
       localStorage.setItem('userRole', reactRole);
       localStorage.setItem('userEmail', userData.email);
       localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
@@ -135,14 +144,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
       setIsLoggedIn(true);
       setUserRole(reactRole);
 
-      // Step 5: Role-based redirect
-      if (reactRole === 'admin') {
-        navigate('/admin');
-      } else if (reactRole === 'supervisor') {
-        navigate('/supervisor');
-      } else if (reactRole === 'employee') {
-        navigate('/'); 
-      }
+      if (reactRole === 'admin') navigate('/admin');
+      else if (reactRole === 'supervisor') navigate('/supervisor');
+      else if (reactRole === 'employee') navigate('/');
 
     } catch (error) {
       console.error('Login error:', error);
