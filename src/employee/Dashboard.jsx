@@ -63,6 +63,11 @@ const Dashboard = ({ onLogout }) => {
         </button>
       </div>
 
+      {/* FLOATING MENU BUTTON FOR MOBILE */}
+      <button className="mobile-menu-btn-floating" onClick={toggleMobileMenu}>
+        {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+      </button>
+
       {/* LOGOUT MODAL */}
       {showLogoutModal && (
         <div className="modal-overlay">
@@ -134,7 +139,7 @@ const Dashboard = ({ onLogout }) => {
         </div>
       </div>
 
-      {/* OVERLAY FOR MOBILE */}
+      {/* OVERLAY FOR MOBILE - Only shows when menu is open */}
       {isMobileMenuOpen && <div className="mobile-overlay" onClick={closeMobileMenu}></div>}
 
       {/* MAIN CONTENT */}

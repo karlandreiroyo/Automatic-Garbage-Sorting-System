@@ -211,7 +211,6 @@
   gap: 20px; 
   padding: 28px; 
   border-bottom: 1px solid #e5e7eb;
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
@@ -538,3 +537,4 @@
   color: #10b981;
   text-decoration: underline;
 }
+

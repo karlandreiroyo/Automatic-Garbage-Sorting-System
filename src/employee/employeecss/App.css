@@ -85,7 +85,6 @@ body, #root {
 .dashboard-container { display: flex; height: 100vh; width: 100%; overflow: hidden; }
 
 /* --- SIDEBAR --- */
-/* --- SIDEBAR (Updated to Admin Layout) --- */
 .sidebar {
   width: 280px; 
   min-width: 280px;
@@ -101,7 +100,7 @@ body, #root {
 /* NEW: Vertical Logo Styles */
 .sidebar-logo-vertical {
   display: flex;
-  flex-direction: column; /* Stacked vertically */
+  flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 12px;
@@ -109,7 +108,7 @@ body, #root {
 }
 
 .sidebar-img-large {
-  width: 85px; /* Pinalaking logo */
+  width: 85px;
   height: auto;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
 }
@@ -136,7 +135,7 @@ body, #root {
   padding: 14px 18px; 
   color: #d1fae5; 
   text-decoration: none; 
-  border-radius: 12px; /* Smoother corners */
+  border-radius: 12px;
   transition: all 0.2s ease; 
   font-size: 0.95rem; 
   font-weight: 500; 
@@ -149,7 +148,7 @@ body, #root {
 }
 
 .nav-item.active { 
-  background-color: #059669; /* Solid green active state */
+  background-color: #059669;
   color: white; 
   box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
 }
@@ -160,6 +159,7 @@ body, #root {
   display: flex;
   justify-content: center;
 }
+
 .today-status-card { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; }
 .today-status-card p, .today-status-card span { font-size: 0.8rem; color: #a7f3d0; }
 .today-status-card h2 { font-size: 1.8rem; margin: 5px 0; }
@@ -252,6 +252,30 @@ body, #root {
   justify-content: center;
 }
 
+/* Floating menu button for mobile */
+.mobile-menu-btn-floating {
+  display: none;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(1, 58, 47, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 12px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 50;
+  transition: all 0.2s;
+}
+
+.mobile-menu-btn-floating:active {
+  background: rgba(1, 58, 47, 1);
+  transform: scale(0.95);
+}
+
 /* Mobile Overlay */
 .mobile-overlay {
   display: none;
@@ -265,73 +289,132 @@ body, #root {
   z-index: 90;
 }
 
+/* ================= MOBILE RESPONSIVE (FIXED) ================= */
 @media (max-width: 768px) {
   /* Login fixes */
-  .app-container { flex-direction: column; }
-  .left-panel { display: none; }
+  .app-container { 
+    flex-direction: column; 
+  }
+  .left-panel { 
+    display: none; 
+  }
   
   /* Dashboard fixes */
   .dashboard-container { 
-    flex-direction: column; 
+    display: block !important;
     height: 100vh;
     overflow: hidden;
   }
 
-  .mobile-header { display: flex; }
-  .mobile-overlay { display: block; }
+  /* HIDE mobile header */
+  .mobile-header { 
+    display: none !important;
+  }
 
-  /* Sidebar becomes a drawer */
+  /* Show floating menu button */
+  .mobile-menu-btn-floating {
+    display: flex !important;
+  }
+
+  /* Sidebar - COMPLETELY HIDDEN by default */
   .sidebar { 
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 280px;
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-    padding-top: 20px;
+    display: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: -300px !important;
+    height: 100vh !important;
+    width: 280px !important;
+    z-index: 100 !important;
+    padding: 25px !important;
+    transition: left 0.3s ease-in-out !important;
   }
 
+  /* Show sidebar ONLY when mobile-open class is added */
   .sidebar.mobile-open {
-    transform: translateX(0);
-    box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+    display: flex !important;
+    left: 0 !important;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.3) !important;
   }
 
-  /* Ensure nav items are visible */
-  .sidebar-nav, .sidebar-footer { display: flex; }
-  .sidebar-footer { flex-direction: column; gap: 15px; }
-
-  /* Main content adjustments */
-  .main-content {
-    width: 100%;
-    padding: 20px;
-    overflow-y: auto;
-    height: calc(100vh - 60px); /* Subtract mobile header height */
+  /* Ensure sidebar nav is visible when open */
+  .sidebar-nav { 
+    display: flex !important;
+    flex-direction: column !important;
   }
   
-  .bin-card { height: auto; flex-direction: column; }
-  .bin-card-left, .bin-card-right { width: 100%; }
+  .sidebar-footer { 
+    display: flex !important;
+    flex-direction: column !important; 
+    gap: 15px !important;
+  }
+
+  /* Mobile overlay - only show when menu is open */
+  .mobile-overlay {
+    display: block;
+  }
+
+  /* Main content - full width, full height (no header) */
+  .main-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 20px !important;
+    overflow-y: auto !important;
+    height: 100vh !important;
+    margin: 0 !important;
+  }
+  
+  /* Bin cards stack vertically */
+  .bin-card { 
+    height: auto; 
+    flex-direction: column; 
+  }
+  .bin-card-left, .bin-card-right { 
+    width: 100%; 
+  }
+}
+
+/* Extra small devices (iPhone SE, etc) */
+@media (max-width: 375px) {
+  .sidebar {
+    width: 260px !important;
+    left: -280px !important;
+  }
+  
+  .sidebar.mobile-open {
+    left: 0 !important;
+  }
+  
+  .main-content {
+    padding: 15px !important;
+  }
+  
+  .dashboard-header h1 { 
+    font-size: 1.5rem; 
+  }
 }
 
 @media (max-width: 480px) {
-  .dashboard-header h1 { font-size: 1.5rem; }
-  .main-content { padding: 15px; }
+  .dashboard-header h1 { 
+    font-size: 1.5rem; 
+  }
+  .main-content { 
+    padding: 15px; 
+  }
 }
 
 /* =========================================================
-   NEW ANIMATION CODE ADDED BELOW
+   ANIMATION CODE
    ========================================================= */
 
 /* 1. Define the Keyframes (The movement) */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px); /* Starts slightly lower */
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateY(0); /* Ends in correct position */
+    transform: translateY(0);
   }
 }
 
@@ -341,6 +424,5 @@ body, #root {
 .notifications-page-container,
 .profile-container,
 .about-container {
-  /* This tells the page to play 'fadeInUp' for 0.4 seconds when it loads */
   animation: fadeInUp 0.4s ease-out forwards;
 }

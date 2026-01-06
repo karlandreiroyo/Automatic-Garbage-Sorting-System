@@ -19,12 +19,21 @@ const Accounts = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null); // State for the user being edited
+  const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [editErrors, setEditErrors] = useState({});
+  const [editTouched, setEditTouched] = useState({});
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [isNotificationHiding, setIsNotificationHiding] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   
   const [formData, setFormData] = useState({
     email: '',
@@ -59,7 +68,28 @@ const Accounts = () => {
     }
   };
 
-  // --- Handlers for Status Toggle ---
+  const showSuccessNotification = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setIsNotificationHiding(false);
+
+    setTimeout(() => {
+      setIsNotificationHiding(true);
+      setTimeout(() => {
+        setShowNotification(false);
+        setIsNotificationHiding(false);
+      }, 300);
+    }, 3000);
+  };
+
+  const closeNotification = () => {
+    setIsNotificationHiding(true);
+    setTimeout(() => {
+      setShowNotification(false);
+      setIsNotificationHiding(false);
+    }, 300);
+  };
+
   const handleToggleStatus = async (user) => {
     const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     const actionLabel = newStatus === 'INACTIVE' ? 'archive' : 'activate';
@@ -75,7 +105,6 @@ const Accounts = () => {
 
       if (error) throw error;
       
-      // Update local state for immediate feedback
       setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
     } catch (error) {
       alert('Error: ' + error.message);
@@ -84,48 +113,31 @@ const Accounts = () => {
     }
   };
 
-  // --- Handlers for Editing ---
   const openEditModal = (user) => {
-    setEditingUser({ ...user }); // Clone user into editing state
+    setEditingUser({ ...user });
+    setEditErrors({});
+    setEditTouched({});
   };
 
-  const handleUpdateEmployee = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('users')
-        .update({
-          first_name: editingUser.first_name,
-          last_name: editingUser.last_name,
-          middle_name: editingUser.middle_name,
-          contact: editingUser.contact,
-          role: editingUser.role
-        })
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
-
-      alert('Account updated successfully!');
-      setEditingUser(null);
-      fetchUsers();
-    } catch (error) {
-      alert('Error updating user: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- (Existing Validation Logic) ---
   const validateField = (name, value) => {
     let error = '';
     switch(name) {
       case 'first_name':
         if (!value.trim()) error = 'First name is required';
         else if (value.trim().length < 2) error = 'First name must be at least 2 characters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'First name can only contain letters';
         break;
       case 'last_name':
         if (!value.trim()) error = 'Last name is required';
+        else if (value.trim().length < 2) error = 'Last name must be at least 2 characters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Last name can only contain letters';
+        break;
+      case 'middle_name':
+        if (value && !/^[a-zA-Z\s]*$/.test(value)) error = 'Middle name can only contain letters';
+        break;
+      case 'contact':
+        if (value && !/^[0-9+\-\s()]*$/.test(value)) error = 'Invalid contact number format';
+        else if (value && value.replace(/[^0-9]/g, '').length < 10) error = 'Contact must be at least 10 digits';
         break;
       case 'email':
         if (!value.trim()) error = 'Email is required';
@@ -133,10 +145,35 @@ const Accounts = () => {
         break;
       case 'password':
         if (!value) error = 'Password is required';
-        else if (value.length < 6) error = 'Min 6 characters';
+        else if (value.length < 6) error = 'Password must be at least 6 characters';
         break;
       case 'confirmPassword':
         if (value !== formData.password) error = 'Passwords do not match';
+        break;
+      default: break;
+    }
+    return error;
+  };
+
+  const validateEditField = (name, value) => {
+    let error = '';
+    switch(name) {
+      case 'first_name':
+        if (!value.trim()) error = 'First name is required';
+        else if (value.trim().length < 2) error = 'First name must be at least 2 characters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'First name can only contain letters';
+        break;
+      case 'last_name':
+        if (!value.trim()) error = 'Last name is required';
+        else if (value.trim().length < 2) error = 'Last name must be at least 2 characters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Last name can only contain letters';
+        break;
+      case 'middle_name':
+        if (value && !/^[a-zA-Z\s]*$/.test(value)) error = 'Middle name can only contain letters';
+        break;
+      case 'contact':
+        if (value && !/^[0-9+\-\s()]*$/.test(value)) error = 'Invalid contact number format';
+        else if (value && value.replace(/[^0-9]/g, '').length < 10) error = 'Contact must be at least 10 digits';
         break;
       default: break;
     }
@@ -157,22 +194,47 @@ const Accounts = () => {
     setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
   };
 
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingUser(prev => ({ ...prev, [name]: value }));
+    if (editTouched[name]) {
+      setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
+    }
+  };
+
+  const handleEditBlur = (e) => {
+    const { name, value } = e.target;
+    setEditTouched(prev => ({ ...prev, [name]: true }));
+    setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
+  };
+
   const handleAddEmployee = async (e) => {
     e.preventDefault();
+    
     const newErrors = {};
-    ['first_name', 'last_name', 'email', 'password', 'confirmPassword'].forEach(f => {
-        const err = validateField(f, formData[f]);
-        if (err) newErrors[f] = err;
+    ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'middle_name', 'contact'].forEach(f => {
+      const err = validateField(f, formData[f]);
+      if (err) newErrors[f] = err;
     });
+    
     if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
+      setErrors(newErrors);
+      setTouched({ 
+        first_name: true, 
+        last_name: true, 
+        email: true, 
+        password: true, 
+        confirmPassword: true,
+        middle_name: true,
+        contact: true 
+      });
+      return;
     }
 
     try {
       setLoading(true);
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
       });
 
@@ -180,23 +242,76 @@ const Accounts = () => {
 
       const { error: dbError } = await supabase.from('users').insert([{
         auth_id: authData.user.id,
-        email: formData.email,
+        email: formData.email.trim(),
         role: formData.role,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        middle_name: formData.middle_name || null,
-        contact: formData.contact || null,
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        middle_name: formData.middle_name?.trim() || null,
+        contact: formData.contact?.trim() || null,
         status: 'ACTIVE'
       }]);
 
       if (dbError) throw dbError;
       
       setShowAddModal(false);
-      setFormData({ email: '', password: '', confirmPassword: '', role: 'COLLECTOR', first_name: '', last_name: '', middle_name: '', contact: '' });
+      setFormData({ 
+        email: '', 
+        password: '', 
+        confirmPassword: '', 
+        role: 'COLLECTOR', 
+        first_name: '', 
+        last_name: '', 
+        middle_name: '', 
+        contact: '' 
+      });
+      setErrors({});
+      setTouched({});
       fetchUsers();
-      alert('Employee account created successfully!');
+      showSuccessNotification('Employee account created successfully!');
     } catch (error) {
       alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateEmployee = async (e) => {
+    e.preventDefault();
+    
+    const newErrors = {};
+    ['first_name', 'last_name', 'middle_name', 'contact'].forEach(f => {
+      const err = validateEditField(f, editingUser[f]);
+      if (err) newErrors[f] = err;
+    });
+    
+    if (Object.keys(newErrors).length > 0) {
+      setEditErrors(newErrors);
+      setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: editingUser.first_name.trim(),
+          last_name: editingUser.last_name.trim(),
+          middle_name: editingUser.middle_name?.trim() || null,
+          contact: editingUser.contact?.trim() || null,
+          role: editingUser.role
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      setEditingUser(null);
+      setEditErrors({});
+      setEditTouched({});
+      fetchUsers();
+      showSuccessNotification(`${editingUser.first_name}'s personal information has been updated successfully!`);
+    } catch (error) {
+      alert('Error updating user: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -215,9 +330,64 @@ const Accounts = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const generatePageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterRole, filterStatus]);
+
   return (
     <div className="accounts-container">
       
+      {/* Success Notification Toast */}
+      {showNotification && (
+        <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
+          <div className="notification-icon">✓</div>
+          <div className="notification-content">
+            <p className="notification-title">Success!</p>
+            <p className="notification-message">{notificationMessage}</p>
+          </div>
+          <button className="notification-close" onClick={closeNotification}>×</button>
+        </div>
+      )}
+
       {/* --- ADD MODAL --- */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
@@ -227,18 +397,61 @@ const Accounts = () => {
             </div>
             <form onSubmit={handleAddEmployee} className="employee-form">
               <div className="form-grid">
-                <div className="form-group">
+                <div className={`form-group ${errors.first_name ? 'has-error' : ''}`}>
                   <label>First Name *</label>
-                  <input type="text" name="first_name" value={formData.first_name} onChange={handleInputChange} onBlur={handleBlur} />
+                  <input 
+                    type="text" 
+                    name="first_name" 
+                    value={formData.first_name} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur} 
+                  />
                   {errors.first_name && <span className="error-message">{errors.first_name}</span>}
                 </div>
-                <div className="form-group">
+                <div className={`form-group ${errors.last_name ? 'has-error' : ''}`}>
                   <label>Last Name *</label>
-                  <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange} onBlur={handleBlur} />
+                  <input 
+                    type="text" 
+                    name="last_name" 
+                    value={formData.last_name} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur} 
+                  />
+                  {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
-                <div className="form-group">
+                <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
+                  <label>Middle Name</label>
+                  <input 
+                    type="text" 
+                    name="middle_name" 
+                    value={formData.middle_name} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur} 
+                  />
+                  {errors.middle_name && <span className="error-message">{errors.middle_name}</span>}
+                </div>
+                <div className={`form-group ${errors.contact ? 'has-error' : ''}`}>
+                  <label>Contact Number</label>
+                  <input 
+                    type="text" 
+                    name="contact" 
+                    value={formData.contact} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur} 
+                    placeholder="e.g., +63 912 345 6789"
+                  />
+                  {errors.contact && <span className="error-message">{errors.contact}</span>}
+                </div>
+                <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
                   <label>Email Address *</label>
-                  <input type="email" name="email" value={formData.email} onChange={handleInputChange} onBlur={handleBlur} />
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur} 
+                  />
+                  {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
                 <div className="form-group">
                   <label>Account Role</label>
@@ -247,18 +460,34 @@ const Accounts = () => {
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
-                <div className="form-group">
+                <div className={`form-group ${errors.password ? 'has-error' : ''}`}>
                   <label>Password *</label>
-                  <input type="password" name="password" value={formData.password} onChange={handleInputChange} />
+                  <input 
+                    type="password" 
+                    name="password" 
+                    value={formData.password} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur}
+                  />
+                  {errors.password && <span className="error-message">{errors.password}</span>}
                 </div>
-                <div className="form-group">
+                <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`}>
                   <label>Confirm Password *</label>
-                  <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} />
+                  <input 
+                    type="password" 
+                    name="confirmPassword" 
+                    value={formData.confirmPassword} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur}
+                  />
+                  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>Create Account</button>
+                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Account'}
+                </button>
               </div>
             </form>
           </div>
@@ -274,29 +503,68 @@ const Accounts = () => {
             </div>
             <form onSubmit={handleUpdateEmployee} className="employee-form">
               <div className="form-grid">
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input type="text" value={editingUser.first_name} onChange={(e) => setEditingUser({...editingUser, first_name: e.target.value})} />
+                <div className={`form-group ${editErrors.first_name ? 'has-error' : ''}`}>
+                  <label>First Name *</label>
+                  <input 
+                    type="text" 
+                    name="first_name"
+                    value={editingUser.first_name} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.first_name && <span className="error-message">{editErrors.first_name}</span>}
                 </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input type="text" value={editingUser.last_name} onChange={(e) => setEditingUser({...editingUser, last_name: e.target.value})} />
+                <div className={`form-group ${editErrors.last_name ? 'has-error' : ''}`}>
+                  <label>Last Name *</label>
+                  <input 
+                    type="text" 
+                    name="last_name"
+                    value={editingUser.last_name} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.last_name && <span className="error-message">{editErrors.last_name}</span>}
                 </div>
-                <div className="form-group">
+                <div className={`form-group ${editErrors.middle_name ? 'has-error' : ''}`}>
+                  <label>Middle Name</label>
+                  <input 
+                    type="text" 
+                    name="middle_name"
+                    value={editingUser.middle_name || ''} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.middle_name && <span className="error-message">{editErrors.middle_name}</span>}
+                </div>
+                <div className={`form-group ${editErrors.contact ? 'has-error' : ''}`}>
                   <label>Contact Number</label>
-                  <input type="text" value={editingUser.contact || ''} onChange={(e) => setEditingUser({...editingUser, contact: e.target.value})} />
+                  <input 
+                    type="text" 
+                    name="contact"
+                    value={editingUser.contact || ''} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                    placeholder="e.g., +63 912 345 6789"
+                  />
+                  {editErrors.contact && <span className="error-message">{editErrors.contact}</span>}
                 </div>
                 <div className="form-group">
                   <label>Role</label>
-                  <select value={editingUser.role} onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}>
+                  <select 
+                    name="role"
+                    value={editingUser.role} 
+                    onChange={handleEditInputChange}
+                  >
                     <option value="COLLECTOR">Collector</option>
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setEditingUser(null)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>Save Changes</button>
+                <button type="button" className="btn-secondary" onClick={() => setEditingUser(null)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </div>
@@ -339,7 +607,7 @@ const Accounts = () => {
           <div>Actions</div>
         </div>
         <div className="table-body">
-          {filteredUsers.map(user => (
+          {currentUsers.map(user => (
             <div key={user.id} className="table-row">
               <div className="td-name">
                 <div className="user-avatar">{user.first_name?.charAt(0).toUpperCase()}</div>
@@ -351,20 +619,68 @@ const Accounts = () => {
                 <span className={`status-badge ${user.status?.toLowerCase()}`}>{user.status}</span>
               </div>
               <div className="td-actions">
-                <button 
-                  className={`action-btn ${user.status === 'ACTIVE' ? 'archive-btn' : 'activate-btn'}`}
-                  onClick={() => handleToggleStatus(user)}
-                >
-                  {user.status === 'ACTIVE' ? <><ArchiveIcon /> Archive</> : <><ActivateIcon /> Activate</>}
-                </button>
-                <button className="icon-btn edit-btn" onClick={() => openEditModal(user)}>
-                  <EditIcon />
-                </button>
+                <div className="actions-left">
+                  <button 
+                    className={`action-btn ${user.status === 'ACTIVE' ? 'archive-btn' : 'activate-btn'}`}
+                    onClick={() => handleToggleStatus(user)}
+                    disabled={loading}
+                  >
+                    {user.status === 'ACTIVE' ? <><ArchiveIcon /> Archive</> : <><ActivateIcon /> Activate</>}
+                  </button>
+                  <button 
+                    className="icon-btn edit-btn" 
+                    onClick={() => openEditModal(user)}
+                    disabled={loading}
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* --- PAGINATION --- */}
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredUsers.length)} of {filteredUsers.length} entries
+          </div>
+          <div className="pagination">
+            <button 
+              className="page-btn prev-btn" 
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            
+            {generatePageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="page-ellipsis">...</span>
+              ) : (
+                <button
+                  key={page}
+                  className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                  onClick={() => handlePageChange(page)}
+                >
+                  {page}
+                </button>
+              )
+            ))}
+            
+            <button 
+              className="page-btn next-btn" 
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
