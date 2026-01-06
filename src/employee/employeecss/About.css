@@ -1,0 +1,416 @@
+/* =========================================
+   1. MAIN CONTAINER & ANIMATION
+   ========================================= */
+.about-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 40px;
+  font-family: 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif;
+  color: #000000;
+  box-sizing: border-box;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   2. HEADER & TYPOGRAPHY
+   ========================================= */
+.about-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.about-header h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 12px 0;
+  line-height: 1.1;
+}
+
+.highlight-green {
+  color: #10b981; /* Brand Green */
+}
+
+.about-description {
+  color: #374151;
+  max-width: 800px;
+  margin: 0 auto 40px auto;
+  line-height: 1.6;
+  font-size: 1.05rem;
+}
+
+.tagline-wrapper {
+  margin-top: 30px;
+}
+
+.tagline-wrapper h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #000000;
+  margin: 0;
+}
+
+/* =========================================
+   3. WASTE CARDS
+   ========================================= */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 50px;
+}
+
+.waste-card {
+  background: white;
+  border: 2px solid #000000; /* Thick Black Border */
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: none;
+  transition: transform 0.2s ease;
+}
+
+.waste-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 4px 4px 0 #000000; /* Minimal Shadow */
+}
+
+/* --- Card Headers --- */
+.card-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: white;
+  border-bottom: 2px solid #000000;
+}
+
+/* --- SPECIFIC CARD COLORS --- */
+
+/* Biodegradable -> GREEN */
+.bg-green { 
+  background-color: #10b981; 
+}
+
+/* Recyclable -> GREEN (Eco-friendly) */
+.bg-blue { 
+  background-color: #10b981 !important; 
+}
+
+/* Non-Biodegradable -> BLACK (Waste) */
+.bg-dark { 
+  background-color: #10b981; 
+} 
+
+/* Icon Box inside Header */
+.header-icon-box {
+  width: 50px;
+  height: 50px;
+  border: 2px solid white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+  background: transparent;
+}
+
+.header-icon-box svg {
+  width: 28px;
+  height: 28px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+/* --- Card Content --- */
+.card-content {
+  padding: 32px 28px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-content p {
+  color: #374151;
+  margin-bottom: 28px;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* Checkmark List */
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: #000000;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.check-box {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #10b981; /* Green Checks */
+}
+
+/* =========================================
+   4. ACCORDIONS (White Backgrounds)
+   ========================================= */
+.accordion-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 50px;
+}
+
+.accordion-item {
+  border: 2px solid #000000;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: white;
+  transition: transform 0.2s ease;
+}
+
+.accordion-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 4px 4px 0 #000000;
+}
+
+/* Force all accordions to be WHITE */
+.accordion-item.bg-purple,
+.accordion-item.bg-orange,
+.accordion-item.bg-cyan {
+  background-color: #ffffff !important;
+}
+
+/* Header */
+.accordion-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  gap: 16px;
+  cursor: pointer;
+  user-select: none;
+  background: white;
+}
+
+.accordion-header:hover {
+  background-color: #f9fafb;
+}
+
+/* Icon Box (Green) */
+.acc-icon-box {
+  width: 40px;
+  height: 40px;
+  background: #10b981; /* Green Background */
+  border: 2px solid #000;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white; /* White Icon */
+}
+
+.acc-icon-box svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Force text/icon colors to uniform Green/Black */
+.bg-purple .acc-icon-box,
+.bg-orange .acc-icon-box,
+.bg-cyan .acc-icon-box {
+  color: white;
+  background: #10b981;
+}
+
+.accordion-header h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.chevron {
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  color: #000;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Content */
+.accordion-content {
+  background: white;
+  border-top: 2px solid #000;
+  padding: 24px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; transform: translateY(-5px); }
+  to { opacity: 1; max-height: 600px; transform: translateY(0); }
+}
+
+.specs-list, .team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spec-row {
+  background: white;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.spec-row strong {
+  color: #000000;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.team-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #000;
+}
+.team-list li:last-child {
+  border-bottom: none;
+}
+
+/* =========================================
+   5. CONTACT SECTION (Green Bar)
+   ========================================= */
+.contact-section-wrapper {
+  border: 2px solid #000000;
+  border-radius: 16px;
+  padding: 50px;
+  background: white;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  row-gap: 50px;
+  column-gap: 40px;
+}
+
+.contact-card {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+
+/* Bar is Green */
+.rounded-pink-bar {
+  width: 6px;
+  background-color: #10b981; /* Green */
+  border-radius: 10px;
+  margin-right: 32px;
+  flex-shrink: 0;
+  border: 1px solid #000;
+}
+
+.contact-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+/* Icon Box */
+.contact-icon-box {
+  width: 54px;
+  height: 54px;
+  border: 2px solid #000000;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: #10b981; /* Green Icon */
+  background: white;
+}
+
+.contact-icon-box svg {
+  width: 24px;
+  height: 24px;
+}
+
+.contact-content h4 {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.contact-content p {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* =========================================
+   6. RESPONSIVE DESIGN
+   ========================================= */
+@media (max-width: 1024px) {
+  .cards-grid, .accordion-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .about-container {
+    padding: 20px;
+  }
+  
+  .about-header h1 {
+    font-size: 2.2rem;
+  }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .contact-content {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

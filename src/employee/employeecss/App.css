@@ -1,0 +1,254 @@
+/* ================= GLOBAL RESET & FONTS ================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, #root {
+  height: 100vh;
+  width: 100%;
+  background-color: #f8fafc;
+}
+
+/* ================= LOGIN PAGE STYLES ================= */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background-color: white;
+}
+
+/* Left Side (Green Panel) */
+.left-panel {
+  flex: 1;
+  background-color: #f0fdf4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  color: #064e3b;
+}
+
+/* Background blobs decoration */
+.left-panel::before, .left-panel::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  z-index: 0;
+  opacity: 0.8;
+}
+.left-panel::before { width: 400px; height: 400px; top: -100px; left: -100px; }
+.left-panel::after { width: 300px; height: 300px; bottom: -50px; right: -50px; }
+
+.content-wrapper { z-index: 1; text-align: center; }
+.content-wrapper h1 { font-size: 3rem; font-weight: 800; margin-bottom: 2rem; line-height: 1.2; }
+.hero-image { width: 350px; height: auto; object-fit: contain; display: block; margin: 0 auto; }
+
+/* Right Side (Form) */
+.right-panel { flex: 1; display: flex; justify-content: center; align-items: center; background-color: white; }
+.form-container { width: 100%; max-width: 450px; padding: 40px; }
+.form-container h2 { text-align: center; color: #064e3b; margin-bottom: 30px; font-size: 2rem; }
+
+/* Form Inputs */
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; color: #555; margin-bottom: 8px; font-size: 0.9rem; }
+.input-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; outline: none; }
+.input-group input:focus { border-color: #047857; }
+
+/* Password Eye */
+.password-wrapper { position: relative; }
+.eye-icon { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #047857; }
+
+/* Options (Forgot Pass/Remember) */
+.options-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; font-size: 0.9rem; }
+.forgot-password { color: #047857; font-weight: 600; text-decoration: none; }
+.remember-me { display: flex; align-items: center; gap: 5px; color: #555; }
+
+/* Login Button */
+.login-btn { width: 100%; padding: 14px; background-color: #064e3b; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-bottom: 40px; }
+.login-btn:hover { background-color: #047857; }
+
+/* Role Selection Cards */
+.role-selection { display: flex; justify-content: space-between; gap: 10px; }
+.role-card { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 15px 5px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s; }
+.role-card:hover { background-color: #f9f9f9; }
+.role-card.active { border-color: #047857; background-color: #f0fdf4; }
+.role-img { width: 40px; height: 40px; object-fit: contain; }
+.role-card span { font-size: 0.85rem; color: #333; }
+
+
+/* ================= DASHBOARD STYLES ================= */
+.dashboard-container { display: flex; height: 100vh; width: 100%; overflow: hidden; }
+
+/* --- SIDEBAR --- */
+/* --- SIDEBAR (Updated to Admin Layout) --- */
+.sidebar {
+  width: 280px; 
+  min-width: 280px;
+  background-color: #013a2f; 
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 25px; 
+  flex-shrink: 0;
+  box-shadow: 4px 0 10px rgba(0,0,0,0.1); 
+}
+
+/* NEW: Vertical Logo Styles */
+.sidebar-logo-vertical {
+  display: flex;
+  flex-direction: column; /* Stacked vertically */
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.sidebar-img-large {
+  width: 85px; /* Pinalaking logo */
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.logo-text-vertical h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0;
+  color: #ffffff;
+}
+
+.logo-text-vertical p {
+  font-size: 0.85rem;
+  color: #6ee7b7;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Updated Nav Items */
+.nav-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 15px; 
+  padding: 14px 18px; 
+  color: #d1fae5; 
+  text-decoration: none; 
+  border-radius: 12px; /* Smoother corners */
+  transition: all 0.2s ease; 
+  font-size: 0.95rem; 
+  font-weight: 500; 
+  cursor: pointer;
+}
+
+.nav-item:hover { 
+  background-color: rgba(255,255,255,0.1); 
+  color: white; 
+}
+
+.nav-item.active { 
+  background-color: #059669; /* Solid green active state */
+  color: white; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+  min-width: 25px;
+  display: flex;
+  justify-content: center;
+}
+.today-status-card { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; }
+.today-status-card p, .today-status-card span { font-size: 0.8rem; color: #a7f3d0; }
+.today-status-card h2 { font-size: 1.8rem; margin: 5px 0; }
+
+/* --- MAIN CONTENT AREA --- */
+.main-content { flex: 1; padding: 40px; overflow-y: auto; background-color: #ffffff; }
+
+.dashboard-header { margin-bottom: 30px; }
+.dashboard-header h1 { font-size: 1.8rem; color: #111; margin-bottom: 5px; }
+.dashboard-header p { color: #666; font-size: 0.9rem; }
+
+.alert-banner { background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 15px; display: flex; gap: 15px; align-items: flex-start; margin-bottom: 30px; color: #881337; }
+.alert-icon { font-size: 1.2rem; }
+
+/* --- BIN CARDS GRID --- */
+.bins-grid { display: flex; flex-direction: column; gap: 20px; }
+
+.bin-card { display: flex; height: 120px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee; }
+
+/* Left side of card (Colored) */
+.bin-card-left { width: 50%; padding: 20px; color: white; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+.green { background: linear-gradient(135deg, #10b981, #059669); }
+.red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.lime { background: linear-gradient(135deg, #84cc16, #65a30d); }
+
+.bin-header { display: flex; justify-content: space-between; align-items: center; }
+.status-badge { background-color: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.bin-card-left h3 { font-size: 1.2rem; margin: 0; }
+.capacity-text { font-size: 0.8rem; opacity: 0.9; }
+
+/* Right side of card (White) */
+.bin-card-right { width: 50%; background-color: white; padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+.fill-info { flex: 1; margin-right: 20px; }
+.fill-text { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: 600; color: #333; }
+.percentage { font-size: 1.1rem; }
+
+/* Progress Bar */
+.progress-bar-bg { width: 100%; height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.progress-bar-fill { height: 100%; border-radius: 4px; }
+.green-bg { background-color: #10b981; }
+.red-bg { background-color: #ef4444; }
+.blue-bg { background-color: #3b82f6; }
+.lime-bg { background-color: #84cc16; }
+
+.last-collection { font-size: 0.75rem; color: #888; }
+
+/* Visual Bin Animation Container */
+.visual-bin-container { width: 50px; height: 70px; display: flex; align-items: flex-end; justify-content: center; }
+.visual-bin { width: 40px; height: 60px; border: 2px solid #ccc; border-radius: 4px 4px 8px 8px; position: relative; overflow: hidden; background-color: #f9fafb; }
+.visual-liquid { width: 100%; position: absolute; bottom: 0; opacity: 0.6; transition: height 0.5s ease; }
+
+/* --- MOBILE RESPONSIVE --- */
+@media (max-width: 768px) {
+  /* Login fixes */
+  .app-container { flex-direction: column; }
+  .left-panel { display: none; }
+  
+  /* Dashboard fixes */
+  .dashboard-container { flex-direction: column; overflow-y: auto; }
+  .sidebar { width: 100%; height: auto; padding: 15px; }
+  .sidebar-nav, .sidebar-footer { display: none; }
+  
+  .bin-card { height: auto; flex-direction: column; }
+  .bin-card-left, .bin-card-right { width: 100%; }
+}
+
+/* =========================================================
+   NEW ANIMATION CODE ADDED BELOW
+   ========================================================= */
+
+/* 1. Define the Keyframes (The movement) */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px); /* Starts slightly lower */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); /* Ends in correct position */
+  }
+}
+
+/* 2. Apply it to ALL your main page containers */
+.bin-monitoring-container,
+.history-page,
+.notifications-page-container,
+.profile-container,
+.about-container {
+  /* This tells the page to play 'fadeInUp' for 0.4 seconds when it loads */
+  animation: fadeInUp 0.4s ease-out forwards;
+}
