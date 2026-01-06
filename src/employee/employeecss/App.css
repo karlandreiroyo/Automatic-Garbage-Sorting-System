@@ -213,18 +213,110 @@ body, #root {
 .visual-liquid { width: 100%; position: absolute; bottom: 0; opacity: 0.6; transition: height 0.5s ease; }
 
 /* --- MOBILE RESPONSIVE --- */
+
+/* Mobile Header (Hidden on Desktop) */
+.mobile-header {
+  display: none;
+  background-color: #013a2f;
+  color: white;
+  padding: 15px 20px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.mobile-logo-img {
+  width: 32px;
+  height: auto;
+}
+
+.mobile-menu-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 90;
+}
+
 @media (max-width: 768px) {
   /* Login fixes */
   .app-container { flex-direction: column; }
   .left-panel { display: none; }
   
   /* Dashboard fixes */
-  .dashboard-container { flex-direction: column; overflow-y: auto; }
-  .sidebar { width: 100%; height: auto; padding: 15px; }
-  .sidebar-nav, .sidebar-footer { display: none; }
+  .dashboard-container { 
+    flex-direction: column; 
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .mobile-header { display: flex; }
+  .mobile-overlay { display: block; }
+
+  /* Sidebar becomes a drawer */
+  .sidebar { 
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    padding-top: 20px;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+  }
+
+  /* Ensure nav items are visible */
+  .sidebar-nav, .sidebar-footer { display: flex; }
+  .sidebar-footer { flex-direction: column; gap: 15px; }
+
+  /* Main content adjustments */
+  .main-content {
+    width: 100%;
+    padding: 20px;
+    overflow-y: auto;
+    height: calc(100vh - 60px); /* Subtract mobile header height */
+  }
   
   .bin-card { height: auto; flex-direction: column; }
   .bin-card-left, .bin-card-right { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header h1 { font-size: 1.5rem; }
+  .main-content { padding: 15px; }
 }
 
 /* =========================================================

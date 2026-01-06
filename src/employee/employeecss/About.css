@@ -432,8 +432,24 @@
     padding: 24px 16px;
   }
 
+  .title-wrapper {
+    flex-direction: column;
+    text-align: center;
+  }
+
   .title-wrapper h1 {
     font-size: 2rem;
+  }
+
+  .tagline-wrapper {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .tagline-bar {
+    width: 50px;
+    height: 5px; /* Horizontal bar on mobile */
   }
 
   .tagline {
@@ -443,6 +459,10 @@
   .cards-grid,
   .info-sections-grid {
     grid-template-columns: 1fr;
+  }
+
+  .waste-card {
+    max-width: 100%;
   }
 
   .specs-grid {
@@ -456,6 +476,7 @@
 
   .footer-item {
     justify-content: flex-start;
+    width: 100%;
   }
 }
 

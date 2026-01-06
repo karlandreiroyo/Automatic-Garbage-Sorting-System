@@ -1,317 +1,203 @@
-/* =========================
-   BASE / DESKTOP VIEW
-   ========================= */
-.bin-monitoring {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 32px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #f9fafb;
-  min-height: 100vh;
-}
-
-/* HEADER */
-.header {
+/* =========================================
+   1. MAIN CONTAINER
+   ========================================= */
+.bin-monitoring-container {
+  width: 100%;       
+  max-width: 100%;   
+  margin: 0;         
+  padding: 20px;     
+  box-sizing: border-box; 
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  color: #1f2937;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  flex-direction: column;
+  min-height: 80vh;
 }
 
-.header-text h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #111827;
+/* =========================================
+   2. HEADER & ALERTS
+   ========================================= */
+.header-section {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 25px; width: 100%;
+}
+.header-titles h1 { font-size: 2.2rem; font-weight: 800; color: #111827; margin: 0 0 5px 0; }
+.header-titles p { color: #6b7280; margin: 0; font-size: 1rem; }
+
+.primary-action-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;
+  border: 1px solid transparent; color: white; transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.95rem; white-space: nowrap;
+}
+.primary-action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+.primary-action-btn:disabled { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; transform: none; }
+.btn-green { background-color: #01bb7d; }
+.btn-blue  { background-color: #3b82f6; }
+
+.notification-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px; border-radius: 10px; margin-bottom: 25px; font-size: 1rem;
+  width: 100%; box-sizing: border-box;
+}
+.notification-banner.success { background-color: #dcfce7; border: 1px solid #86efac; color: #166534; }
+.notification-banner.warning { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+
+/* =========================================
+   3. CARD GRID
+   ========================================= */
+.bin-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); 
+  gap: 20px; 
+  width: 100%;
+  align-items: stretch;
+}
+
+/* =========================================
+   4. BIN CARD (Design from Screenshot)
+   ========================================= */
+.bin-card {
+  display: flex; flex-direction: column; background: white;
+  border: 1px solid #e5e7eb; 
+  border-radius: 16px; /* Smooth corners */
+  overflow: hidden;
+  position: relative; transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%; min-height: 520px; width: 100%;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
+
+.bin-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+.bin-card.selected-card { border: 3px solid #3b82f6; transform: translateY(-6px); }
+
+/* --- COLORED HEADERS --- */
+.bin-header {
+  padding: 30px 20px; 
+  display: flex; flex-direction: column; align-items: center; 
+  justify-content: center; text-align: center; color: white; gap: 12px; 
+  flex-shrink: 0; 
+  /* Height Management */
+  min-height: 180px;
+}
+
+/* Dynamic Backgrounds */
+.bin-card.green .bin-header { background-color: #10b981; }
+.bin-card.red .bin-header   { background-color: #ef4444; }
+.bin-card.blue .bin-header  { background-color: #3b82f6; }
+.bin-card.lime .bin-header  { background-color: #84cc16; }
+
+/* White Icon Circle in Header */
+.icon-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; 
+  border: 2px solid rgba(255,255,255,0.6); 
   margin-bottom: 4px;
 }
+.icon-circle svg { width: 32px; height: 32px; color: white; }
 
-.header-text p {
-  font-size: 0.95rem;
-  color: #6b7280;
+.bin-header h3 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
+
+/* Status Pill */
+.bin-status { 
+  background: rgba(0,0,0,0.2); 
+  color: white; 
+  padding: 6px 14px; 
+  border-radius: 30px; 
+  font-size: 0.75rem; 
+  font-weight: 700; 
+  text-transform: uppercase;
 }
 
-.drain-all-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 700;
+/* Checkbox (White Border on colored bg) */
+.bin-checkbox-wrapper {
+  position: absolute; top: 12px; right: 12px; z-index: 50;
+  background: transparent; 
+  border: 2px solid rgba(255,255,255,0.7);
+  border-radius: 6px; padding: 4px;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
-  background-color: #ef4444;
-  color: white;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+.bin-checkbox-wrapper:hover { background: rgba(255,255,255,0.2); }
+.bin-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6; margin: 0; }
+
+/* =========================================
+   5. WHITE BODY CONTENT
+   ========================================= */
+.bin-body {
+  padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 20px; background: white;
 }
 
-.drain-all-btn:hover {
-  background-color: #dc2626;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-}
+/* Fill Level - Large Colored Text */
+.fill-info { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.fill-info .label { font-size: 0.8rem; color: #9ca3af; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.fill-info .value { font-size: 2.5rem; font-weight: 900; line-height: 1; }
 
-/* ALERT */
-.alert-box {
-  display: flex;
-  gap: 12px;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin: 24px 0;
-}
+.progress-track { width: 100%; height: 12px; background-color: #f3f4f6; border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
 
-.alert-box div > div {
-  font-weight: 600;
-  color: #92400e;
+.meta-info {
+  display: flex; flex-direction: column; gap: 10px;
+  background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: auto; margin-top: 10px;
 }
+.meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; gap: 10px; }
+.meta-row span { color: #6b7280; font-weight: 500; white-space: nowrap; }
+.meta-row strong { color: #374151; font-weight: 700; white-space: nowrap; }
 
-.alert-box p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #78350f;
-}
-
-/* BIN CARDS */
-.bin-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* CARD */
-.bin-card {
-  display: flex;
-  background: transparent;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 2px solid #000000;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  height: 180px;
-  width: 100%;
-}
-
-/* LEFT */
-.bin-left {
-  width: 280px;
-  padding: 20px 24px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-}
-
-.bin-left-top {
-  display: none;
-}
-
-.bin-left-bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.bin-left-bottom h3 {
-  margin: 0 0 8px 0;
-  font-size: 1.8rem;
-  font-weight: 700;
-}
-
-.bin-left-bottom p {
-  font-size: 1rem;
-  opacity: 0.95;
-  font-weight: 500;
-}
-
-/* RIGHT */
-.bin-right {
-  flex: 1;
-  padding: 20px 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 28px;
-  background: #ffffff;
-}
-
-.bin-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.fill-level {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  color: #6b7280;
-  margin-bottom: 6px;
-}
-
-.fill-percent {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.fill-bar {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 14px;
-}
-
-.fill-progress {
-  height: 100%;
-  border-radius: 4px;
-}
-
-/* --- UPDATED: FOOTER AREA (DRAIN SIDE-BY-SIDE) --- */
-.info-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end; /* Pantay sa baba */
-  margin-top: auto;
-}
-
-.last-collection {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.collection-time {
-  font-weight: 600;
-  color: #374151;
-  margin-top: 2px;
-}
-
+/* Bottom Button */
 .drain-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  cursor: pointer;
-  background-color: #6b7280;
-  color: white;
-  transition: all 0.2s ease;
+  width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #374151; color: white; border: none; padding: 14px; border-radius: 10px;
+  font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.drain-btn:hover:not(:disabled) { background: #1f2937; transform: scale(1.02); }
+.drain-btn:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb; transform: none; }
+
+/* =========================================
+   6. RESPONSIVE
+   ========================================= */
+@media (max-width: 1200px) { 
+  .bin-grid-layout { grid-template-columns: repeat(2, 1fr); } 
 }
 
-.drain-btn:hover {
-  background-color: #ef4444;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
-}
-
-/* BIN VISUAL */
-.bin-visual {
-  width: 90px;
-  height: 110px;
-  border-radius: 12px 12px 0 0; /* Rounded top corners only */
-  border: 2px solid #000000;
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: #9ca3af; /* Gray background for empty section */
-}
-
-.bin-fill-section {
-  width: 100%;
-  position: absolute;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  border-top: 2px solid #ffffff; /* White separator line */
-  z-index: 1;
-}
-
-.bin-empty-section {
-  width: 100%;
-  height: 100%;
-  background: #9ca3af; /* Gray for empty portion */
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-}
-
-.bin-percentage-text {
-  color: #ffffff;
-  font-weight: 800;
-  font-size: 1rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  z-index: 10;
-  position: relative;
-}
-
-.bin-fill {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-}
-
-.bin-icon {
-  position: relative;
-  z-index: 1;
-  opacity: 0.3;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-/* COLORS */
-/* Left side background colors remain based on category */
-.green .bin-left { background: #10b981; }
-.green .bin-visual { border-color: #000000; }
-
-.red .bin-left { background: #ef4444; }
-.red .bin-visual { border-color: #000000; }
-
-.blue .bin-left { background: #3b82f6; }
-.blue .bin-visual { border-color: #000000; }
-
-.lime .bin-left { background: #84cc16; }
-.lime .bin-visual { border-color: #000000; }
-
-/* Fill progress and bin-fill colors are now dynamically set via inline styles */
-/* based on fill level: 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green */
-
-
-/* =========================
-   📱 MOBILE VIEW (RESPONSIVE)
-   ========================= */
-@media (max-width: 480px) {
-  .bin-monitoring { padding: 16px; }
-  .header h1 { font-size: 1.4rem; }
-  .bin-card { flex-direction: column; }
-  .bin-left { width: 100%; padding: 16px; }
-  .bin-right { padding: 16px; gap: 12px; }
-  .bin-visual { width: 65px; height: 85px; }
+@media (max-width: 700px) { 
+  .bin-monitoring-container { padding: 15px; }
+  .bin-grid-layout { grid-template-columns: 1fr; gap: 15px; } 
   
-  /* Sa mobile, ibabalik natin sa stack layout para hindi masikip */
-  .info-footer {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    margin-top: 15px;
+  .bin-card { 
+    min-height: auto; /* Allow auto height on mobile */
+    height: auto;
   }
   
-  .drain-btn {
-    flex: 1; /* Para mahaba ang button sa mobile */
-    justify-content: center;
+  .bin-header {
+    min-height: auto;
+    padding: 20px 15px;
   }
+  
+  .bin-body {
+    padding: 20px;
+    gap: 15px;
+  }
+  
+  .header-titles h1 { font-size: 1.8rem; }
+  .header-section { flex-direction: column; align-items: flex-start; gap: 15px; }
+  .primary-action-btn { width: 100%; justify-content: center; }
 }
+
+/* =========================================
+   7. MODAL
+   ========================================= */
+.modal-backdrop {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-card { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 480px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+.modal-icon-wrapper { background: #fef9c3; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #eab308; }
+.modal-card h2 { margin: 0 0 12px 0; color: #111827; }
+.modal-card p { color: #6b7280; margin-bottom: 24px; }
+.modal-btn-group { display: flex; gap: 12px; }
+.modal-btn-group button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; }
+.btn-cancel { background: #f3f4f6; color: #374151; }
+.btn-confirm { background: #ef4444; color: white; }

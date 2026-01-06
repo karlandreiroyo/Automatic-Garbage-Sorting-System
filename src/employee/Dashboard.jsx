@@ -26,12 +26,42 @@ const AlertIcon = () => (
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('about');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <div className="dashboard-container">
+
+      {/* MOBILE HEADER */}
+      <div className="mobile-header">
+        <div className="mobile-logo">
+            <img src={sidebarLogo} alt="Logo" className="mobile-logo-img" />
+            <span>Sorting System</span>
+        </div>
+        <button className="mobile-menu-btn" onClick={toggleMobileMenu}>
+          {isMobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+        </button>
+      </div>
 
       {/* LOGOUT MODAL */}
       {showLogoutModal && (
@@ -53,8 +83,8 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {/* SIDEBAR */}
-      <div className="sidebar">
-
+      <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+        
         <div className="sidebar-header">
           <div className="power-indicator">
             <span>SYSTEM POWER</span>
@@ -74,19 +104,19 @@ const Dashboard = ({ onLogout }) => {
         </div>
 
         <nav className="sidebar-nav">
-          <div className={`nav-item ${activeTab === 'monitoring' ? 'active' : ''}`} onClick={() => setActiveTab('monitoring')}>
+          <div className={`nav-item ${activeTab === 'monitoring' ? 'active' : ''}`} onClick={() => { setActiveTab('monitoring'); closeMobileMenu(); }}>
             Bin Monitoring
           </div>
-          <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
+          <div className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => { setActiveTab('notifications'); closeMobileMenu(); }}>
             Notifications
           </div>
-          <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
+          <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => { setActiveTab('history'); closeMobileMenu(); }}>
             Collection History
           </div>
-          <div className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+          <div className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); closeMobileMenu(); }}>
             Profile
           </div>
-          <div className={`nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={() => setActiveTab('about')}>
+          <div className={`nav-item ${activeTab === 'about' ? 'active' : ''}`} onClick={() => { setActiveTab('about'); closeMobileMenu(); }}>
             About
           </div>
         </nav>
@@ -103,6 +133,9 @@ const Dashboard = ({ onLogout }) => {
           </div>
         </div>
       </div>
+
+      {/* OVERLAY FOR MOBILE */}
+      {isMobileMenuOpen && <div className="mobile-overlay" onClick={closeMobileMenu}></div>}
 
       {/* MAIN CONTENT */}
       <div className="main-content">
