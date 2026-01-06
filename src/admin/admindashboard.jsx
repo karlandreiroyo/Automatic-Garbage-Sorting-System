@@ -108,11 +108,10 @@ const AdminDashboard = ({ onLogout }) => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth <= 1024;
       setIsMobile(mobile);
-      // Only auto-collapse on mobile, desktop should show sidebar by default
       if (mobile) {
         setIsSidebarCollapsed(true);
       } else {
-        setIsSidebarCollapsed(false); // Desktop: show sidebar
+        setIsSidebarCollapsed(false);
       }
     };
     
@@ -175,14 +174,6 @@ const AdminDashboard = ({ onLogout }) => {
       {/* Sidebar with conditional class */}
       <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="power-indicator">
-            <span>ADMIN PANEL</span>
-            <div className="battery-icon">
-              <div className="battery-level" style={{ width: '100%' }}></div>
-            </div>
-            <span>ACTIVE</span>
-          </div>
-
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
             <div className="logo-text-stacked">
