@@ -1,3 +1,7 @@
+/* =========================== */
+/* CSS STYLES */
+/* =========================== */
+
 /* Layout and Containers */
 .admin-container {
   display: flex;
@@ -6,14 +10,6 @@
   background-color: #f8fafc;
   overflow: hidden;
   position: relative;
-  box-sizing: border-box;
-}
-
-/* Global responsive constraints */
-.admin-container *,
-.admin-container *::before,
-.admin-container *::after {
-  box-sizing: border-box;
 }
 
 /* Mobile Header */
@@ -31,23 +27,6 @@
   align-items: center;
   gap: 15px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-  width: 100%;
-}
-
-/* Show mobile header and collapse sidebar on tablets/mobile */
-@media (max-width: 1024px) {
-  .mobile-header {
-    display: flex !important; /* Show mobile header */
-  }
-  
-  .sidebar {
-    transform: translateX(-100%) !important; /* Sidebar collapsed by default */
-  }
-  
-  .sidebar:not(.collapsed) {
-    transform: translateX(0) !important; /* Show when toggled */
-  }
 }
 
 .hamburger-btn {
@@ -77,75 +56,28 @@
   font-size: 1.1rem;
 }
 
-/* Sidebar Styles */
+/* Sidebar Styles - Fixed on left */
 .sidebar {
-  width: 280px;
+  width: 320px;
   background-color: #064e3b;
   color: white;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 25px;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, width 0.3s ease;
+  transition: transform 0.3s ease;
   z-index: 200;
   height: 100vh;
-  max-height: 100vh;
-  min-height: 100vh; /* Ensure minimum height */
-  position: relative;
+  position: fixed; /* Fixed position */
+  left: 0;
+  top: 0;
   flex-shrink: 0;
-  overflow-y: auto; /* Enable scrolling when zoomed */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  box-sizing: border-box;
-  /* Ensure content doesn't get clipped */
-  contain: layout style;
 }
 
-/* Custom scrollbar styling for sidebar */
-.sidebar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-.sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Firefox scrollbar */
-.sidebar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
-}
-
-/* Ensure sidebar content is always accessible when zoomed */
-.sidebar > * {
-  min-width: 0; /* Prevent flex children from overflowing */
-}
-
-/* Make sure all sidebar sections are visible */
-.sidebar-header,
-.sidebar-nav,
-.sidebar-footer {
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Collapsed Sidebar State - Only apply transform on mobile */
+/* Collapsed Sidebar State */
 @media (max-width: 1024px) {
   .sidebar.collapsed {
     transform: translateX(-100%);
-    width: 280px;
-    position: fixed;
-    left: 0;
-    top: 0;
   }
   
   .sidebar:not(.collapsed) {
@@ -153,17 +85,14 @@
   }
 }
 
-/* Desktop - Sidebar is always visible unless manually collapsed */
+/* Desktop - Sidebar is always visible */
 @media (min-width: 1025px) {
   .sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-    padding: 0;
-    overflow: hidden;
+    transform: translateX(-100%);
   }
   
   .sidebar:not(.collapsed) {
-    width: 280px;
+    transform: translateX(0);
   }
 }
 
@@ -181,39 +110,6 @@
 
 .sidebar-header {
   margin-bottom: 40px;
-  flex-shrink: 0; /* Prevent header from shrinking */
-  min-height: fit-content; /* Ensure header takes needed space */
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Power Indicator */
-.power-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #a7f3d0;
-  margin-bottom: 30px;
-  opacity: 0.8;
-  flex-shrink: 0; /* Prevent power indicator from shrinking */
-  width: 100%;
-  box-sizing: border-box;
-  min-height: fit-content; /* Ensure it takes needed space */
-}
-
-.battery-icon {
-  width: 25px;
-  height: 12px;
-  border: 1px solid #a7f3d0;
-  border-radius: 2px;
-  padding: 1px;
-}
-
-.battery-level {
-  height: 100%;
-  background-color: #10b981;
 }
 
 /* UPDATED: Vertical Logo Section */
@@ -222,87 +118,50 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 15px;
-  width: 100%;
-  box-sizing: border-box;
-  flex-shrink: 0; /* Prevent logo from shrinking */
-  min-height: fit-content; /* Ensure it takes needed space */
+  gap: 20px;
 }
 
 .sidebar-main-logo {
-  width: 90px;
+  width: 110px;
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
 }
 
 .logo-text-stacked h3 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
   margin: 0;
   letter-spacing: 0.5px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
 }
 
 .logo-text-stacked p {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: #6ee7b7;
-  margin: 4px 0 0 0;
+  margin: 6px 0 0 0;
   font-weight: 500;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
 }
 
 /* Navigation Items */
 .sidebar-nav {
-  flex: 1 1 auto; /* Allow nav to grow and shrink */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 0; /* Allow flex item to shrink and enable scrolling */
-  overflow-y: auto; /* Enable scrolling for nav items */
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
-  padding-right: 4px; /* Space for scrollbar */
-  width: 100%;
-  box-sizing: border-box;
-  /* Ensure nav items are always visible */
-  flex-basis: 0; /* Allow flex to calculate properly */
-}
-
-/* Custom scrollbar for nav section */
-.sidebar-nav::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  gap: 10px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  border-radius: 10px;
+  padding: 15px 20px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
   color: #d1fae5;
   white-space: nowrap;
-  overflow: visible; /* Changed from hidden to visible */
-  flex-shrink: 0; /* Prevent nav items from shrinking */
-  width: 100%;
-  box-sizing: border-box;
+  overflow: hidden;
+  font-size: 1.05rem;
 }
 
 .nav-item:hover {
@@ -317,9 +176,9 @@
 }
 
 .nav-icon {
-  margin-right: 12px;
-  font-size: 1.1rem;
-  min-width: 24px;
+  margin-right: 15px;
+  font-size: 1.2rem;
+  min-width: 28px;
   text-align: center;
 }
 
@@ -329,29 +188,21 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  flex-shrink: 0; /* Prevent footer from shrinking */
-  min-height: fit-content; /* Ensure footer takes needed space */
-  width: 100%;
-  box-sizing: border-box;
-  padding-top: 20px; /* Extra padding to ensure visibility */
 }
 
 .sign-out-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   background: none;
   border: none;
   color: #ecfdf5;
   cursor: pointer;
   font-weight: 600;
-  padding: 10px;
+  padding: 12px;
   transition: opacity 0.2s;
   white-space: nowrap;
-  width: 100%;
-  box-sizing: border-box;
-  flex-shrink: 0; /* Prevent button from shrinking */
-  min-height: 44px; /* Ensure touch target size */
+  font-size: 1.05rem;
 }
 
 .sign-out-btn:hover {
@@ -360,95 +211,92 @@
 
 .today-status-card {
   background-color: rgba(255, 255, 255, 0.05);
-  padding: 15px;
+  padding: 18px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  width: 100%;
-  box-sizing: border-box;
-  flex-shrink: 0; /* Prevent card from shrinking */
-  min-height: fit-content; /* Ensure card takes needed space */
 }
 
 .today-status-card p {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: #6ee7b7;
   margin: 0;
 }
 
 .today-status-card h2 {
-  font-size: 1.6rem;
-  margin: 5px 0;
+  font-size: 1.8rem;
+  margin: 8px 0;
   color: white;
 }
 
 .today-status-card span {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: #a7f3d0;
 }
 
 /* =========================== */
-/* MAIN CONTENT - CENTERED & SPACIOUS */
+/* MAIN CONTENT - WITH SMALL MARGIN FROM SIDEBAR */
 /* =========================== */
 
-/* Main Content Area - Maximized space */
+/* Main Content Area */
 .main-content {
   flex: 1;
-  padding: 16px; /* Reduced from 30px */
   overflow-y: auto;
-  background-color: #f8fafc;
-  transition: padding 0.3s ease;
-  height: 100vh;
   overflow-x: hidden;
-  display: flex;
-  justify-content: flex-start; /* Changed from center to flex-start */
-  align-items: flex-start; /* Align to top */
-  width: 100%;
-  min-width: 0; /* Prevent flex overflow */
-  box-sizing: border-box;
+  background-color: #f8fafc;
+  height: 100vh;
+  position: relative;
+  padding: 0;
+  margin: 0;
 }
 
-/* Responsive Main Content - Maximized space */
-@media (max-width: 1024px) {
+/* On Desktop - Add small margin from sidebar */
+@media (min-width: 1025px) {
   .main-content {
-    padding: 12px; /* Reduced from 20px */
+    margin-left: 340px; /* Sidebar width (320px) + 20px margin */
+    width: calc(100% - 340px);
+    padding: 30px; /* Add padding to main content itself */
+  }
+  
+  /* When sidebar is collapsed */
+  .sidebar.collapsed + .main-content {
+    margin-left: 0;
+    width: 100%;
+    padding: 30px;
   }
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    padding: 8px; /* Reduced from 16px */
-  }
-}
-
-@media (max-width: 480px) {
-  .main-content {
-    padding: 8px; /* Reduced from 12px */
-  }
-}
-
-/* Content container - Full width */
-.content-center-wrapper {
-  width: 100%;
-  max-width: 100%; /* Changed from 1200px to use full width */
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-/* Ensure child components fill the space properly */
+/* Child components inside main content */
 .main-content > * {
   width: 100%;
-  max-width: 100%; /* Ensure full width */
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-/* Remove excessive margins/padding from child components */
-.main-content > div {
-  width: 100%;
-  height: 100%;
+/* For mobile */
+@media (max-width: 1024px) {
+  .mobile-header {
+    display: flex;
+  }
+  
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay {
+    display: block;
+  }
+  
+  .main-content {
+    padding-top: 60px; /* Space for mobile header */
+    padding: 20px; /* Mobile padding */
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
 }
 
 /* Modal Styles */
@@ -462,7 +310,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
   backdrop-filter: blur(4px);
 }
 
@@ -497,67 +345,58 @@
 .btn-cancel { background: #f1f5f9; color: #475569; }
 .btn-confirm { background: #c62828; color: white; }
 
-/* Responsive Styles */
-@media (max-width: 1024px) {
-  .mobile-header {
-    display: flex;
-  }
-  
+/* Small mobile devices (480px and below) */
+@media (max-width: 480px) {
   .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-    height: 100vh;
-    max-height: 100vh;
-    overflow-y: auto; /* Enable scrolling when zoomed */
-    overflow-x: hidden;
-  }
-  
-  .sidebar:not(.collapsed) {
-    transform: translateX(0);
-  }
-  
-  .sidebar-overlay {
-    display: block;
+    width: 280px;
   }
   
   .main-content {
-    padding: 20px;
-    padding-top: 80px; /* Account for mobile header */
-    width: 100%;
+    padding-top: 60px;
+    padding: 15px;
   }
   
-  .main-content.mobile-expanded {
-    padding-top: 80px;
+  .sidebar-logo-container {
+    gap: 15px;
+  }
+  
+  .sidebar-main-logo {
+    width: 90px;
+  }
+  
+  .logo-text-stacked h3 {
+    font-size: 1.4rem;
+  }
+  
+  .nav-item {
+    padding: 12px 15px;
+    font-size: 1rem;
   }
 }
 
-@media (min-width: 1025px) {
-  .main-content {
-    padding: 16px; /* Reduced padding */
-    margin-left: 0; /* Removed margin - sidebar is flex item */
-    width: 100%;
-    justify-content: flex-start; /* Align to left */
+/* Large Desktop (1440px and above) */
+@media (min-width: 1440px) {
+  .sidebar {
+    width: 340px;
   }
   
-  /* When sidebar is collapsed on desktop */
+  .main-content {
+    margin-left: 360px; /* 340px sidebar + 20px margin */
+    width: calc(100% - 360px);
+    padding: 40px; /* More padding on large screens */
+  }
+  
   .sidebar.collapsed + .main-content {
     margin-left: 0;
     width: 100%;
-    padding: 16px;
-  }
-}
-
-/* Small mobile devices */
-@media (max-width: 480px) {
-  .sidebar:not(.collapsed) {
-    width: 100%;
-    max-width: 300px;
+    padding: 40px;
   }
   
-  .main-content {
-    padding: 15px;
-    padding-top: 70px;
+  .sidebar-main-logo {
+    width: 120px;
+  }
+  
+  .logo-text-stacked h3 {
+    font-size: 1.7rem;
   }
 }
