@@ -10,6 +10,17 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/binMonitoring.css';
 
+// Add this helper function at the top of your BinMonitoring.jsx file, after the imports
+
+/**
+ * Rounds fill level to nearest 10
+ * @param {number} level - Fill level percentage
+ * @returns {number} Rounded fill level (0, 10, 20, ..., 100)
+ */
+const roundToTen = (level) => {
+  return Math.round(level / 10) * 10;
+};
+
 // Icon Components for different waste categories
 const LeafIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -276,195 +287,195 @@ const BinMonitoring = () => {
   
   // State for list view bins, each with its own independent category bins
   const [bins, setBins] = useState([
-    { 
-      id: 1, 
-      name: 'Bin 1', 
-      fillLevel: 80, 
-      systemPower: 100, 
-      capacity: '20kg', 
-      lastUpdate: '2 hours ago', 
-      category: 'Biodegradable',
-      categoryBins: [
-        { 
-          id: 'non-bio-1', 
-          category: 'Non Biodegradable', 
-          fillLevel: 100, 
-          capacity: '100 L', 
-          lastCollection: '4 hours ago',
-          colorClass: 'red',
-          icon: <TrashIcon />
-        },
-        { 
-          id: 'bio-1', 
-          category: 'Biodegradable', 
-          fillLevel: 80, 
-          capacity: '100 L', 
-          lastCollection: '2 hours ago',
-          colorClass: 'green',
-          icon: <LeafIcon />
-        },
-        { 
-          id: 'recycle-1', 
-          category: 'Recyclable', 
-          fillLevel: 86, 
-          capacity: '100L', 
-          lastCollection: '1 hours ago',
-          colorClass: 'blue',
-          icon: <RecycleIcon />
-        },
-        { 
-          id: 'unsorted-1', 
-          category: 'Unsorted', 
-          fillLevel: 83, 
-          capacity: '100L', 
-          lastCollection: '1 hours ago',
-          colorClass: 'lime',
-          icon: <GearIcon />
-        }
-      ]
-    },
-    { 
-      id: 2, 
-      name: 'Bin 2', 
-      fillLevel: 86, 
-      systemPower: 50, 
-      capacity: '20kg', 
-      lastUpdate: '1 hour ago', 
-      category: 'Non-Biodegradable',
-      categoryBins: [
-        { 
-          id: 'non-bio-2', 
-          category: 'Non Biodegradable', 
-          fillLevel: 95, 
-          capacity: '100 L', 
-          lastCollection: '3 hours ago',
-          colorClass: 'red',
-          icon: <TrashIcon />
-        },
-        { 
-          id: 'bio-2', 
-          category: 'Biodegradable', 
-          fillLevel: 75, 
-          capacity: '100 L', 
-          lastCollection: '1 hour ago',
-          colorClass: 'green',
-          icon: <LeafIcon />
-        },
-        { 
-          id: 'recycle-2', 
-          category: 'Recyclable', 
-          fillLevel: 90, 
-          capacity: '100L', 
-          lastCollection: '2 hours ago',
-          colorClass: 'blue',
-          icon: <RecycleIcon />
-        },
-        { 
-          id: 'unsorted-2', 
-          category: 'Unsorted', 
-          fillLevel: 70, 
-          capacity: '100L', 
-          lastCollection: '30 minutes ago',
-          colorClass: 'lime',
-          icon: <GearIcon />
-        }
-      ]
-    },
-    { 
-      id: 3, 
-      name: 'Bin 3', 
-      fillLevel: 85, 
-      systemPower: 20, 
-      capacity: '20kg', 
-      lastUpdate: '3 hours ago', 
-      category: 'Recycle',
-      categoryBins: [
-        { 
-          id: 'non-bio-3', 
-          category: 'Non Biodegradable', 
-          fillLevel: 88, 
-          capacity: '100 L', 
-          lastCollection: '5 hours ago',
-          colorClass: 'red',
-          icon: <TrashIcon />
-        },
-        { 
-          id: 'bio-3', 
-          category: 'Biodegradable', 
-          fillLevel: 82, 
-          capacity: '100 L', 
-          lastCollection: '2 hours ago',
-          colorClass: 'green',
-          icon: <LeafIcon />
-        },
-        { 
-          id: 'recycle-3', 
-          category: 'Recyclable', 
-          fillLevel: 85, 
-          capacity: '100L', 
-          lastCollection: '1 hour ago',
-          colorClass: 'blue',
-          icon: <RecycleIcon />
-        },
-        { 
-          id: 'unsorted-3', 
-          category: 'Unsorted', 
-          fillLevel: 90, 
-          capacity: '100L', 
-          lastCollection: '45 minutes ago',
-          colorClass: 'lime',
-          icon: <GearIcon />
-        }
-      ]
-    },
-    { 
-      id: 4, 
-      name: 'Bin 4', 
-      fillLevel: 90, 
-      systemPower: 100, 
-      capacity: '20kg', 
-      lastUpdate: '1 hour ago', 
-      category: 'Unsorted',
-      categoryBins: [
-        { 
-          id: 'non-bio-4', 
-          category: 'Non Biodegradable', 
-          fillLevel: 92, 
-          capacity: '100 L', 
-          lastCollection: '6 hours ago',
-          colorClass: 'red',
-          icon: <TrashIcon />
-        },
-        { 
-          id: 'bio-4', 
-          category: 'Biodegradable', 
-          fillLevel: 88, 
-          capacity: '100 L', 
-          lastCollection: '3 hours ago',
-          colorClass: 'green',
-          icon: <LeafIcon />
-        },
-        { 
-          id: 'recycle-4', 
-          category: 'Recyclable', 
-          fillLevel: 91, 
-          capacity: '100L', 
-          lastCollection: '2 hours ago',
-          colorClass: 'blue',
-          icon: <RecycleIcon />
-        },
-        { 
-          id: 'unsorted-4', 
-          category: 'Unsorted', 
-          fillLevel: 90, 
-          capacity: '100L', 
-          lastCollection: '1 hour ago',
-          colorClass: 'lime',
-          icon: <GearIcon />
-        }
-      ]
-    }
-  ]);
+  { 
+    id: 1, 
+    name: 'Bin 1', 
+    fillLevel: 80, // Already multiple of 10
+    systemPower: 100, 
+    capacity: '20kg', 
+    lastUpdate: '2 hours ago', 
+    category: 'Biodegradable',
+    categoryBins: [
+      { 
+        id: 'non-bio-1', 
+        category: 'Non Biodegradable', 
+        fillLevel: 100, // Already multiple of 10
+        capacity: '100 L', 
+        lastCollection: '4 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'bio-1', 
+        category: 'Biodegradable', 
+        fillLevel: 80, // Already multiple of 10
+        capacity: '100 L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'recycle-1', 
+        category: 'Recyclable', 
+        fillLevel: 90, // Changed from 86 to 90
+        capacity: '100L', 
+        lastCollection: '1 hours ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-1', 
+        category: 'Unsorted', 
+        fillLevel: 80, // Changed from 83 to 80
+        capacity: '100L', 
+        lastCollection: '1 hours ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  },
+  { 
+    id: 2, 
+    name: 'Bin 2', 
+    fillLevel: 90, // Changed from 86 to 90
+    systemPower: 50, 
+    capacity: '20kg', 
+    lastUpdate: '1 hour ago', 
+    category: 'Non-Biodegradable',
+    categoryBins: [
+      { 
+        id: 'non-bio-2', 
+        category: 'Non Biodegradable', 
+        fillLevel: 100, // Changed from 95 to 100
+        capacity: '100 L', 
+        lastCollection: '3 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'bio-2', 
+        category: 'Biodegradable', 
+        fillLevel: 80, // Changed from 75 to 80
+        capacity: '100 L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'recycle-2', 
+        category: 'Recyclable', 
+        fillLevel: 90, // Already multiple of 10
+        capacity: '100L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-2', 
+        category: 'Unsorted', 
+        fillLevel: 70, // Already multiple of 10
+        capacity: '100L', 
+        lastCollection: '30 minutes ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  },
+  { 
+    id: 3, 
+    name: 'Bin 3', 
+    fillLevel: 90, // Changed from 85 to 90
+    systemPower: 20, 
+    capacity: '20kg', 
+    lastUpdate: '3 hours ago', 
+    category: 'Recycle',
+    categoryBins: [
+      { 
+        id: 'non-bio-3', 
+        category: 'Non Biodegradable', 
+        fillLevel: 90, // Changed from 88 to 90
+        capacity: '100 L', 
+        lastCollection: '5 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'bio-3', 
+        category: 'Biodegradable', 
+        fillLevel: 80, // Changed from 82 to 80
+        capacity: '100 L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'recycle-3', 
+        category: 'Recyclable', 
+        fillLevel: 90, // Changed from 85 to 90
+        capacity: '100L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-3', 
+        category: 'Unsorted', 
+        fillLevel: 90, // Already multiple of 10
+        capacity: '100L', 
+        lastCollection: '45 minutes ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  },
+  { 
+    id: 4, 
+    name: 'Bin 4', 
+    fillLevel: 90, // Already multiple of 10
+    systemPower: 100, 
+    capacity: '20kg', 
+    lastUpdate: '1 hour ago', 
+    category: 'Unsorted',
+    categoryBins: [
+      { 
+        id: 'non-bio-4', 
+        category: 'Non Biodegradable', 
+        fillLevel: 90, // Changed from 92 to 90
+        capacity: '100 L', 
+        lastCollection: '6 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'bio-4', 
+        category: 'Biodegradable', 
+        fillLevel: 90, // Changed from 88 to 90
+        capacity: '100 L', 
+        lastCollection: '3 hours ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'recycle-4', 
+        category: 'Recyclable', 
+        fillLevel: 90, // Changed from 91 to 90
+        capacity: '100L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-4', 
+        category: 'Unsorted', 
+        fillLevel: 90, // Already multiple of 10
+        capacity: '100L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  }
+]);
 
   // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
@@ -519,49 +530,43 @@ const BinMonitoring = () => {
    * Simulates natural decrease over time (waste being processed/removed)
    * Bins decrease gradually unless manually drained or new waste is added
    */
-  const updateBinFillLevels = () => {
-    setBins(prevBins =>
-      prevBins.map(bin => {
-        // Update category bins with gradual decrease to simulate waste processing
-        // Bins naturally decrease over time (0.1% to 0.3% per update cycle)
-        const updatedCategoryBins = bin.categoryBins.map(catBin => {
-          // Simulate natural decrease (waste being processed/removed)
-          // Only decrease if fill level is above 0
-          if (catBin.fillLevel > 0) {
-            // Small random decrease between 0.1% and 0.3% per cycle
-            const decreaseAmount = 0.1 + (Math.random() * 0.2); // 0.1 to 0.3
-            const newCatFillLevel = Math.max(0, Math.round(catBin.fillLevel - decreaseAmount));
-            return {
-              ...catBin,
-              fillLevel: newCatFillLevel
-            };
-          }
-          // If already at 0%, keep it at 0%
+  // Then in your updateBinFillLevels function, update this part:
+
+const updateBinFillLevels = () => {
+  setBins(prevBins =>
+    prevBins.map(bin => {
+      const updatedCategoryBins = bin.categoryBins.map(catBin => {
+        if (catBin.fillLevel > 0) {
+          const decreaseAmount = 0.1 + (Math.random() * 0.2);
+          const newCatFillLevel = Math.max(0, catBin.fillLevel - decreaseAmount);
+          // Round to nearest 10
           return {
             ...catBin,
-            fillLevel: 0
+            fillLevel: roundToTen(newCatFillLevel)
           };
-        });
-
-        // Calculate overall bin fill level as the maximum fill level among category bins
-        // This represents the most full category bin, which determines the bin's status
-        const maxFillLevel = updatedCategoryBins.length > 0
-          ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
-          : bin.fillLevel;
-
-        // Update last update time to show recent activity
-        const minutesAgo = Math.floor(Math.random() * 3) + 1; // 1-3 minutes ago
-        const updateTime = minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
-
+        }
         return {
-          ...bin,
-          fillLevel: maxFillLevel, // Real-time fill level calculated from category bins
-          lastUpdate: updateTime,
-          categoryBins: updatedCategoryBins // Updated category bins with real-time data
+          ...catBin,
+          fillLevel: 0
         };
-      })
-    );
-  };
+      });
+
+      const maxFillLevel = updatedCategoryBins.length > 0
+        ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
+        : bin.fillLevel;
+
+      const minutesAgo = Math.floor(Math.random() * 3) + 1;
+      const updateTime = minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
+
+      return {
+        ...bin,
+        fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
+        lastUpdate: updateTime,
+        categoryBins: updatedCategoryBins
+      };
+    })
+  );
+};
 
   /**
    * Handles bin click to navigate to detail view
