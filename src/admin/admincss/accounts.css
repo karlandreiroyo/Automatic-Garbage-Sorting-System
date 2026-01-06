@@ -1,7 +1,11 @@
 /* Container Layout */
 .accounts-container {
-  padding: 24px;
+  padding: 0; /* Reduced from 24px */
   animation: fadeInUp 0.4s ease-out forwards;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 @keyframes fadeInUp {
@@ -89,6 +93,19 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Form columns turn into rows on smaller screens */
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr !important; /* 2 columns → 1 column (rows) */
+  }
+  
+  .full-width-group {
+    grid-column: span 1 !important;
+  }
 }
 
 .full-width-group {
@@ -224,6 +241,11 @@
   align-items: center;
   gap: 8px;
   transition: 0.2s;
+  min-width: 140px;
+  min-height: 44px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .add-employee-btn:hover {
@@ -285,6 +307,21 @@
   font-weight: 600;
   color: #475569;
   font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Table columns turn into rows on mobile */
+@media (max-width: 968px) {
+  .table-header {
+    display: none !important; /* Hide header, rows will show labels */
+  }
+  
+  .table-row {
+    grid-template-columns: 1fr !important; /* Columns become rows */
+    display: flex !important;
+    flex-direction: column !important;
+  }
 }
 
 .table-body {
@@ -374,6 +411,9 @@
   transition: all 0.2s;
   white-space: nowrap;
   min-width: 85px;
+  min-height: 36px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .activate-btn {
@@ -522,5 +562,77 @@
   .icon-btn {
     width: 32px;
     height: 32px;
+  }
+  
+  .modal-content.maximized {
+    max-width: 95%;
+    border-radius: 16px;
+  }
+  
+  .modal-header {
+    padding: 24px;
+  }
+  
+  .modal-icon-circle {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .modal-title-desc h2 {
+    font-size: 1.3rem;
+  }
+  
+  .employee-form {
+    padding: 24px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .full-width-group {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .accounts-container {
+    padding: 12px;
+  }
+  
+  .accounts-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .table-row {
+    padding: 16px;
+  }
+  
+  .modal-content.maximized {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .modal-title-desc h2 {
+    font-size: 1.2rem;
+  }
+  
+  .employee-form {
+    padding: 20px;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
   }
 }

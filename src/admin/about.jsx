@@ -88,14 +88,30 @@ const ClockIcon = () => (
 );
 
 const About = () => {
-  const [openSections, setOpenSections] = useState({
-    specs: false,
-    about: false,
-    team: false
-  });
+  // State for accordion sections
+  const [isSpecsOpen, setIsSpecsOpen] = useState(false);
+  const [isAboutProjectOpen, setIsAboutProjectOpen] = useState(false);
+  const [isTeamMembersOpen, setIsTeamMembersOpen] = useState(false);
 
-  const toggleSection = (section) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  /**
+   * Toggle Specs section
+   */
+  const toggleSpecs = () => {
+    setIsSpecsOpen(prev => !prev);
+  };
+
+  /**
+   * Toggle About Project section
+   */
+  const toggleAboutProject = () => {
+    setIsAboutProjectOpen(prev => !prev);
+  };
+
+  /**
+   * Toggle Team Members section
+   */
+  const toggleTeamMembers = () => {
+    setIsTeamMembersOpen(prev => !prev);
   };
 
   const biodegradableFeatures = [
@@ -215,17 +231,29 @@ const About = () => {
 
       {/* Accordion Sections */}
       <div className="accordion-grid">
+        {/* Specs Accordion */}
         <div className="accordion-item">
-          <div className="accordion-header purple" onClick={() => toggleSection('specs')}>
+          <div 
+            className="accordion-header purple" 
+            onClick={toggleSpecs}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleSpecs();
+              }
+            }}
+          >
             <div className="accordion-icon">
               <GearIcon />
             </div>
             <h3>Specs</h3>
-            <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
+            <div className={`chevron ${isSpecsOpen ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.specs && (
+          {isSpecsOpen ? (
             <div className="accordion-content">
               <div className="specs-list">
                 <h4>Main Features:</h4>
@@ -236,39 +264,66 @@ const About = () => {
                 </ul>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
+        {/* About Project Accordion */}
         <div className="accordion-item">
-          <div className="accordion-header orange" onClick={() => toggleSection('about')}>
+          <div 
+            className="accordion-header orange" 
+            onClick={toggleAboutProject}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleAboutProject();
+              }
+            }}
+          >
             <div className="accordion-icon">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
-            <div className={`chevron ${openSections.about ? 'open' : ''}`}>
+            <div className={`chevron ${isAboutProjectOpen ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.about && (
+          {isAboutProjectOpen ? (
             <div className="accordion-content">
               <p>
-                To design and develop a small-scale automatic garbage sorting system that can efficiently separate waste into biodegradable, non-biodegradable, and recyclable materials, promoting proper waste management in schools or household environments.
+                This automatic garbage sorting system is designed to revolutionize waste management through intelligent automation. The system efficiently separates waste into different categories, promoting environmental sustainability and proper waste disposal practices.
+              </p>
+              <p>
+                Our goal is to create a smart solution that reduces manual labor, improves sorting accuracy, and helps communities adopt better waste management habits for a cleaner future.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
+        {/* Team Members Accordion */}
         <div className="accordion-item">
-          <div className="accordion-header cyan" onClick={() => toggleSection('team')}>
+          <div 
+            className="accordion-header cyan" 
+            onClick={toggleTeamMembers}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleTeamMembers();
+              }
+            }}
+          >
             <div className="accordion-icon">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
-            <div className={`chevron ${openSections.team ? 'open' : ''}`}>
+            <div className={`chevron ${isTeamMembersOpen ? 'open' : ''}`}>
               <ChevronDown />
             </div>
           </div>
-          {openSections.team && (
+          {isTeamMembersOpen ? (
             <div className="accordion-content">
               <ul className="team-list">
                 {teamMembers.map((member, index) => (
@@ -276,7 +331,7 @@ const About = () => {
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 

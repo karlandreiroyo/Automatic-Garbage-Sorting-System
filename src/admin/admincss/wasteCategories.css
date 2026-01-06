@@ -1,7 +1,14 @@
 .waste-categories-container {
   padding: 0;
   width: 100%;
+  max-width: 100%;
   animation: fadeInUp 0.4s ease-out forwards;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.waste-categories-header {
+  margin-bottom: 20px; /* Reduced from 30px */
 }
 
 @keyframes fadeInUp {
@@ -51,6 +58,11 @@
   cursor: pointer;
   transition: all 0.2s ease;
   color: #475569;
+  min-width: 100px;
+  min-height: 44px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .time-filter-btn:hover {
@@ -69,8 +81,28 @@
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 12px; /* Reduced from 24px */
   width: 100%;
+  box-sizing: border-box;
+}
+
+/* Columns turn into rows at breakpoints */
+@media (max-width: 1280px) {
+  .categories-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* 4 columns → 2 columns */
+  }
+}
+
+@media (max-width: 768px) {
+  .categories-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* 2 columns remain */
+  }
+}
+
+@media (max-width: 480px) {
+  .categories-grid {
+    grid-template-columns: 1fr !important; /* 2 columns → 1 column (rows) */
+  }
 }
 
 .category-card {
@@ -98,12 +130,17 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  border-bottom: 3px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .category-icon {
   font-size: 3.5rem;
   filter: brightness(0) invert(1);
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain; /* Keep aspect ratio */
+  aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
 }
 
 /* Bottom Content Section - Like bin body */
@@ -196,12 +233,64 @@
   }
 }
 
+@media (max-width: 640px) {
+  .waste-categories-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .waste-categories-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .time-filters {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .time-filter-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+}
+
 @media (max-width: 480px) {
   .categories-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
   
   .category-card {
     min-height: 300px;
+  }
+  
+  .waste-categories-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .time-filter-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .category-icon-section {
+    height: 80px;
+  }
+  
+  .category-icon {
+    font-size: 2rem;
+  }
+  
+  .category-content {
+    padding: 20px 16px;
+  }
+  
+  .category-name {
+    font-size: 1rem;
+  }
+  
+  .count-number {
+    font-size: 2rem;
   }
 }
