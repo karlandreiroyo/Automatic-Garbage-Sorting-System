@@ -22,7 +22,6 @@
 .mark-all-btn { background: linear-gradient(135deg, #10B981 0%, #059669 100%); border:none; color:white; font-weight:600; cursor:pointer; font-size:0.95rem; padding: 12px 24px; border-radius: 8px; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:2.5rem; }
-.stat-card { background:white; padding:1rem 1.5rem; border-radius:12px; display:flex; align-items:center; gap:1rem; box-shadow:0 4px 6px rgba(0,0,0,0.05); border:2px solid #000000; }-bottom:2.5rem; }
 .stat-card { background:white; padding:1rem 1.5rem; border-radius:12px; display:flex; align-items:center; gap:1rem; box-shadow:0 4px 6px rgba(0,0,0,0.05); border:2px solid #000000; }
 .icon-box { width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
 .icon-box.critical { background: var(--red-bg); color: var(--red-text); }

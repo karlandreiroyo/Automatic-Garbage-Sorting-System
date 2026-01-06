@@ -157,10 +157,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -183,10 +179,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -422,10 +414,6 @@
   min-height: 36px;
   box-sizing: border-box;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
 }
 
 .activate-btn {

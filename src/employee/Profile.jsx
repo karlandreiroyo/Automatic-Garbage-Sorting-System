@@ -57,7 +57,6 @@ const Profile = () => {
                 {isEditing ? <><SaveIcon /> Save Changes</> : <><PencilIcon /> Edit Profile</>}
               </button>
             </div>
-
             <div className="personal-info-grid">
               <div className="form-group">
                 <label>Full Name</label>
