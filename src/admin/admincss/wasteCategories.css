@@ -1,9 +1,6 @@
 .waste-categories-container {
   padding: 0;
   width: 100%;
-<<<<<<< HEAD
-  animation: fadeInUp 0.4s ease-out forwards;
-=======
   max-width: 100%;
   animation: fadeInUp 0.4s ease-out forwards;
   box-sizing: border-box;
@@ -12,7 +9,6 @@
 
 .waste-categories-header {
   margin-bottom: 20px; /* Reduced from 30px */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 @keyframes fadeInUp {
@@ -62,8 +58,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
   color: #475569;
-<<<<<<< HEAD
-=======
   min-width: 100px;
   min-height: 44px;
   box-sizing: border-box;
@@ -73,7 +67,6 @@
   align-items: center;
   gap: 8px;
   justify-content: center;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .time-filter-btn:hover {
@@ -92,10 +85,6 @@
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-<<<<<<< HEAD
-  gap: 24px;
-  width: 100%;
-=======
   gap: 12px; /* Reduced from 24px */
   width: 100%;
   box-sizing: border-box;
@@ -118,7 +107,6 @@
   .categories-grid {
     grid-template-columns: 1fr !important; /* 2 columns → 1 column (rows) */
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .category-card {
@@ -146,24 +134,17 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-<<<<<<< HEAD
-  border-bottom: 3px solid rgba(0, 0, 0, 0.1);
-=======
   border-bottom: 2px solid rgba(0, 0, 0, 0.1);
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .category-icon {
   font-size: 3.5rem;
   filter: brightness(0) invert(1);
-<<<<<<< HEAD
-=======
   width: auto;
   height: auto;
   max-width: 100%;
   object-fit: contain; /* Keep aspect ratio */
   aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Bottom Content Section - Like bin body */
@@ -256,11 +237,6 @@
   }
 }
 
-<<<<<<< HEAD
-@media (max-width: 480px) {
-  .categories-grid {
-    grid-template-columns: 1fr;
-=======
 @media (max-width: 640px) {
   .waste-categories-header {
     flex-direction: column;
@@ -287,14 +263,11 @@
   .categories-grid {
     grid-template-columns: 1fr;
     gap: 14px;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
   
   .category-card {
     min-height: 300px;
   }
-<<<<<<< HEAD
-=======
   
   .waste-categories-header h1 {
     font-size: 1.6rem;
@@ -324,5 +297,4 @@
   .count-number {
     font-size: 2rem;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }

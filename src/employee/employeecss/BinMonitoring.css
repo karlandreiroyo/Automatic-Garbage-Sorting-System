@@ -1,19 +1,3 @@
-<<<<<<< HEAD
-/* =========================================
-   1. MAIN CONTAINER (OPTIMIZED FOR NO GAPS)
-   ========================================= */
-.bin-monitoring-container {
-  width: 100%;       
-  max-width: 100%;   
-  margin: 0;         
-  padding: 20px;     
-  box-sizing: border-box; /* Crucial for full width */
-  
-  font-family: 'Segoe UI', 'Roboto', sans-serif;
-  color: #1f2937;
-  animation: fadeIn 0.4s ease-out;
-  min-height: 80vh; 
-=======
 /* =========================
    BASE / DESKTOP VIEW
    ========================= */
@@ -157,164 +141,10 @@
 
 .bin-info {
   flex: 1;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   display: flex;
   flex-direction: column;
 }
 
-<<<<<<< HEAD
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* =========================================
-   2. HEADER
-   ========================================= */
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-  width: 100%;
-}
-
-.header-titles h1 { font-size: 2.2rem; font-weight: 800; color: #111827; margin: 0 0 5px 0; }
-.header-titles p { color: #6b7280; margin: 0; font-size: 1rem; }
-
-.primary-action-btn {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;
-  border: 1px solid transparent; color: white; transition: all 0.2s;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 0.95rem;
-  white-space: nowrap;
-}
-.primary-action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
-.primary-action-btn:disabled { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; box-shadow: none; transform: none; }
-.btn-green { background-color: #10b981; }
-.btn-blue  { background-color: #3b82f6; }
-
-/* =========================================
-   3. ALERTS
-   ========================================= */
-.notification-banner {
-  display: flex; align-items: center; gap: 16px;
-  padding: 16px; border-radius: 10px; margin-bottom: 25px; font-size: 1rem;
-  width: 100%; box-sizing: border-box;
-}
-.notification-banner.success { background-color: #dcfce7; border: 1px solid #86efac; color: #166534; }
-.notification-banner.warning { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
-
-/* =========================================
-   4. GRID LAYOUT
-   ========================================= */
-.bin-grid-layout {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 20px; 
-  width: 100%;
-  align-items: stretch;
-}
-
-/* =========================================
-   5. BIN CARD (VISUALS)
-   ========================================= */
-.bin-card {
-  display: flex; flex-direction: column; background: white;
-  border: 1px solid #e5e7eb; border-radius: 20px; overflow: hidden;
-  position: relative; transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%; min-height: 520px; width: 100%;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-}
-
-.bin-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-.bin-card.selected-card { border: 3px solid #3b82f6; transform: translateY(-6px); }
-
-/* Checkbox */
-.bin-checkbox-wrapper {
-  position: absolute; top: 12px; right: 12px; z-index: 50;
-  background: rgba(255,255,255,0.3); padding: 5px; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5);
-  cursor: pointer; transition: transform 0.2s;
-}
-.bin-checkbox-wrapper:hover { transform: scale(1.1); }
-.bin-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #3b82f6; margin: 0; }
-
-/* --- HEADER (Fixed Height) --- */
-.bin-header {
-  padding: 30px 20px; 
-  display: flex; flex-direction: column; align-items: center; 
-  justify-content: center; text-align: center; color: white; gap: 12px; 
-  flex-shrink: 0; /* Prevents resizing weirdly */
-}
-
-.bin-card.green .bin-header { background-color: #10b981; }
-.bin-card.red .bin-header   { background-color: #ef4444; }
-.bin-card.blue .bin-header  { background-color: #3b82f6; }
-.bin-card.lime .bin-header  { background-color: #84cc16; }
-
-.icon-circle {
-  width: 64px; height: 64px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.3); margin-bottom: 4px;
-}
-.icon-circle svg { width: 32px; height: 32px; }
-.bin-header h3 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
-.bin-status { background: white; color: #374151; padding: 5px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-
-/* --- BODY (Fills Space) --- */
-.bin-body {
-  padding: 24px; flex: 1; display: flex; flex-direction: column; gap: 20px; background: white;
-}
-
-.fill-info { display: flex; justify-content: space-between; align-items: flex-end; }
-.fill-info .label { font-size: 0.9rem; color: #6b7280; font-weight: 700; text-transform: uppercase; }
-.fill-info .value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
-
-.progress-track { width: 100%; height: 10px; background-color: #f3f4f6; border-radius: 6px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
-
-.meta-info {
-  display: flex; flex-direction: column; gap: 10px;
-  background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: auto; 
-}
-/* No Wrap Fixes */
-.meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; gap: 10px; }
-.meta-row span { color: #6b7280; font-weight: 500; white-space: nowrap; }
-.meta-row strong { color: #374151; font-weight: 700; white-space: nowrap; }
-
-.drain-btn {
-  width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;
-  background: #374151; color: white; border: none; padding: 14px; border-radius: 10px;
-  font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s;
-}
-.drain-btn:hover:not(:disabled) { background: #1f2937; transform: scale(1.02); }
-.drain-btn:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb; transform: none; }
-
-/* =========================================
-   6. RESPONSIVE
-   ========================================= */
-@media (max-width: 1200px) { .bin-grid-layout { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 700px) { .bin-grid-layout { grid-template-columns: 1fr; } }
-
-/* =========================================
-   7. MODAL
-   ========================================= */
-.modal-backdrop {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
-}
-.modal-card { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 450px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-.modal-icon-wrapper { background: #fef9c3; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #eab308; }
-.modal-card h2 { margin: 0 0 12px 0; color: #111827; }
-.modal-card p { color: #6b7280; margin-bottom: 24px; }
-.modal-btn-group { display: flex; gap: 12px; }
-.modal-btn-group button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: none; }
-.btn-cancel { background: #f3f4f6; color: #374151; }
-.btn-confirm { background: #ef4444; color: white; }
-=======
 .fill-level {
   display: flex;
   justify-content: space-between;
@@ -485,4 +315,3 @@
     justify-content: center;
   }
 }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7

@@ -1,16 +1,11 @@
 /* Container Layout */
 .accounts-container {
-<<<<<<< HEAD
-  padding: 24px;
-  animation: fadeInUp 0.4s ease-out forwards;
-=======
   padding: 0; /* Reduced from 24px */
   animation: fadeInUp 0.4s ease-out forwards;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 @keyframes fadeInUp {
@@ -98,8 +93,6 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
-<<<<<<< HEAD
-=======
   width: 100%;
   box-sizing: border-box;
 }
@@ -113,7 +106,6 @@
   .full-width-group {
     grid-column: span 1 !important;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .full-width-group {
@@ -165,13 +157,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-<<<<<<< HEAD
-=======
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -194,13 +179,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
-<<<<<<< HEAD
-=======
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .btn-secondary:hover {
@@ -263,14 +241,11 @@
   align-items: center;
   gap: 8px;
   transition: 0.2s;
-<<<<<<< HEAD
-=======
   min-width: 140px;
   min-height: 44px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .add-employee-btn:hover {
@@ -332,8 +307,6 @@
   font-weight: 600;
   color: #475569;
   font-size: 14px;
-<<<<<<< HEAD
-=======
   width: 100%;
   box-sizing: border-box;
 }
@@ -349,7 +322,6 @@
     display: flex !important;
     flex-direction: column !important;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .table-body {
@@ -439,16 +411,9 @@
   transition: all 0.2s;
   white-space: nowrap;
   min-width: 85px;
-<<<<<<< HEAD
-=======
   min-height: 36px;
   box-sizing: border-box;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .activate-btn {
@@ -598,8 +563,6 @@
     width: 32px;
     height: 32px;
   }
-<<<<<<< HEAD
-=======
   
   .modal-content.maximized {
     max-width: 95%;
@@ -672,5 +635,4 @@
   .btn-primary, .btn-secondary {
     width: 100%;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }

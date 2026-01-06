@@ -49,8 +49,6 @@ const CloseIcon = () => (
   </svg>
 );
 
-<<<<<<< HEAD
-=======
 // Sidebar Navigation Icons
 const DashboardIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -97,7 +95,6 @@ const AboutIcon = () => (
   </svg>
 );
 
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 /* ================= MAIN ================= */
 
 const AdminDashboard = ({ onLogout }) => {
@@ -111,18 +108,10 @@ const AdminDashboard = ({ onLogout }) => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth <= 1024;
       setIsMobile(mobile);
-<<<<<<< HEAD
-      // Only auto-collapse on mobile, desktop should show sidebar by default
-      if (mobile) {
-        setIsSidebarCollapsed(true);
-      } else {
-        setIsSidebarCollapsed(false); // Desktop: show sidebar
-=======
       if (mobile) {
         setIsSidebarCollapsed(true);
       } else {
         setIsSidebarCollapsed(false);
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
       }
     };
     
@@ -185,17 +174,6 @@ const AdminDashboard = ({ onLogout }) => {
       {/* Sidebar with conditional class */}
       <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-<<<<<<< HEAD
-          <div className="power-indicator">
-            <span>ADMIN PANEL</span>
-            <div className="battery-icon">
-              <div className="battery-level" style={{ width: '100%' }}></div>
-            </div>
-            <span>ACTIVE</span>
-          </div>
-
-=======
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
             <div className="logo-text-stacked">
@@ -210,11 +188,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => handleNavClick('dashboard')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><DashboardIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Dashboard
           </div>
 
@@ -222,11 +196,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => handleNavClick('users')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><WasteCategoriesIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Waste Categories
           </div>
 
@@ -234,11 +204,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'data' ? 'active' : ''}`}
             onClick={() => handleNavClick('data')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><DataAnalyticsIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Data Analytics
           </div>
 
@@ -246,11 +212,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'account' ? 'active' : ''}`}
             onClick={() => handleNavClick('account')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><AccountsIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Accounts
           </div>
 
@@ -258,11 +220,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`}
             onClick={() => handleNavClick('bins')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><BinMonitoringIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             Bin Monitoring
           </div>
 
@@ -270,11 +228,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => handleNavClick('reports')}
           >
-<<<<<<< HEAD
-            <span className="nav-icon"></span>
-=======
             <div className="nav-icon"><AboutIcon /></div>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
             About
           </div>
         </nav>

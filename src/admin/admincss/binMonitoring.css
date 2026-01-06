@@ -1,10 +1,5 @@
 /* ========== ADMIN LIST VIEW STYLES ========== */
 .bin-monitoring-container {
-<<<<<<< HEAD
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-=======
   padding: 0; /* Reduced from 20px */
   max-width: 100%; /* Changed from 1200px */
   margin: 0;
@@ -20,16 +15,12 @@
   gap: 12px; /* Reduced from 24px */
   width: 100%;
   box-sizing: border-box;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .header-title { 
   color: #1e293b; 
   margin: 0; 
   font-size: 1.8rem; 
-<<<<<<< HEAD
-  font-weight: 800; 
-=======
   font-weight: 800;
   line-height: 1.2;
   word-wrap: break-word;
@@ -47,14 +38,10 @@
   .header-title {
     font-size: 1.3rem;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .header-subtitle { 
   color: #64748b; 
-<<<<<<< HEAD
-  margin: 5px 0 25px; 
-=======
   margin: 5px 0 25px;
   line-height: 1.4;
   word-wrap: break-word;
@@ -71,7 +58,6 @@
   .header-subtitle {
     font-size: 0.85rem;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .bin-monitoring-header {
@@ -82,8 +68,6 @@
   gap: 30px;
 }
 
-<<<<<<< HEAD
-=======
 /* Style the h1 and p in bin-monitoring-header to make them visible */
 .bin-monitoring-header h1 {
   font-size: 2.2rem;
@@ -123,7 +107,6 @@
   }
 }
 
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 .header-left {
   display: flex;
   flex-direction: column;
@@ -135,8 +118,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-<<<<<<< HEAD
-=======
   flex: 1;
 }
 
@@ -145,7 +126,6 @@
   align-items: center;
   gap: 12px; /* Space between back and drain all buttons */
   flex-shrink: 0;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .bin-name-header {
@@ -169,14 +149,11 @@
   align-items: center;
   gap: 8px;
   transition: all 0.2s;
-<<<<<<< HEAD
-=======
   min-width: 100px;
   min-height: 40px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Action button styles moved to .action-btn class above */
@@ -358,11 +335,7 @@
 .bin-detail-large-visual {
   width: 200px;
   height: 300px;
-<<<<<<< HEAD
-  border: 6px solid #000000;
-=======
   border: 2px solid #000000;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 20px 20px 0 0; /* Rounded top corners only */
   position: relative;
   overflow: hidden;
@@ -377,11 +350,7 @@
   align-items: center;
   justify-content: center;
   transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-<<<<<<< HEAD
-  border-top: 3px solid #ffffff; /* White separator line */
-=======
   border-top: 2px solid #ffffff; /* White separator line */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   z-index: 1;
 }
 
@@ -475,11 +444,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 2px solid #000000;
   cursor: pointer;
-<<<<<<< HEAD
-  min-height: 200px;
-=======
   min-height: 180px; /* Reduced from 200px */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Left Panel - Green Section */
@@ -487,11 +452,7 @@
   width: 40%;
   background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
   color: white;
-<<<<<<< HEAD
-  padding: 30px;
-=======
   padding: 20px; /* Reduced from 30px */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -589,19 +550,11 @@
 /* Right Panel - White Section */
 .bin-list-right-panel {
   flex: 1;
-<<<<<<< HEAD
-  padding: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-=======
   padding: 20px; /* Reduced from 30px */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px; /* Reduced from 30px */
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   background: white;
 }
 
@@ -661,11 +614,7 @@
 .bin-list-icon-visual {
   width: 100px;
   height: 140px;
-<<<<<<< HEAD
-  border: 4px solid #000000;
-=======
   border: 2px solid #000000;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 12px 12px 0 0;
   position: relative;
   overflow: hidden;
@@ -744,14 +693,11 @@
   align-items: center;
   gap: 8px;
   transition: all 0.2s;
-<<<<<<< HEAD
-=======
   min-width: 120px;
   min-height: 40px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .drain-all-btn:hover {
@@ -771,14 +717,11 @@
   gap: 8px;
   transition: all 0.2s;
   border: 2px solid #000000;
-<<<<<<< HEAD
-=======
   min-width: 100px;
   min-height: 40px;
   box-sizing: border-box;
   white-space: nowrap;
   flex-shrink: 0;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .action-btn.back-btn {
@@ -943,11 +886,7 @@
 .visual-box {
   width: 85px;
   height: 110px;
-<<<<<<< HEAD
-  border: 4px solid #000000;
-=======
   border: 2px solid #000000;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 10px;
   position: relative;
   display: flex;
@@ -992,11 +931,7 @@
   border: 2px solid #000000;
   margin-bottom: 30px;
   color: #92400e;
-<<<<<<< HEAD
-  border-left: 6px solid #f59e0b;
-=======
   border-left: 2px solid #f59e0b;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .alert-box span:first-child {
@@ -1307,24 +1242,6 @@
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Fill progress colors are now dynamically set via inline styles based on fill level */
-/* 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green */
-.bin-card.green .fill-progress {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.red .fill-progress {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.blue .fill-progress {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.lime .fill-progress {
-  /* Color will be overridden by inline style */
-}
-
 .info-footer {
   display: flex;
   justify-content: space-between;
@@ -1369,34 +1286,13 @@
 .bin-visual {
   width: 100px;
   height: 140px;
-<<<<<<< HEAD
-  border: 4px solid #000000;
-=======
   border: 2px solid #000000;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 12px 12px 0 0; /* Rounded top corners only */
   position: relative;
   overflow: hidden;
   background: #9ca3af; /* Gray background for empty section */
 }
 
-<<<<<<< HEAD
-/* Bin visual border colors for detail cards */
-.bin-detail-card.green .bin-visual {
-  border-color: #10b981;
-}
-
-.bin-detail-card.red .bin-visual {
-  border-color: #ef4444;
-}
-
-.bin-detail-card.blue .bin-visual {
-  border-color: #3b82f6;
-}
-
-.bin-detail-card.lime .bin-visual {
-  border-color: #84cc16;
-=======
 /* Bin visual border colors for detail cards - All identical black thin borders */
 .bin-detail-card.green .bin-visual {
   border-color: #000000;
@@ -1416,7 +1312,6 @@
 .bin-detail-card.lime .bin-visual {
   border-color: #000000;
   border-width: 2px;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 .bin-fill-section {
@@ -1449,24 +1344,6 @@
   position: relative;
 }
 
-/* Bin fill colors are now dynamically set via inline styles based on fill level */
-/* 0-15% = Red, 15-30% = Orange, 30-50% = Yellow, 50-100% = Green */
-.bin-card.green .bin-fill {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.red .bin-fill {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.blue .bin-fill {
-  /* Color will be overridden by inline style */
-}
-
-.bin-card.lime .bin-fill {
-  /* Color will be overridden by inline style */
-}
-
 .bin-icon {
   position: relative;
   z-index: 10;
@@ -1485,20 +1362,13 @@
 .bin-icon-visual {
   width: 80px;
   height: 120px;
-<<<<<<< HEAD
-  border: 4px solid #000000;
-=======
   border: 2px solid #000000;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   border-radius: 12px 12px 0 0; /* Rounded top corners only */
   position: relative;
   overflow: hidden;
   background: #9ca3af; /* Gray background for empty section */
 }
 
-<<<<<<< HEAD
-/* Responsive */
-=======
 /* Responsive - Layout Rearrangement */
 @media (max-width: 1200px) {
   .bin-monitoring-container {
@@ -1633,7 +1503,6 @@
   }
 }
 
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 @media (max-width: 850px) {
   .bin-horizontal-card { 
     flex-direction: column; 
@@ -1653,11 +1522,7 @@
   }
   
   .bin-title { 
-<<<<<<< HEAD
-    font-size: 2.5rem; 
-=======
     font-size: 2rem; 
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
 
   .bin-card {
@@ -1676,16 +1541,11 @@
     width: 100%;
     height: 100px;
   }
-<<<<<<< HEAD
-=======
   
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   .bin-detail-right {
     flex-direction: column;
     align-items: flex-start;
   }
-<<<<<<< HEAD
-=======
   
   .category-bins-grid {
     grid-template-columns: 1fr;
@@ -1805,7 +1665,6 @@
     grid-template-columns: 1fr !important; /* Force single column */
     gap: 14px;
   }
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 }
 
 /* Modal Styles for Confirmation Dialogs */
@@ -1917,8 +1776,6 @@
   .modal-box {
     width: 90%;
     max-width: 320px;
-<<<<<<< HEAD
-=======
     padding: 24px;
   }
   
@@ -1945,8 +1802,5 @@
   .btn-modal {
     padding: 10px;
     font-size: 0.85rem;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
   }
-}
-
 }

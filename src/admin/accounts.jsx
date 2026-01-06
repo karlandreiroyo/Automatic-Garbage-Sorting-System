@@ -5,14 +5,11 @@ import './admincss/accounts.css';
 // SVG Icons
 const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
 const CloseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>;
-<<<<<<< HEAD
-=======
 const CancelIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
 const SaveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
 const ArchiveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>;
 const ActivateIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
 const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
 
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
@@ -220,17 +217,11 @@ const Accounts = () => {
               </div>
 
               <div className="modal-footer">
-<<<<<<< HEAD
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? 'Processing...' : 'Create Account'}
-=======
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>
                   <CancelIcon /> Cancel
                 </button>
                 <button type="submit" className="btn-primary" disabled={loading}>
                   <SaveIcon /> {loading ? 'Processing...' : 'Create Account'}
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
                 </button>
               </div>
             </form>
@@ -303,16 +294,6 @@ const Accounts = () => {
                 <div className="td-actions">
                   {user.status === 'ACTIVE' ? (
                     <button className="action-btn archive-btn">
-<<<<<<< HEAD
-                      Archive
-                    </button>
-                  ) : (
-                    <button className="action-btn activate-btn">
-                      Activate
-                    </button>
-                  )}
-                  <button className="icon-btn edit-btn">✏️</button>
-=======
                       <ArchiveIcon /> Archive
                     </button>
                   ) : (
@@ -323,7 +304,6 @@ const Accounts = () => {
                   <button className="icon-btn edit-btn">
                     <EditIcon />
                   </button>
->>>>>>> 57c2a03f9c1bc20f118311fcacbba6fe257a33a7
                 </div>
               </div>
             ))
