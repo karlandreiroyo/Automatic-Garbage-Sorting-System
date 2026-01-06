@@ -33,6 +33,13 @@
   height: auto;
 }
 
+.illustration-container svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
 /* Right panel */
 .right-panel {
   flex: 1;

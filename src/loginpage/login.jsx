@@ -1,8 +1,66 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient.jsx';
-import mainLogo from '../assets/sorting-logo.png';
 import './Login.css';
+
+// Waste Sorting Logo Component
+const SortingLogo = () => (
+  <svg width="350" height="350" viewBox="0 0 350 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Bin Container - Main rectangular body */}
+    <rect x="80" y="195" width="190" height="125" rx="4" fill="white"/>
+    
+    {/* Curved Top Opening with slight overflow */}
+    <path d="M75 195 Q175 175 275 195" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
+    <rect x="80" y="195" width="190" height="8" rx="4" fill="white"/>
+    
+    {/* Three Vertical Dividers for compartments */}
+    <line x1="143.33" y1="195" x2="143.33" y2="320" stroke="white" strokeWidth="3"/>
+    <line x1="208.33" y1="195" x2="208.33" y2="320" stroke="white" strokeWidth="3"/>
+    
+    {/* Left Compartment - Leaf Icon (Biodegradable) */}
+    <g transform="translate(105, 245)">
+      {/* Main leaf shape */}
+      <path d="M18 0 Q18 6 18 10 Q18 16 18 20 Q18 24 15 26 Q12 28 10 26 Q8 24 8 20 Q8 16 10 12 Q12 6 15 3 Q18 0 18 0" fill="white"/>
+      <path d="M18 0 Q22 3 25 6 Q28 10 30 14 Q32 18 30 22 Q28 26 25 28 Q22 30 18 28 Q14 30 11 28 Q8 26 6 22 Q4 18 6 14 Q8 10 11 6 Q14 3 18 0" fill="white"/>
+      {/* Stem */}
+      <line x1="18" y1="20" x2="18" y2="32" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+    </g>
+    
+    {/* Middle Compartment - Cube Icon (General Waste) */}
+    <g transform="translate(170, 245)">
+      {/* 3D cube */}
+      <rect x="12" y="12" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5"/>
+      <line x1="12" y1="12" x2="20" y2="8" stroke="white" strokeWidth="2.5"/>
+      <line x1="28" y1="12" x2="20" y2="8" stroke="white" strokeWidth="2.5"/>
+      <line x1="20" y1="8" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
+      <line x1="12" y1="28" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
+      <line x1="28" y1="28" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
+    </g>
+    
+    {/* Right Compartment - Recycling Symbol (Recyclables) */}
+    <g transform="translate(235, 245)">
+      {/* Three chasing arrows */}
+      <path d="M22 6 L30 6 L26 16 Z" fill="white"/>
+      <path d="M14 18 L22 18 L18 8 Z" fill="white"/>
+      <path d="M26 22 L34 22 L30 12 Z" fill="white"/>
+      <path d="M22 6 L26 16 L14 18 L18 8 L30 12 L26 22" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </g>
+    
+    {/* Overflowing Organic Waste from Top */}
+    {/* Banana Peel */}
+    <path d="M105 180 Q115 170 125 180 Q135 190 130 195 Q125 200 115 195 Q105 190 105 180 Z" fill="white"/>
+    
+    {/* Leafy Greens / Cabbage/Lettuce */}
+    <path d="M145 175 Q150 165 160 175 Q165 180 160 185 Q155 190 150 185 Q145 180 145 175 Z" fill="white"/>
+    <path d="M155 170 Q160 165 170 170 Q175 175 170 180 Q165 185 160 180 Q155 175 155 170 Z" fill="white"/>
+    <path d="M165 165 Q170 160 180 165 Q185 170 180 175 Q175 180 170 175 Q165 170 165 165 Z" fill="white"/>
+    
+    {/* Additional Food Scraps */}
+    <circle cx="195" cy="175" r="6" fill="white"/>
+    <ellipse cx="205" cy="170" rx="5" ry="7" fill="white"/>
+    <path d="M215 165 Q220 160 225 165 Q230 170 225 175 Q220 180 215 175 Q215 170 215 165 Z" fill="white"/>
+  </svg>
+);
 
 // Eye icon component
 const EyeIcon = ({ visible }) => (
@@ -104,7 +162,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
             System
           </h1>
           <div className="illustration-container">
-            <img src={mainLogo} alt="System Logo" className="hero-image" />
+            <SortingLogo />
           </div>
         </div>
       </div>
