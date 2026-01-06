@@ -49,6 +49,52 @@ const CloseIcon = () => (
   </svg>
 );
 
+// Sidebar Navigation Icons
+const DashboardIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7"/>
+    <rect x="14" y="3" width="7" height="7"/>
+    <rect x="14" y="14" width="7" height="7"/>
+    <rect x="3" y="14" width="7" height="7"/>
+  </svg>
+);
+
+const WasteCategoriesIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18M3 12h18M3 18h18"/>
+  </svg>
+);
+
+const DataAnalyticsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="20" x2="18" y2="10"/>
+    <line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="14"/>
+  </svg>
+);
+
+const AccountsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
+const BinMonitoringIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+  </svg>
+);
+
+const AboutIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="16" x2="12" y2="12"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+);
+
 /* ================= MAIN ================= */
 
 const AdminDashboard = ({ onLogout }) => {
@@ -151,7 +197,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => handleNavClick('dashboard')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><DashboardIcon /></div>
             Dashboard
           </div>
 
@@ -159,7 +205,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => handleNavClick('users')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><WasteCategoriesIcon /></div>
             Waste Categories
           </div>
 
@@ -167,7 +213,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'data' ? 'active' : ''}`}
             onClick={() => handleNavClick('data')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><DataAnalyticsIcon /></div>
             Data Analytics
           </div>
 
@@ -175,7 +221,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'account' ? 'active' : ''}`}
             onClick={() => handleNavClick('account')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><AccountsIcon /></div>
             Accounts
           </div>
 
@@ -183,7 +229,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`}
             onClick={() => handleNavClick('bins')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><BinMonitoringIcon /></div>
             Bin Monitoring
           </div>
 
@@ -191,7 +237,7 @@ const AdminDashboard = ({ onLogout }) => {
             className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
             onClick={() => handleNavClick('reports')}
           >
-            <span className="nav-icon"></span>
+            <div className="nav-icon"><AboutIcon /></div>
             About
           </div>
         </nav>

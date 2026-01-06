@@ -335,45 +335,51 @@ const About = () => {
         </div>
       </div>
 
-      {/* Contact Section */}
-      <div className="contact-section">
-        <div className="contact-item">
-          <div className="contact-icon teal">
+      {/* Contact Footer Section */}
+      <div className="contact-footer">
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
             <MailIcon />
           </div>
-          <div className="contact-info">
+          <div className="footer-content">
             <h4>EMAIL</h4>
             <p>info@sortingsystem.com</p>
           </div>
         </div>
 
-        <div className="contact-item">
-          <div className="contact-icon teal">
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
             <PhoneIcon />
           </div>
-          <div className="contact-info">
+          <div className="footer-content">
             <h4>PHONE</h4>
             <p>+1 (555) 123-4567</p>
           </div>
         </div>
 
-        <div className="contact-item">
-          <div className="contact-icon teal">
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
             <MapPinIcon />
           </div>
-          <div className="contact-info">
+          <div className="footer-content">
             <h4>ADDRESS</h4>
-            <p>Brgy. 176, Bagong Silang, Caloocan City, 1428</p>
+            <p>Brgy. 176, Bagong Silang,<br />Caloocan City, 1428</p>
           </div>
         </div>
 
-        <div className="contact-item">
-          <div className="contact-icon teal">
+        <div className="footer-divider"></div>
+
+        <div className="contact-footer-item">
+          <div className="footer-icon-wrapper">
             <ClockIcon />
           </div>
-          <div className="contact-info">
+          <div className="footer-content">
             <h4>BUSINESS HOURS</h4>
-            <p>Mon–Fri: 9AM–6PM<br />Sat: 9AM–1PM<br />Sun: Closed</p>
+            <p>Mon-Fri: 9AM-6PM<br />Sat: 9AM-1PM<br />Sun: Closed</p>
           </div>
         </div>
       </div>
