@@ -1,31 +1,74 @@
+/**
+ * Data Analytics Component
+ * Displays comprehensive analytics and charts for waste sorting data
+ * Features: Time-based filtering, category-specific accuracy metrics, and trend analysis
+ */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/dataAnalytics.css';
 
-// Time Filter Icons
-const DailyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
-const WeeklyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
-const MonthlyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>;
-const YearlyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="18" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 4v6M17 4v6"/></svg>;
+// Time filter icons
+const ClockIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+const CalendarDatesIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+  </svg>
+);
+
+const CalendarYearIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+    <path d="M8 14h.01M12 14h.01M16 14h.01"/>
+  </svg>
+);
+
+// Target icon for accuracy cards
+const TargetIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"/>
+    <circle cx="12" cy="12" r="6"/>
+    <circle cx="12" cy="12" r="2"/>
+  </svg>
+);
 
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
-
-  const [accuracyData, setAccuracyData] = useState([
-    { name: 'General Waste', value: 98.2 },
-    { name: 'Biodegradable', value: 89.4 },
-    { name: 'Non-Biodegradable', value: 90.6 },
-    { name: 'Recycle', value: 92.3 }
+  const [categoryAccuracy, setCategoryAccuracy] = useState({
+    'General Waste': 98.2,
+    'Biodegradable': 89.4,
+    'Non-Biodegradable': 90.6,
+    'Recycle': 92.3
+  });
+  const [wasteDistribution, setWasteDistribution] = useState([
+    { name: 'Biodegradable', percentage: 50, color: '#047857' },
+    { name: 'Non-Biodegradable', percentage: 20, color: '#ef4444' },
+    { name: 'Recycle', percentage: 10, color: '#f97316' },
+    { name: 'Unsorted', percentage: 20, color: '#84cc16' }
   ]);
-
-  const [distributionData, setDistributionData] = useState([
-    { name: 'Biodegradable', value: 50, color: '#047857' },
-    { name: 'Non-Biodegradable', value: 20, color: '#ef4444' },
-    { name: 'Recycle', value: 20, color: '#f97316' },
-    { name: 'Unsorted', value: 10, color: '#6ee7b7' }
-  ]);
-
-  const [dailyTrendData, setDailyTrendData] = useState([
+  const [dailyTrend, setDailyTrend] = useState([
     { day: 'Mon', value: 550 },
     { day: 'Tue', value: 280 },
     { day: 'Wed', value: 980 },
@@ -41,73 +84,85 @@ const DataAnalytics = () => {
 
   const fetchAnalyticsData = async () => {
     try {
-      let query = supabase.from('waste_items').select('*');
+      let query = supabase
+        .from('waste_items')
+        .select('*');
 
-      const now = new Date();
+      // Apply time filter
       if (timeFilter === 'daily') {
-        now.setHours(0, 0, 0, 0);
-        query = query.gte('created_at', now.toISOString());
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        query = query.gte('created_at', today.toISOString());
       } else if (timeFilter === 'weekly') {
-        now.setDate(now.getDate() - 7);
-        query = query.gte('created_at', now.toISOString());
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        query = query.gte('created_at', weekAgo.toISOString());
       } else if (timeFilter === 'monthly') {
-        now.setMonth(now.getMonth() - 1);
-        query = query.gte('created_at', now.toISOString());
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        query = query.gte('created_at', monthAgo.toISOString());
       } else if (timeFilter === 'yearly') {
-        now.setFullYear(now.getFullYear() - 1);
-        query = query.gte('created_at', now.toISOString());
+        const yearAgo = new Date();
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        query = query.gte('created_at', yearAgo.toISOString());
       }
 
       const { data, error } = await query;
+
       if (error) throw error;
 
-      const categoryCounts = {
-        Biodegradable: 0,
-        'Non-Biodegradable': 0,
-        Recycle: 0,
-        Unsorted: 0
-      };
+      // Calculate distribution from actual data if available
+      if (data && data.length > 0) {
+        const categoryCounts = {};
+        data.forEach(item => {
+          const category = item.category || 'Unsorted';
+          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        });
 
-      data?.forEach(item => {
-        const category = item.category || 'Unsorted';
-        categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-      });
+        const total = data.length;
+        const distribution = [
+          { name: 'Biodegradable', count: categoryCounts['Biodegradable'] || 0, color: '#047857' },
+          { name: 'Non-Biodegradable', count: categoryCounts['Non-Biodegradable'] || 0, color: '#ef4444' },
+          { name: 'Recycle', count: categoryCounts['Recycle'] || 0, color: '#f97316' },
+          { name: 'Unsorted', count: categoryCounts['Unsorted'] || 0, color: '#84cc16' }
+        ].map(item => ({
+          ...item,
+          percentage: total > 0 ? ((item.count / total) * 100).toFixed(0) : 0
+        }));
 
-      const total = data?.length || 0;
-      if (total > 0) {
-        setDistributionData([
-          { name: 'Biodegradable', value: Math.round((categoryCounts.Biodegradable / total) * 100), color: '#047857' },
-          { name: 'Non-Biodegradable', value: Math.round((categoryCounts['Non-Biodegradable'] / total) * 100), color: '#ef4444' },
-          { name: 'Recycle', value: Math.round((categoryCounts.Recycle / total) * 100), color: '#f97316' },
-          { name: 'Unsorted', value: Math.round((categoryCounts.Unsorted / total) * 100), color: '#6ee7b7' }
-        ]);
+        setWasteDistribution(distribution);
       }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
     }
   };
 
-  const calculateDonutChart = () => {
-    const total = distributionData.reduce((sum, item) => sum + item.value, 0);
-    if (!total) return [];
+  // Calculate donut chart segments
+  const calculateDonutSegments = () => {
+    let currentAngle = -90; // Start from top
+    const segments = wasteDistribution.map(item => {
+      const percentage = parseFloat(item.percentage);
+      const angle = (percentage / 100) * 360;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + angle;
+      currentAngle = endAngle;
 
-    const circumference = 2 * Math.PI * 45;
-    let offset = 0;
+      const startX = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
+      const startY = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
+      const endX = 100 + 80 * Math.cos((endAngle * Math.PI) / 180);
+      const endY = 100 + 80 * Math.sin((endAngle * Math.PI) / 180);
+      const largeArcFlag = angle > 180 ? 1 : 0;
 
-    return distributionData.map(item => {
-      const length = (item.value / total) * circumference;
-      const segment = {
+      return {
         ...item,
-        strokeDasharray: length,
-        strokeDashoffset: circumference - offset
+        path: `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
       };
-      offset += length;
-      return segment;
     });
+    return segments;
   };
 
-  const segments = calculateDonutChart();
-  const maxBarValue = Math.max(...dailyTrendData.map(d => d.value), 1200);
+  const donutSegments = calculateDonutSegments();
+  const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 1200);
 
   return (
     <div className="data-analytics-container">
@@ -118,91 +173,156 @@ const DataAnalytics = () => {
         </div>
       </div>
 
+      {/* Time Filters */}
       <div className="time-filters">
-        {['daily', 'weekly', 'monthly', 'yearly'].map(filter => (
-          <button
-            key={filter}
-            className={`time-filter-btn ${timeFilter === filter ? 'active' : ''}`}
-            onClick={() => setTimeFilter(filter)}
-          >
-            {filter === 'daily' && <DailyIcon />}
-            {filter === 'weekly' && <WeeklyIcon />}
-            {filter === 'monthly' && <MonthlyIcon />}
-            {filter === 'yearly' && <YearlyIcon />}
-            {filter.charAt(0).toUpperCase() + filter.slice(1)}
-          </button>
-        ))}
+        <button
+          className={`time-filter-btn ${timeFilter === 'daily' ? 'active' : ''}`}
+          onClick={() => setTimeFilter('daily')}
+        >
+          <ClockIcon />
+          Daily
+        </button>
+        <button
+          className={`time-filter-btn ${timeFilter === 'weekly' ? 'active' : ''}`}
+          onClick={() => setTimeFilter('weekly')}
+        >
+          <CalendarIcon />
+          Weekly
+        </button>
+        <button
+          className={`time-filter-btn ${timeFilter === 'monthly' ? 'active' : ''}`}
+          onClick={() => setTimeFilter('monthly')}
+        >
+          <CalendarDatesIcon />
+          Monthly
+        </button>
+        <button
+          className={`time-filter-btn ${timeFilter === 'yearly' ? 'active' : ''}`}
+          onClick={() => setTimeFilter('yearly')}
+        >
+          <CalendarYearIcon />
+          Yearly
+        </button>
       </div>
 
+      {/* Sorting Accuracy Metrics */}
       <div className="accuracy-metrics">
-        {accuracyData.map((metric, index) => (
-          <div key={index} className="accuracy-card">
-            <div className="accuracy-content">
-              <h3 className="accuracy-title">{metric.name}</h3>
-              <p className="accuracy-label">Sorting Accuracy</p>
-              <p className="accuracy-value">{metric.value}%</p>
-              <p className="accuracy-subtitle">Average accuracy rate</p>
-            </div>
+        <div className="accuracy-card">
+          <div className="accuracy-icon">
+            <TargetIcon />
           </div>
-        ))}
+          <div className="accuracy-content">
+            <h3 className="accuracy-title">General Waste</h3>
+            <p className="accuracy-label">Sorting Accuracy</p>
+            <div className="accuracy-value">{categoryAccuracy['General Waste']}%</div>
+            <p className="accuracy-subtitle">Average accuracy rate</p>
+          </div>
+        </div>
+        <div className="accuracy-card">
+          <div className="accuracy-icon">
+            <TargetIcon />
+          </div>
+          <div className="accuracy-content">
+            <h3 className="accuracy-title">Biodegradable</h3>
+            <p className="accuracy-label">Sorting Accuracy</p>
+            <div className="accuracy-value">{categoryAccuracy['Biodegradable']}%</div>
+            <p className="accuracy-subtitle">Average accuracy rate</p>
+          </div>
+        </div>
+        <div className="accuracy-card">
+          <div className="accuracy-icon">
+            <TargetIcon />
+          </div>
+          <div className="accuracy-content">
+            <h3 className="accuracy-title">Non-Biodegradable</h3>
+            <p className="accuracy-label">Sorting Accuracy</p>
+            <div className="accuracy-value">{categoryAccuracy['Non-Biodegradable']}%</div>
+            <p className="accuracy-subtitle">Average accuracy rate</p>
+          </div>
+        </div>
+        <div className="accuracy-card">
+          <div className="accuracy-icon">
+            <TargetIcon />
+          </div>
+          <div className="accuracy-content">
+            <h3 className="accuracy-title">Recycle</h3>
+            <p className="accuracy-label">Sorting Accuracy</p>
+            <div className="accuracy-value">{categoryAccuracy['Recycle']}%</div>
+            <p className="accuracy-subtitle">Average accuracy rate</p>
+          </div>
+        </div>
       </div>
 
+      {/* Charts Section */}
       <div className="charts-section">
+        {/* Waste Distribution Donut Chart */}
         <div className="chart-card">
           <h3 className="chart-title">Waste Distribution</h3>
-
           <div className="donut-chart-container">
-            <svg className="donut-chart" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="45" fill="none" stroke="#f3f4f6" strokeWidth="20" />
-              {segments.map((seg, i) => (
-                <circle
-                  key={i}
-                  cx="60"
-                  cy="60"
-                  r="45"
-                  fill="none"
-                  stroke={seg.color}
-                  strokeWidth="20"
-                  strokeDasharray={`${seg.strokeDasharray} 999`}
-                  strokeDashoffset={seg.strokeDashoffset}
-                  transform="rotate(-90 60 60)"
+            <svg className="donut-chart" viewBox="0 0 200 200">
+              <circle
+                className="donut-ring"
+                cx="100"
+                cy="100"
+                r="80"
+                fill="none"
+                stroke="#f3f4f6"
+                strokeWidth="40"
+              />
+              {donutSegments.map((segment, index) => (
+                <path
+                  key={index}
+                  className="donut-segment"
+                  d={segment.path}
+                  fill={segment.color}
+                  stroke="#fff"
+                  strokeWidth="2"
                 />
               ))}
             </svg>
             <div className="donut-center">
-              <span className="donut-total">
-                {distributionData.reduce((s, i) => s + i.value, 0)}%
-              </span>
+              <div className="donut-total">100%</div>
             </div>
           </div>
-
           <div className="chart-legend">
-            {distributionData.map((item, index) => (
+            {wasteDistribution.map((item, index) => (
               <div key={index} className="legend-item">
                 <div className="legend-color" style={{ backgroundColor: item.color }}></div>
                 <span className="legend-label">{item.name}</span>
-                <span className="legend-value">{item.value}%</span>
+                <span className="legend-value">{item.percentage}%</span>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Daily Sorting Trend Bar Chart */}
         <div className="chart-card">
           <h3 className="chart-title">Daily Sorting Trend</h3>
           <div className="bar-chart-container">
+            <div className="bar-chart-y-axis">
+              <span className="y-axis-label">1200</span>
+              <span className="y-axis-label">900</span>
+              <span className="y-axis-label">600</span>
+              <span className="y-axis-label">300</span>
+              <span className="y-axis-label">0</span>
+            </div>
             <div className="bar-chart-bars">
-              {dailyTrendData.map((d, i) => (
-                <div key={i} className="bar-chart-item">
-                  <div className="bar" style={{ height: `${(d.value / maxBarValue) * 100}%` }}>
-                    <span className="bar-value">{d.value}</span>
-                  </div>
-                  <div className="bar-label">{d.day}</div>
+              {dailyTrend.map((item, index) => (
+                <div key={index} className="bar-chart-item">
+                  {item.value > 0 && (
+                    <div
+                      className="bar"
+                      style={{ height: `${(item.value / maxTrendValue) * 100}%` }}
+                    >
+                      <span className="bar-value">{item.value}</span>
+                    </div>
+                  )}
+                  <span className="bar-label">{item.day}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

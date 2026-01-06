@@ -1,9 +1,3 @@
-/**
- * Admin Dashboard Component
- * Main container component for the admin panel that manages navigation and displays different admin pages
- * Features: Sidebar navigation, modal dialogs, and dynamic content rendering based on active tab
- */
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +10,6 @@ import Accounts from './accounts.jsx';
 import WasteCategories from './wasteCategories.jsx';
 import DataAnalytics from './dataAnalytics.jsx';
 import BinMonitoring from './binMonitoring.jsx';
-import About from './about.jsx';
 
 /* ================= ICONS ================= */
 
@@ -29,25 +22,10 @@ const SignOutIcon = () =>
 
 const AlertIcon = () => 
   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
   </svg>;
-
-const MenuIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
 
 // Sidebar Navigation Icons
 const DashboardIcon = () => (
@@ -87,11 +65,18 @@ const BinMonitoringIcon = () => (
   </svg>
 );
 
-const AboutIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="12" y1="16" x2="12" y2="12"/>
-    <line x1="12" y1="8" x2="12.01" y2="8"/>
+const MenuIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 
@@ -223,14 +208,6 @@ const AdminDashboard = ({ onLogout }) => {
             <div className="nav-icon"><BinMonitoringIcon /></div>
             Bin Monitoring
           </div>
-
-          <div
-            className={`nav-item ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => handleNavClick('reports')}
-          >
-            <div className="nav-icon"><AboutIcon /></div>
-            About
-          </div>
         </nav>
 
         <div className="sidebar-footer">
@@ -260,7 +237,6 @@ const AdminDashboard = ({ onLogout }) => {
         {activeTab === 'data' && <DataAnalytics />}
         {activeTab === 'account' && <Accounts />}
         {activeTab === 'bins' && <BinMonitoring />}
-        {activeTab === 'reports' && <About />}
       </div>
     </div>
   );
