@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../employee/employeecss/Profile.css';
+import { supabase } from '../supabaseClient.jsx';
 
 // --- ICONS ---
 const ShieldIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
@@ -57,22 +58,26 @@ const Profile = () => {
   };
 
   const validatePhone = (phone) => {
-    if (!phone.trim()) {
-      return 'Phone number is required';
-    }
-    // Remove all non-digit characters for validation
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (digitsOnly.length < 10) {
-      return 'Phone number must be at least 10 digits';
-    }
-    if (digitsOnly.length > 15) {
-      return 'Phone number is too long';
-    }
-    if (!/^[0-9+\s()-]+$/.test(phone)) {
-      return 'Phone number contains invalid characters';
-    }
-    return '';
-  };
+  // Convert to string first in case it's a number
+  const phoneStr = String(phone || '').trim();
+  
+  if (!phoneStr) {
+    return 'Phone number is required';
+  }
+  
+  // Remove all non-digit characters for validation
+  const digitsOnly = phoneStr.replace(/\D/g, '');
+  if (digitsOnly.length < 10) {
+    return 'Phone number must be at least 10 digits';
+  }
+  if (digitsOnly.length > 15) {
+    return 'Phone number is too long';
+  }
+  if (!/^[0-9+\s()-]+$/.test(phoneStr)) {
+    return 'Phone number contains invalid characters';
+  }
+  return '';
+};
 
   // Handle input change with validation
   const handleInputChange = (field, value) => {
@@ -137,59 +142,134 @@ const Profile = () => {
     return !Object.values(newErrors).some(error => error !== '');
   };
 
-  // Fetch profile (simulate with useEffect)
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      // Your Supabase fetch logic here
-      // Simulated data for demo
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (err) {
-      console.error("Fetch Error:", err.message);
-    } finally {
-      setLoading(false);
+  // Fetch profile from Supabase
+const fetchProfile = async () => {
+  try {
+    setLoading(true);
+    
+    // Get current user from Supabase Auth
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("No user logged in");
+      return;
     }
-  };
+
+    // Fetch user data from users table
+    const { data, error } = await supabase
+      .from('users')
+      .select('first_name, last_name, middle_name, email, contact')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+  // Combine first, middle, last name into fullName
+  // Only add middle name if it exists and is not empty
+  const middle = (data.middle_name && data.middle_name.trim()) ? ` ${data.middle_name} ` : ' ';
+  const fullName = `${data.first_name}${middle}${data.last_name}`;
+  
+  setFormData({
+    fullName: fullName,
+    email: data.email || '',
+    phone: String(data.contact || '')
+  });
+
+    }
+  } catch (err) {
+    console.error("Fetch Error:", err.message);
+    alert("Error loading profile: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchProfile();
   }, []);
 
   // Handle Save
-  const handleSave = async () => {
-    if (!isEditing) {
-      setIsEditing(true);
+const handleSave = async () => {
+  console.log("Save button clicked");
+  console.log("Current isEditing state:", isEditing);
+  
+  if (!isEditing) {
+    console.log("Entering edit mode");
+    setIsEditing(true);
+    return;
+  }
+
+  console.log("Starting save process...");
+  console.log("Current formData:", formData);
+
+  // Validate all fields before saving
+  const isValid = validateAllFields();
+  console.log("Validation result:", isValid);
+  console.log("Current errors:", errors);
+  
+  if (!isValid) {
+    console.log("Validation failed, not saving");
+    return;
+  }
+
+  try {
+    console.log("Setting loading to true");
+    setLoading(true);
+    
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log("Current user:", user);
+    console.log("User error:", userError);
+    
+    if (!user) {
+      alert("Not logged in");
       return;
     }
 
-    // Validate all fields before saving
-    if (!validateAllFields()) {
-      return;
-    }
+    // Split name: first word is first_name, rest is last_name
+const nameParts = formData.fullName.trim().split(' ').filter(part => part.length > 0);
+const firstName = nameParts[0];
+const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
 
-    try {
-      // Your Supabase save logic here
-      // Split name: first word is first_name, rest is last_name
-      const nameParts = formData.fullName.trim().split(' ');
-      const fName = nameParts[0];
-      const lName = nameParts.slice(1).join(' ');
+    console.log("Parsed name parts:", { firstName, lastName, middleName });
+    console.log("Phone:", formData.phone);
 
-      // Simulated save
-      await new Promise(resolve => setTimeout(resolve, 500));
+    // Update user data in Supabase
+    const { data: updateData, error } = await supabase
+      .from('users')
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        middle_name: middleName,
+        contact: formData.phone
+      })
+      .eq('auth_id', user.id);
 
-      setSaveSuccess(true);
-      setIsEditing(false);
-      // Reset touched state
-      setTouched({
-        fullName: false,
-        email: false,
-        phone: false
-      });
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      alert("Update failed: " + err.message);
-    }
-  };
+    console.log("Update response data:", updateData);
+    console.log("Update error:", error);
+
+    if (error) throw error;
+
+    console.log("Save successful!");
+    setSaveSuccess(true);
+    setIsEditing(false);
+    // Reset touched state
+    setTouched({
+      fullName: false,
+      email: false,
+      phone: false
+    });
+    setTimeout(() => setSaveSuccess(false), 3000);
+  } catch (err) {
+    console.error("Update error:", err);
+    alert("Update failed: " + err.message);
+  } finally {
+    console.log("Setting loading to false");
+    setLoading(false);
+  }
+};
 
   const handleCancel = () => {
     setIsEditing(false);
