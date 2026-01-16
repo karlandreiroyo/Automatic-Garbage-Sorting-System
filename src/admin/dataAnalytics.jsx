@@ -35,38 +35,54 @@ const CalendarDatesIcon = () => (
   </svg>
 );
 
-const CalendarYearIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-    <line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8" y1="2" x2="8" y2="6"/>
-    <line x1="3" y1="10" x2="21" y2="10"/>
-    <path d="M8 14h.01M12 14h.01M16 14h.01"/>
+// Icons matching bin monitoring
+const TrashIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 6h18"/>
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
   </svg>
 );
 
-// Target icon for accuracy cards
-const TargetIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10"/>
-    <circle cx="12" cy="12" r="6"/>
-    <circle cx="12" cy="12" r="2"/>
+const LeafIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+  </svg>
+);
+
+const RecycleIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
+    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
+    <path d="m14 5 2.39 4.143"/>
+    <path d="M8.293 13.53 11 19"/>
+    <path d="M19.324 11.06 14 5"/>
+    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
+    <path d="m14 5-2.707 4.53"/>
+  </svg>
+);
+
+const GearIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+    <circle cx="12" cy="12" r="3"/>
   </svg>
 );
 
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [categoryAccuracy, setCategoryAccuracy] = useState({
-    'General Waste': 98.2,
+    'Unsorted': 98.2,
     'Biodegradable': 89.4,
     'Non-Biodegradable': 90.6,
     'Recycle': 92.3
   });
   const [wasteDistribution, setWasteDistribution] = useState([
-    { name: 'Biodegradable', percentage: 50, color: '#047857' },
+    { name: 'Biodegradable', percentage: 50, color: '#10b981' },
     { name: 'Non-Biodegradable', percentage: 20, color: '#ef4444' },
     { name: 'Recycle', percentage: 10, color: '#f97316' },
-    { name: 'Unsorted', percentage: 20, color: '#84cc16' }
+    { name: 'Unsorted', percentage: 20, color: '#6b7280' }
   ]);
   const [dailyTrend, setDailyTrend] = useState([
     { day: 'Mon', value: 550 },
@@ -101,10 +117,6 @@ const DataAnalytics = () => {
         const monthAgo = new Date();
         monthAgo.setMonth(monthAgo.getMonth() - 1);
         query = query.gte('created_at', monthAgo.toISOString());
-      } else if (timeFilter === 'yearly') {
-        const yearAgo = new Date();
-        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-        query = query.gte('created_at', yearAgo.toISOString());
       }
 
       const { data, error } = await query;
@@ -121,10 +133,10 @@ const DataAnalytics = () => {
 
         const total = data.length;
         const distribution = [
-          { name: 'Biodegradable', count: categoryCounts['Biodegradable'] || 0, color: '#047857' },
+          { name: 'Biodegradable', count: categoryCounts['Biodegradable'] || 0, color: '#10b981' },
           { name: 'Non-Biodegradable', count: categoryCounts['Non-Biodegradable'] || 0, color: '#ef4444' },
           { name: 'Recycle', count: categoryCounts['Recycle'] || 0, color: '#f97316' },
-          { name: 'Unsorted', count: categoryCounts['Unsorted'] || 0, color: '#84cc16' }
+          { name: 'Unsorted', count: categoryCounts['Unsorted'] || 0, color: '#6b7280' }
         ].map(item => ({
           ...item,
           percentage: total > 0 ? ((item.count / total) * 100).toFixed(0) : 0
@@ -137,9 +149,10 @@ const DataAnalytics = () => {
     }
   };
 
-  // Calculate donut chart segments
+  // Calculate pie chart segments
   const calculateDonutSegments = () => {
     let currentAngle = -90; // Start from top
+    const radius = 90; // Increased radius for larger pie chart
     const segments = wasteDistribution.map(item => {
       const percentage = parseFloat(item.percentage);
       const angle = (percentage / 100) * 360;
@@ -147,15 +160,15 @@ const DataAnalytics = () => {
       const endAngle = currentAngle + angle;
       currentAngle = endAngle;
 
-      const startX = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
-      const startY = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
-      const endX = 100 + 80 * Math.cos((endAngle * Math.PI) / 180);
-      const endY = 100 + 80 * Math.sin((endAngle * Math.PI) / 180);
+      const startX = 100 + radius * Math.cos((startAngle * Math.PI) / 180);
+      const startY = 100 + radius * Math.sin((startAngle * Math.PI) / 180);
+      const endX = 100 + radius * Math.cos((endAngle * Math.PI) / 180);
+      const endY = 100 + radius * Math.sin((endAngle * Math.PI) / 180);
       const largeArcFlag = angle > 180 ? 1 : 0;
 
       return {
         ...item,
-        path: `M 100 100 L ${startX} ${startY} A 80 80 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
+        path: `M 100 100 L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
       };
     });
     return segments;
@@ -196,31 +209,13 @@ const DataAnalytics = () => {
           <CalendarDatesIcon />
           Monthly
         </button>
-        <button
-          className={`time-filter-btn ${timeFilter === 'yearly' ? 'active' : ''}`}
-          onClick={() => setTimeFilter('yearly')}
-        >
-          <CalendarYearIcon />
-          Yearly
-        </button>
       </div>
 
       {/* Sorting Accuracy Metrics */}
       <div className="accuracy-metrics">
         <div className="accuracy-card">
           <div className="accuracy-icon">
-            <TargetIcon />
-          </div>
-          <div className="accuracy-content">
-            <h3 className="accuracy-title">General Waste</h3>
-            <p className="accuracy-label">Sorting Accuracy</p>
-            <div className="accuracy-value">{categoryAccuracy['General Waste']}%</div>
-            <p className="accuracy-subtitle">Average accuracy rate</p>
-          </div>
-        </div>
-        <div className="accuracy-card">
-          <div className="accuracy-icon">
-            <TargetIcon />
+            <LeafIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
@@ -231,7 +226,7 @@ const DataAnalytics = () => {
         </div>
         <div className="accuracy-card">
           <div className="accuracy-icon">
-            <TargetIcon />
+            <TrashIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
@@ -242,12 +237,23 @@ const DataAnalytics = () => {
         </div>
         <div className="accuracy-card">
           <div className="accuracy-icon">
-            <TargetIcon />
+            <RecycleIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Accuracy</p>
             <div className="accuracy-value">{categoryAccuracy['Recycle']}%</div>
+            <p className="accuracy-subtitle">Average accuracy rate</p>
+          </div>
+        </div>
+        <div className="accuracy-card">
+          <div className="accuracy-icon">
+            <GearIcon />
+          </div>
+          <div className="accuracy-content">
+            <h3 className="accuracy-title">Unsorted</h3>
+            <p className="accuracy-label">Sorting Accuracy</p>
+            <div className="accuracy-value">{categoryAccuracy['Unsorted']}%</div>
             <p className="accuracy-subtitle">Average accuracy rate</p>
           </div>
         </div>
@@ -260,15 +266,6 @@ const DataAnalytics = () => {
           <h3 className="chart-title">Waste Distribution</h3>
           <div className="donut-chart-container">
             <svg className="donut-chart" viewBox="0 0 200 200">
-              <circle
-                className="donut-ring"
-                cx="100"
-                cy="100"
-                r="80"
-                fill="none"
-                stroke="#f3f4f6"
-                strokeWidth="40"
-              />
               {donutSegments.map((segment, index) => (
                 <path
                   key={index}
@@ -280,9 +277,6 @@ const DataAnalytics = () => {
                 />
               ))}
             </svg>
-            <div className="donut-center">
-              <div className="donut-total">100%</div>
-            </div>
           </div>
           <div className="chart-legend">
             {wasteDistribution.map((item, index) => (

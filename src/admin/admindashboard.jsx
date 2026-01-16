@@ -146,18 +146,25 @@ const AdminDashboard = ({ onLogout }) => {
       {/* Mobile Header with Hamburger - Only show on mobile */}
       {isMobile && (
         <div className="mobile-header">
-          <button className="hamburger-btn" onClick={toggleSidebar}>
-            {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
-          </button>
           <div className="mobile-logo">
             <img src={sidebarLogo} alt="Logo" />
             <span>Admin Panel</span>
           </div>
+          <button className="hamburger-btn" onClick={toggleSidebar}>
+            {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
+          </button>
         </div>
       )}
 
+      {/* FLOATING MENU BUTTON FOR MOBILE - Right side */}
+      {isMobile && (
+        <button className="mobile-menu-btn-floating" onClick={toggleSidebar}>
+          {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
+        </button>
+      )}
+
       {/* Sidebar with conditional class */}
-      <div className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+      <div className={`sidebar ${isMobile && !isSidebarCollapsed ? 'mobile-open' : ''} ${!isMobile && isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
@@ -217,17 +224,11 @@ const AdminDashboard = ({ onLogout }) => {
           >
             <SignOutIcon /> Sign Out
           </button>
-
-          <div className="today-status-card">
-            <p>System Status</p>
-            <h2>99.8%</h2>
-            <span>Uptime</span>
-          </div>
         </div>
       </div>
 
       {/* Overlay for mobile when sidebar is open */}
-      {!isSidebarCollapsed && isMobile && (
+      {isMobile && !isSidebarCollapsed && (
         <div className="sidebar-overlay" onClick={() => setIsSidebarCollapsed(true)} />
       )}
 

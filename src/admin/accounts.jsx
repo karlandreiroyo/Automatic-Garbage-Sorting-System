@@ -390,8 +390,8 @@ const Accounts = () => {
 
       {/* --- ADD MODAL --- */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content maximized">
             <div className="modal-header">
               <h2>Add New Employee</h2>
             </div>
@@ -496,8 +496,8 @@ const Accounts = () => {
 
       {/* --- EDIT MODAL --- */}
       {editingUser && (
-        <div className="modal-overlay" onClick={() => setEditingUser(null)}>
-          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content maximized">
             <div className="modal-header">
               <h2>Edit Employee Account</h2>
             </div>
