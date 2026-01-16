@@ -117,61 +117,58 @@ const BinListCard = ({ bin, onClick }) => {
     return 'status-empty';
   };
 
-  return (
-    <div className="bin-list-card" onClick={onClick}>
-      {/* Left Panel - Green Section */}
-      <div className="bin-list-left-panel">
-        <div className="bin-list-system-power">
-          <span className="system-power-label">SYSTEM POWER</span>
-          <div className="system-power-content">
-            <BatteryIcon level={bin.systemPower} />
-          </div>
-        </div>
-        <div className="bin-list-title-section">
-          <h1 className="bin-list-title">{bin.name}</h1>
-          <p className="bin-list-capacity">Capacity: {bin.capacity}</p>
-        </div>
-        <span className={`bin-list-status-badge ${getStatusClass()}`}>
-          <span className="status-dot"></span>
-          {getStatus()}
-        </span>
-      </div>
+  // Get color class based on category
+  const getColorClass = () => {
+    if (bin.category === 'Biodegradable') return 'green';
+    if (bin.category === 'Non-Biodegradable' || bin.category === 'Non Biodegradable') return 'red';
+    if (bin.category === 'Recyclable') return 'blue';
+    return 'lime'; // Default for Unsorted or others
+  };
 
-      {/* Right Panel - White Section */}
-      <div className="bin-list-right-panel">
-        <div className="bin-list-fill-section">
-          <span className="fill-level-label">Fill Level</span>
-          <div className="bin-list-progress-container">
-            <div className="bin-list-fill-bar">
-              <div 
-                className="bin-list-fill-progress" 
-                style={{ 
-                  width: `${bin.fillLevel}%`,
-                  backgroundColor: getFillLevelColor(bin.fillLevel)
-                }}
-              ></div>
-            </div>
+  // Get icon based on category - All bins use TrashIcon like Bin 2
+  const getCategoryIcon = () => {
+    return <TrashIcon />; // All bins use the same icon as Bin 2
+  };
+
+  return (
+    <div className={`bin-list-card ${getColorClass()}`} onClick={onClick}>
+      {/* Colored Header Section */}
+      <div className="bin-list-header">
+        {/* Icon Circle */}
+        <div className="bin-list-icon-wrapper">
+          {getCategoryIcon()}
+        </div>
+        
+        {/* Bin Name */}
+        <h3 className="bin-list-category-name">{bin.name}</h3>
+      </div>
+      
+      {/* White Body Section */}
+      <div className="bin-list-body">
+        <div className="bin-list-fill-info">
+          <div className="fill-level-section">
+            <span className="fill-level-label">Fill Level</span>
             <span 
-              className="bin-list-fill-percentage"
+              className="fill-percent" 
               style={{ color: getFillLevelColor(bin.fillLevel) }}
             >
               {bin.fillLevel}%
             </span>
           </div>
-          <span className="bin-list-last-update">{bin.lastUpdate}</span>
-        </div>
-        <div className="bin-list-visual">
-          <div className="bin-list-icon-visual">
+          <div className="fill-bar">
             <div 
-              className="bin-list-fill-section-visual" 
+              className="fill-progress" 
               style={{ 
-                height: `${bin.fillLevel}%`,
+                width: `${bin.fillLevel}%`,
                 backgroundColor: getFillLevelColor(bin.fillLevel)
               }}
-            >
-              <span className="bin-list-percentage-text">{bin.fillLevel}%</span>
+            ></div>
+          </div>
+          <div className="bin-list-meta-info">
+            <div className="bin-list-info-row">
+              <span className="info-label">Last Collection</span>
+              <span className="info-value">{bin.lastUpdate}</span>
             </div>
-            <div className="bin-list-empty-section-visual"></div>
           </div>
         </div>
       </div>
@@ -209,63 +206,59 @@ const BinDetailCard = ({ bin, onDrain }) => {
     return 'status-empty';
   };
 
+  // Get the icon based on category
+  const getCategoryIcon = () => {
+    if (bin.icon) return bin.icon;
+    // Default icons based on color class
+    if (bin.colorClass === 'green') return <LeafIcon />;
+    if (bin.colorClass === 'red') return <TrashIcon />;
+    if (bin.colorClass === 'blue') return <RecycleIcon />;
+    return <GearIcon />;
+  };
+
+  // Get category color based on colorClass
+  const getCategoryColor = () => {
+    if (bin.colorClass === 'green') return '#10b981'; // Biodegradable
+    if (bin.colorClass === 'red') return '#ef4444'; // Non-Biodegradable
+    if (bin.colorClass === 'blue') return '#f97316'; // Recyclable
+    return '#6b7280'; // Unsorted (lime)
+  };
+
   return (
     <div className={`bin-detail-card ${bin.colorClass}`}>
-      <div className="bin-detail-left">
-        <div className="bin-detail-info">
-          <h3>{bin.category}</h3>
-          <p>Capacity: {bin.capacity}</p>
+      {/* Colored Header Section - Top */}
+      <div className="bin-detail-header">
+        <div className="bin-detail-icon-wrapper">
+          {getCategoryIcon()}
         </div>
+        <h3 className="bin-detail-category-name">{bin.category}</h3>
       </div>
-      <div className="bin-detail-middle">
-        <div className="bin-detail-fill-info">
-          <div className="fill-level-header">
-            <span className="fill-level-label">Fill Level</span>
-            <span 
-              className="fill-percent" 
-              style={{ color: getFillLevelColor(bin.fillLevel) }}
-            >
-              {bin.fillLevel}%
-            </span>
-          </div>
-          <div className="fill-bar">
-            <div 
-              className="fill-progress" 
-              style={{ 
-                width: `${bin.fillLevel}%`,
-                backgroundColor: getFillLevelColor(bin.fillLevel)
-              }}
-            ></div>
-          </div>
-          <div className="last-collection-row">
-            <div className="last-collection">
-              <span>Last Collection</span>
-              <span className="collection-time">{bin.lastCollection}</span>
-            </div>
-            <button className="drain-bin-btn" onClick={(e) => {
-              e.stopPropagation();
-              if (onDrain) onDrain(bin.id);
-            }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
-              </svg>
-              DRAIN
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="bin-detail-right">
-        <div className="bin-visual">
-          <div 
-            className="bin-fill-section" 
-            style={{ 
-              height: `${bin.fillLevel}%`,
-              backgroundColor: getFillLevelColor(bin.fillLevel)
-            }}
+      
+      {/* White Body Section - Bottom */}
+      <div className="bin-detail-body">
+        <div className="fill-info">
+          <span className="label">Fill Level</span>
+          <span 
+            className="value" 
+            style={{ color: getCategoryColor() }}
           >
-            <span className="bin-percentage-text">{bin.fillLevel}%</span>
+            {bin.fillLevel}%
+          </span>
+        </div>
+        <div className="progress-track">
+          <div 
+            className="progress-fill" 
+            style={{ 
+              width: `${bin.fillLevel}%`,
+              backgroundColor: getCategoryColor()
+            }}
+          ></div>
+        </div>
+        <div className="meta-info">
+          <div className="meta-row">
+            <span className="meta-label">Last Collection</span>
+            <strong className="meta-val">{bin.lastCollection}</strong>
           </div>
-          <div className="bin-empty-section"></div>
         </div>
       </div>
     </div>
@@ -284,6 +277,17 @@ const BinMonitoring = () => {
   const [selectedBinId, setSelectedBinId] = useState(null);
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const binsPerPage = 4;
+  // State for Add Bin modal
+  const [showAddBinModal, setShowAddBinModal] = useState(false);
+  const [binFormData, setBinFormData] = useState({
+    name: '',
+    category: 'Biodegradable',
+    capacity: '20kg'
+  });
+  const [loading, setLoading] = useState(false);
   
   // State for list view bins, each with its own independent category bins
   const [bins, setBins] = useState([
@@ -297,15 +301,6 @@ const BinMonitoring = () => {
     category: 'Biodegradable',
     categoryBins: [
       { 
-        id: 'non-bio-1', 
-        category: 'Non Biodegradable', 
-        fillLevel: 100, // Already multiple of 10
-        capacity: '100 L', 
-        lastCollection: '4 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
         id: 'bio-1', 
         category: 'Biodegradable', 
         fillLevel: 80, // Already multiple of 10
@@ -313,6 +308,15 @@ const BinMonitoring = () => {
         lastCollection: '2 hours ago',
         colorClass: 'green',
         icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-1', 
+        category: 'Non Biodegradable', 
+        fillLevel: 100, // Already multiple of 10
+        capacity: '100 L', 
+        lastCollection: '4 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
       },
       { 
         id: 'recycle-1', 
@@ -344,15 +348,6 @@ const BinMonitoring = () => {
     category: 'Non-Biodegradable',
     categoryBins: [
       { 
-        id: 'non-bio-2', 
-        category: 'Non Biodegradable', 
-        fillLevel: 100, // Changed from 95 to 100
-        capacity: '100 L', 
-        lastCollection: '3 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
         id: 'bio-2', 
         category: 'Biodegradable', 
         fillLevel: 80, // Changed from 75 to 80
@@ -360,6 +355,15 @@ const BinMonitoring = () => {
         lastCollection: '1 hour ago',
         colorClass: 'green',
         icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-2', 
+        category: 'Non Biodegradable', 
+        fillLevel: 100, // Changed from 95 to 100
+        capacity: '100 L', 
+        lastCollection: '3 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
       },
       { 
         id: 'recycle-2', 
@@ -391,15 +395,6 @@ const BinMonitoring = () => {
     category: 'Recycle',
     categoryBins: [
       { 
-        id: 'non-bio-3', 
-        category: 'Non Biodegradable', 
-        fillLevel: 90, // Changed from 88 to 90
-        capacity: '100 L', 
-        lastCollection: '5 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
         id: 'bio-3', 
         category: 'Biodegradable', 
         fillLevel: 80, // Changed from 82 to 80
@@ -407,6 +402,15 @@ const BinMonitoring = () => {
         lastCollection: '2 hours ago',
         colorClass: 'green',
         icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-3', 
+        category: 'Non Biodegradable', 
+        fillLevel: 90, // Changed from 88 to 90
+        capacity: '100 L', 
+        lastCollection: '5 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
       },
       { 
         id: 'recycle-3', 
@@ -438,15 +442,6 @@ const BinMonitoring = () => {
     category: 'Unsorted',
     categoryBins: [
       { 
-        id: 'non-bio-4', 
-        category: 'Non Biodegradable', 
-        fillLevel: 90, // Changed from 92 to 90
-        capacity: '100 L', 
-        lastCollection: '6 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
         id: 'bio-4', 
         category: 'Biodegradable', 
         fillLevel: 90, // Changed from 88 to 90
@@ -454,6 +449,15 @@ const BinMonitoring = () => {
         lastCollection: '3 hours ago',
         colorClass: 'green',
         icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-4', 
+        category: 'Non Biodegradable', 
+        fillLevel: 90, // Changed from 92 to 90
+        capacity: '100 L', 
+        lastCollection: '6 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
       },
       { 
         id: 'recycle-4', 
@@ -474,8 +478,149 @@ const BinMonitoring = () => {
         icon: <GearIcon />
       }
     ]
+  },
+  { 
+    id: 5, 
+    name: 'Bin 5', 
+    fillLevel: 75,
+    systemPower: 80, 
+    capacity: '20kg', 
+    lastUpdate: '2 hours ago', 
+    category: 'Biodegradable',
+    categoryBins: [
+      { 
+        id: 'bio-5', 
+        category: 'Biodegradable', 
+        fillLevel: 75,
+        capacity: '100 L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-5', 
+        category: 'Non Biodegradable', 
+        fillLevel: 75,
+        capacity: '100 L', 
+        lastCollection: '3 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'recycle-5', 
+        category: 'Recyclable', 
+        fillLevel: 75,
+        capacity: '100L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-5', 
+        category: 'Unsorted', 
+        fillLevel: 75,
+        capacity: '100L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  },
+  { 
+    id: 6, 
+    name: 'Bin 6', 
+    fillLevel: 60,
+    systemPower: 70, 
+    capacity: '20kg', 
+    lastUpdate: '1 hour ago', 
+    category: 'Non-Biodegradable',
+    categoryBins: [
+      { 
+        id: 'bio-6', 
+        category: 'Biodegradable', 
+        fillLevel: 60,
+        capacity: '100 L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-6', 
+        category: 'Non Biodegradable', 
+        fillLevel: 60,
+        capacity: '100 L', 
+        lastCollection: '2 hours ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'recycle-6', 
+        category: 'Recyclable', 
+        fillLevel: 60,
+        capacity: '100L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-6', 
+        category: 'Unsorted', 
+        fillLevel: 60,
+        capacity: '100L', 
+        lastCollection: '30 minutes ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
+  },
+  { 
+    id: 7, 
+    name: 'Bin 7', 
+    fillLevel: 50,
+    systemPower: 60, 
+    capacity: '20kg', 
+    lastUpdate: '30 minutes ago', 
+    category: 'Recyclable',
+    categoryBins: [
+      { 
+        id: 'bio-7', 
+        category: 'Biodegradable', 
+        fillLevel: 50,
+        capacity: '100 L', 
+        lastCollection: '30 minutes ago',
+        colorClass: 'green',
+        icon: <LeafIcon />
+      },
+      { 
+        id: 'non-bio-7', 
+        category: 'Non Biodegradable', 
+        fillLevel: 50,
+        capacity: '100 L', 
+        lastCollection: '1 hour ago',
+        colorClass: 'red',
+        icon: <TrashIcon />
+      },
+      { 
+        id: 'recycle-7', 
+        category: 'Recyclable', 
+        fillLevel: 50,
+        capacity: '100L', 
+        lastCollection: '30 minutes ago',
+        colorClass: 'blue',
+        icon: <RecycleIcon />
+      },
+      { 
+        id: 'unsorted-7', 
+        category: 'Unsorted', 
+        fillLevel: 50,
+        capacity: '100L', 
+        lastCollection: '15 minutes ago',
+        colorClass: 'lime',
+        icon: <GearIcon />
+      }
+    ]
   }
-]);
+  ]);
 
   // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
@@ -863,7 +1008,7 @@ const updateBinFillLevels = () => {
         <div className="bin-monitoring-header">
           <div className="header-left-detail">
             <h1 className="bin-name-header">{selectedBin?.name || 'BIN'}</h1>
-            <p>Monitor bin fill levels in real-time</p>
+            <p>Monitor bin fill levels</p>
           </div>
           <div className="header-actions">
             <button className="action-btn back-btn" onClick={handleBack}>
@@ -872,21 +1017,6 @@ const updateBinFillLevels = () => {
               </svg>
               Back
             </button>
-            <button className="action-btn drain-all-btn" onClick={handleDrainAll}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7 7l5 5 5-5M7 13l5 5 5-5"/>
-              </svg>
-              DRAIN ALL
-            </button>
-          </div>
-        </div>
-
-        {/* Action Required Alert */}
-        <div className="action-required-alert">
-          <span className="warning-icon">⚠️</span>
-          <div>
-            <span className="action-text">Action Required</span>
-            <p>{full} bin full, {almostFull} bins almost full</p>
           </div>
         </div>
 
@@ -904,33 +1034,176 @@ const updateBinFillLevels = () => {
     );
   }
 
-  // Calculate action required for main bins
-  const mainBinsFull = bins.filter(b => b.fillLevel >= 90).length;
-  const mainBinsAlmostFull = bins.filter(b => b.fillLevel >= 75 && b.fillLevel < 90).length;
+  // Calculate pagination
+  const totalPages = Math.ceil(bins.length / binsPerPage);
+  const indexOfLastBin = currentPage * binsPerPage;
+  const indexOfFirstBin = indexOfLastBin - binsPerPage;
+  const currentBins = bins.slice(indexOfFirstBin, indexOfLastBin);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Handle Add Bin form input change
+  const handleBinInputChange = (e) => {
+    const { name, value } = e.target;
+    setBinFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle Add Bin form submission
+  const handleAddBin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Generate next bin number
+      const nextBinNumber = bins.length + 1;
+      const newBinName = binFormData.name || `Bin ${nextBinNumber}`;
+
+      // Create new bin with default category bins
+      const newBin = {
+        id: nextBinNumber,
+        name: newBinName,
+        fillLevel: 0,
+        systemPower: 100,
+        capacity: binFormData.capacity || '20kg',
+        lastUpdate: 'Just now',
+        category: binFormData.category || 'Biodegradable',
+        categoryBins: [
+          {
+            id: `bio-${nextBinNumber}`,
+            category: 'Biodegradable',
+            fillLevel: 0,
+            capacity: '100 L',
+            lastCollection: 'Just now',
+            colorClass: 'green',
+            icon: <LeafIcon />
+          },
+          {
+            id: `non-bio-${nextBinNumber}`,
+            category: 'Non Biodegradable',
+            fillLevel: 0,
+            capacity: '100 L',
+            lastCollection: 'Just now',
+            colorClass: 'red',
+            icon: <TrashIcon />
+          },
+          {
+            id: `recycle-${nextBinNumber}`,
+            category: 'Recyclable',
+            fillLevel: 0,
+            capacity: '100L',
+            lastCollection: 'Just now',
+            colorClass: 'blue',
+            icon: <RecycleIcon />
+          },
+          {
+            id: `unsorted-${nextBinNumber}`,
+            category: 'Unsorted',
+            fillLevel: 0,
+            capacity: '100L',
+            lastCollection: 'Just now',
+            colorClass: 'lime',
+            icon: <GearIcon />
+          }
+        ]
+      };
+
+      // Add to bins array
+      setBins(prev => [...prev, newBin]);
+
+      // Reset form
+      setBinFormData({
+        name: '',
+        category: 'Biodegradable',
+        capacity: '20kg'
+      });
+
+      // Close modal
+      setShowAddBinModal(false);
+    } catch (error) {
+      console.error('Error adding bin:', error);
+      alert('Error adding bin. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Render list view (default) - Shows main bins (Bin 1, Bin 2, etc.)
   return (
     <div className="bin-monitoring-container">
+      {/* Add Bin Modal */}
+      {showAddBinModal && (
+        <div className="modal-overlay">
+          <div className="modal-content maximized">
+            <div className="modal-header">
+              <h2>Add New Bin</h2>
+            </div>
+            <form onSubmit={handleAddBin} className="employee-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Bin Name *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={binFormData.name}
+                    onChange={handleBinInputChange}
+                    placeholder="e.g., Bin 5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Category</label>
+                  <select name="category" value={binFormData.category} onChange={handleBinInputChange}>
+                    <option value="Biodegradable">Biodegradable</option>
+                    <option value="Non-Biodegradable">Non-Biodegradable</option>
+                    <option value="Recyclable">Recyclable</option>
+                    <option value="Unsorted">Unsorted</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Capacity</label>
+                  <input
+                    type="text"
+                    name="capacity"
+                    value={binFormData.capacity}
+                    onChange={handleBinInputChange}
+                    placeholder="e.g., 20kg"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddBinModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Bin'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* List View Header */}
       <div className="bin-monitoring-header">
         <div>
-          <h1>Real-Time Bin Monitoring</h1>
-          <p>Monitor bin fill levels in real-time</p>
+          <h1>Bin Monitoring</h1>
+          <p>Monitor bin fill levels</p>
         </div>
-      </div>
-
-      {/* Action Required Alert */}
-      <div className="action-required-alert">
-        <span className="warning-icon">⚠️</span>
-        <div>
-          <span className="action-text">Action Required</span>
-          <p>{mainBinsFull} bin full, {mainBinsAlmostFull} bins almost full</p>
-        </div>
+        {/* Add Bin Button - Aligned with header, shows on all pages */}
+        <button className="add-bin-header-button" onClick={() => setShowAddBinModal(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          ADD BIN
+        </button>
       </div>
 
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
-        {bins.map(bin => (
+        {currentBins.map(bin => (
           <BinListCard 
             key={bin.id} 
             bin={bin} 
@@ -938,6 +1211,38 @@ const updateBinFillLevels = () => {
           />
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <button 
+            className="pagination-btn pagination-prev"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          {[...Array(totalPages)].map((_, index) => {
+            const page = index + 1;
+            return (
+              <button
+                key={page}
+                className={`pagination-btn pagination-number ${currentPage === page ? 'active' : ''}`}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </button>
+            );
+          })}
+          <button 
+            className="pagination-btn pagination-next"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
