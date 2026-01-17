@@ -17,9 +17,18 @@
 
 .data-analytics-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   margin-bottom: 30px;
+  width: 100%;
+}
+
+.data-analytics-header > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
 }
 
 .data-analytics-header h1 {
@@ -27,18 +36,23 @@
   font-weight: 700;
   color: #111;
   margin: 0 0 5px 0;
+  text-align: center;
+  width: 100%;
 }
 
 .data-analytics-header p {
   font-size: 0.9rem;
   color: #666;
   margin: 0;
+  text-align: center;
+  width: 100%;
 }
 
 .time-filters {
   display: flex;
   gap: 15px;
   margin-bottom: 30px;
+  flex-wrap: nowrap;
 }
 
 .time-filter-btn {
@@ -55,6 +69,9 @@
   align-items: center;
   gap: 8px;
   justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .time-filter-btn:hover {
@@ -324,36 +341,311 @@
   text-align: center;
 }
 
+/* Tablet */
 @media (max-width: 1200px) {
+  .data-analytics-container {
+    padding: 18px;
+  }
+  
   .accuracy-metrics {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .donut-chart-container {
+    min-height: 220px;
+  }
+  
+  .donut-chart {
+    width: 220px;
+    height: 220px;
   }
 }
 
+/* Mobile */
 @media (max-width: 768px) {
+  .data-analytics-container {
+    padding: 15px;
+  }
+  
   .data-analytics-header {
     flex-direction: column;
-    gap: 15px;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+  
+  .data-analytics-header > div {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .data-analytics-header h1 {
+    font-size: 1.6rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .data-analytics-header p {
+    font-size: 0.85rem;
+    text-align: center !important;
+    width: 100%;
   }
 
   .time-filters {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin-bottom: 25px;
+  }
+  
+  .time-filter-btn {
+    padding: 9px 18px;
+    font-size: 0.9rem;
+    flex-shrink: 1;
   }
 
   .accuracy-metrics {
     grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 25px;
+  }
+  
+  .accuracy-card {
+    padding: 18px;
+    gap: 14px;
+  }
+  
+  .accuracy-icon {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .accuracy-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .accuracy-title {
+    font-size: 0.9rem;
+  }
+  
+  .accuracy-label {
+    font-size: 0.7rem;
+  }
+  
+  .accuracy-value {
+    font-size: 1.6rem;
   }
 
   .charts-section {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .chart-card {
+    padding: 20px;
+  }
+  
+  .chart-title {
+    font-size: 1rem;
+    margin-bottom: 16px;
   }
 
   .bar-chart-container {
     height: 250px;
+    gap: 10px;
   }
-
+  
+  .bar-chart-bars {
+    gap: 10px;
+  }
+  
   .bar-value {
     font-size: 0.65rem;
     top: -18px;
+  }
+  
+  .bar-label {
+    font-size: 0.7rem;
+  }
+  
+  .donut-chart-container {
+    min-height: 200px;
+  }
+  
+  .donut-chart {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .chart-legend {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .data-analytics-container {
+    padding: 12px;
+  }
+  
+  .data-analytics-header {
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
+    padding-right: 15px;
+    box-sizing: border-box;
+  }
+  
+  .data-analytics-header > div {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .data-analytics-header h1 {
+    font-size: 1.4rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .data-analytics-header p {
+    font-size: 0.8rem;
+    text-align: center !important;
+    width: 100%;
+  }
+
+  .time-filters {
+    gap: 6px;
+    margin-bottom: 20px;
+    flex-wrap: nowrap;
+  }
+  
+  .time-filter-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  
+  .time-filter-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .accuracy-metrics {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .accuracy-card {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .accuracy-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .accuracy-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .accuracy-title {
+    font-size: 0.85rem;
+  }
+  
+  .accuracy-label {
+    font-size: 0.65rem;
+    margin-bottom: 6px;
+  }
+  
+  .accuracy-value {
+    font-size: 1.5rem;
+  }
+
+  .chart-card {
+    padding: 16px;
+  }
+  
+  .chart-title {
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+
+  .bar-chart-container {
+    height: 220px;
+    gap: 8px;
+  }
+  
+  .bar-chart-y-axis {
+    padding-right: 6px;
+  }
+  
+  .y-axis-label {
+    font-size: 0.7rem;
+  }
+  
+  .bar-chart-bars {
+    gap: 8px;
+  }
+  
+  .bar-value {
+    font-size: 0.6rem;
+    top: -16px;
+  }
+  
+  .bar-label {
+    font-size: 0.65rem;
+    margin-top: 6px;
+  }
+  
+  .donut-chart-container {
+    min-height: 180px;
+  }
+  
+  .donut-chart {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .chart-legend {
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+  
+  .legend-item {
+    padding: 6px 10px;
+  }
+  
+  .legend-color {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .legend-label {
+    font-size: 0.8rem;
+  }
+  
+  .legend-value {
+    font-size: 0.85rem;
   }
 }
