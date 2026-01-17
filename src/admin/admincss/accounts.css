@@ -652,6 +652,71 @@
   }
 }
 
+/* Tablet */
+@media (max-width: 1024px) {
+  .accounts-container {
+    padding: 20px;
+  }
+  
+  .accounts-header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .add-employee-btn {
+    padding: 11px 18px;
+    font-size: 0.9rem;
+  }
+  
+  .filters-row {
+    gap: 10px;
+  }
+  
+  .search-input,
+  .filter-select {
+    padding: 11px 14px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .accounts-container {
+    padding: 18px;
+  }
+  
+  .accounts-header {
+    margin-bottom: 20px;
+  }
+  
+  .accounts-header h1 {
+    font-size: 1.7rem;
+  }
+  
+  .add-employee-btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .filters-row {
+    gap: 10px;
+  }
+  
+  .table-row {
+    padding: 18px;
+  }
+  
+  .action-btn {
+    min-width: 80px;
+    padding: 7px 14px;
+    font-size: 0.8rem;
+  }
+  
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 @media (max-width: 640px) {
   .accounts-container {
     padding: 16px;
@@ -660,26 +725,43 @@
   .accounts-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 16px;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  
+  .accounts-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .accounts-header p {
+    font-size: 0.9rem;
   }
 
   .add-employee-btn {
     width: 100%;
     justify-content: center;
+    padding: 10px 16px;
   }
 
   .filters-row {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .search-input,
   .filter-select {
     width: 100%;
+    padding: 10px 14px;
+  }
+
+  .table-row {
+    padding: 16px;
+    gap: 10px;
   }
 
   .td-actions {
     flex-wrap: wrap;
+    gap: 6px;
   }
 
   .action-btn,
@@ -690,12 +772,29 @@
   .action-btn {
     min-width: 75px;
     padding: 6px 12px;
+    min-height: 34px;
   }
 
   .icon-btn {
     width: 32px;
     height: 32px;
   }
+  
+  .pagination-container {
+    padding: 16px 0;
+  }
+  
+  .pagination {
+    gap: 6px;
+  }
+  
+  .page-btn {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+    padding: 0 10px;
+  }
+}
   
   .modal-content.maximized {
     max-width: 95%;

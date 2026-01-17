@@ -31,6 +31,14 @@
   box-sizing: border-box;
 }
 
+/* On smaller screens, stack bins vertically one by one */
+@media (max-width: 1024px) {
+  .bin-list-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .header-title { 
   color: #1e293b; 
   margin: 0; 
@@ -77,23 +85,36 @@
 .bin-monitoring-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  align-items: center;
+  margin-bottom: 20px;
+  margin-top: 0;
   gap: 30px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bin-monitoring-header > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 /* Style the h1 and p in bin-monitoring-header to make them visible */
 .bin-monitoring-header h1 {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin: 0 0 8px 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
   line-height: 1.2;
   word-wrap: break-word;
 }
 
+.bin-monitoring-header h1.bin-name-header {
+  font-size: 1.75rem;
+}
+
 .bin-monitoring-header p {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #64748b;
   margin: 0;
   line-height: 1.4;
@@ -101,23 +122,171 @@
 }
 
 /* Responsive font sizes */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+  .bin-monitoring-header {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
   .bin-monitoring-header h1 {
-    font-size: 1.8rem;
+    font-size: 2rem;
   }
   
   .bin-monitoring-header p {
-    font-size: 0.9rem;
+    font-size: 1rem;
+  }
+  
+  .bin-name-header {
+    font-size: 3.8rem;
+  }
+  
+  .header-left-detail p {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .bin-monitoring-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    padding-top: 0;
+    margin-top: 0;
+    margin-bottom: 18px;
+    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+  
+  .bin-monitoring-header > div {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .header-left-detail {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .bin-monitoring-header h1 {
+    font-size: 1.8rem !important;
+  }
+  
+  .bin-monitoring-header h1.bin-name-header {
+    font-size: 1.8rem !important;
+  }
+  
+  .bin-monitoring-header p {
+    font-size: 1rem;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .add-bin-header-button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .bin-name-header {
+    font-size: 3.5rem;
+  }
+  
+  .header-left-detail p {
+    font-size: 1.1rem;
+  }
+  
+  .bin-monitoring-header .header-actions {
+    position: fixed;
+    top: 5px;
+    right: 20px;
+    z-index: 45;
+  }
+  
+  .bin-monitoring-header .back-btn {
+    min-width: 70px;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .bin-monitoring-header .back-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  /* Adjust margin-top for category cards since Back button is at top */
+  .bin-detail-cards {
+    margin-top: 0;
   }
 }
 
 @media (max-width: 480px) {
+  .bin-monitoring-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding-top: 0;
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  
+  .header-left-detail {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+  
   .bin-monitoring-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.7rem !important;
+  }
+  
+  .bin-monitoring-header h1.bin-name-header {
+    font-size: 1.7rem !important;
   }
   
   .bin-monitoring-header p {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
+  }
+  
+  .bin-name-header {
+    font-size: 1.4rem;
+  }
+  
+  .header-left-detail p {
+    font-size: 1.05rem;
+  }
+  
+  .bin-monitoring-header .header-actions {
+    position: fixed;
+    top: 5px;
+    right: 20px;
+    z-index: 45;
+    width: auto;
+  }
+  
+  .bin-monitoring-header .back-btn {
+    width: auto;
+    min-width: 65px;
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 0.7rem;
+  }
+  
+  .bin-monitoring-header .back-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  /* Adjust margin-top for category cards since Back button is at top */
+  .bin-detail-cards {
+    margin-top: 0;
   }
 }
 
@@ -133,6 +302,8 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .header-actions {
@@ -142,11 +313,64 @@
   flex-shrink: 0;
 }
 
+/* Position Back button on right side, center header text on mobile */
+@media (max-width: 1024px) {
+  .bin-monitoring-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding-top: 60px;
+  }
+  
+  .header-left-detail {
+    width: 100%;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .bin-monitoring-header .header-actions {
+    position: fixed;
+    top: 5px;
+    right: 20px;
+    z-index: 45;
+  }
+  
+  .bin-monitoring-header .back-btn {
+    min-width: 70px;
+    min-height: 32px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .bin-monitoring-header .back-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  /* Adjust margin-top for category cards since Back button is at top */
+  .bin-detail-cards {
+    margin-top: 0;
+  }
+}
+
 .bin-name-header {
-  font-size: 2.5rem;
+  font-size: 3.5rem;
   font-weight: 800;
   color: #111827;
   margin: 0 0 8px 0;
+  line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.header-left-detail p {
+  font-size: 1.2rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .back-btn-pill {
@@ -453,23 +677,23 @@
   gap: 8px;
   background: #047857;
   color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  align-self: flex-start;
-  margin-top: 0;
+  transition: 0.2s;
+  min-width: 140px;
+  min-height: 44px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-size: 0.95rem;
 }
 
 .add-bin-header-button:hover {
   background: #065f46;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .add-bin-header-button svg {
@@ -487,9 +711,19 @@
   margin-bottom: 8px;
 }
 
+/* On smaller screens, stack bins vertically one by one */
+@media (max-width: 1024px) {
+  .bin-list-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 /* Pagination Styles */
 .pagination-container {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
@@ -571,14 +805,8 @@
 
 @media (max-width: 1200px) {
   .bin-list-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .bin-list-cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
@@ -611,8 +839,30 @@
     font-size: 1.4rem;
   }
   
+  .fill-level-section {
+    align-items: center !important;
+    text-align: center !important;
+  }
+  
+  .fill-level-label {
+    text-align: center !important;
+    width: 100%;
+  }
+  
   .fill-percent {
     font-size: 2rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .fill-level {
+    align-items: center !important;
+    text-align: center !important;
+  }
+  
+  .fill-level span:first-child {
+    text-align: center !important;
+    width: 100%;
   }
   
   .pagination-container {
@@ -744,7 +994,8 @@
 .fill-level-section {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   gap: 8px;
 }
 
@@ -754,12 +1005,16 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
+  width: 100%;
 }
 
 .fill-percent {
   font-size: 2.5rem;
   font-weight: 900;
   line-height: 1;
+  text-align: center;
+  width: 100%;
 }
 
 .fill-bar {
@@ -1193,12 +1448,20 @@
   gap: 20px;
   width: 100%;
   align-items: stretch;
+  margin-top: 0;
 }
 
 /* Responsive Grid Layout */
 @media (max-width: 1200px) {
   .bin-detail-cards {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Add margin-top on mobile to avoid Back button overlap */
+@media (max-width: 1024px) {
+  .bin-detail-cards {
+    margin-top: 55px;
   }
 }
 
@@ -1210,48 +1473,93 @@
   .bin-detail-cards {
     grid-template-columns: 1fr;
     gap: 15px;
+    margin-top: 50px;
   }
   
   .bin-detail-card {
     min-height: auto;
     height: auto;
+    border-radius: 12px;
   }
   
   .bin-detail-header {
     min-height: auto;
-    padding: 20px 15px;
+    padding: 18px 14px;
+    gap: 10px;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
   
   .bin-detail-body {
-    padding: 20px;
-    gap: 15px;
-  }
-  
-  .bin-detail-icon-wrapper {
-    width: 56px;
-    height: 56px;
-  }
-  
-  .bin-detail-icon-wrapper svg {
-    width: 28px;
-    height: 28px;
-  }
-  
-  .bin-detail-category-name {
-    font-size: 1.4rem;
-  }
-  
-  .fill-info .value {
-    font-size: 2rem;
-  }
-  
-  .meta-info {
-    padding: 14px;
+    padding: 18px;
+    padding-top: 14px;
     gap: 8px;
   }
   
+  .bin-detail-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .bin-detail-icon-wrapper svg {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .bin-detail-category-name {
+    font-size: 1.25rem;
+    text-align: center !important;
+    width: 100%;
+    margin: 0 auto !important;
+  }
+  
+  .fill-info {
+    align-items: center !important;
+    text-align: center !important;
+    margin-top: 10px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .fill-info .label {
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .fill-info .value {
+    font-size: 1.75rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .fill-info {
+    margin-bottom: 12px !important;
+  }
+  
+  .progress-track {
+    display: block !important;
+    margin: 12px auto 12px auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #000000 !important;
+    box-sizing: border-box !important;
+  }
+  
+  .meta-info {
+    padding: 12px;
+    gap: 6px;
+    margin: 12px auto 0 auto !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  
   .meta-row {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    width: 100% !important;
   }
   
   .drain-btn {
@@ -1354,7 +1662,7 @@
   justify-content: center;
   background: transparent;
   border: 2px solid rgba(255, 255, 255, 0.6);
-  margin-bottom: 4px;
+  margin: 0 auto 4px auto;
 }
 
 .bin-detail-icon-wrapper svg {
@@ -1364,42 +1672,66 @@
 }
 
 .bin-detail-category-name {
-  margin: 0;
+  margin: 0 auto;
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.5px;
+  text-align: center;
+  width: 100%;
 }
 
 /* White Body Section - Bottom */
 .bin-detail-body {
-  padding: 24px;
+  padding: 32px 28px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  justify-content: flex-start;
   background: white;
+  min-height: 340px;
 }
 
 /* Fill Level - Large Colored Text */
+.bin-detail-fill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  flex: 1;
+}
+
 .fill-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
 }
 
-.fill-info .label {
+.fill-level-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.fill-level-label {
   font-size: 0.8rem;
   color: #9ca3af;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-align: center;
+  width: 100%;
 }
 
-.fill-info .value {
+.fill-percent {
   font-size: 2.5rem;
   font-weight: 900;
   line-height: 1;
+  text-align: center;
+  width: 100%;
 }
 
 .progress-track {
@@ -1408,6 +1740,9 @@
   background-color: #f3f4f6;
   border-radius: 6px;
   overflow: hidden;
+  margin-top: 4px;
+  border: 2px solid #000000;
+  box-sizing: border-box;
 }
 
 .progress-fill {
@@ -1419,29 +1754,27 @@
 .meta-info {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: #f9fafb;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: auto;
-  margin-top: 10px;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 20px;
 }
 
 .meta-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 1rem;
   gap: 10px;
+  padding: 12px 0;
 }
 
-.meta-row span {
+.meta-row .meta-label {
   color: #6b7280;
   font-weight: 500;
   white-space: nowrap;
 }
 
-.meta-row strong {
+.meta-row .meta-val {
   color: #374151;
   font-weight: 700;
   white-space: nowrap;
@@ -1581,8 +1914,10 @@
 
 .fill-level {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
   margin-bottom: 12px;
 }
 
@@ -1590,12 +1925,16 @@
   color: #94a3b8;
   font-size: 14px;
   font-weight: 600;
+  text-align: center;
+  width: 100%;
 }
 
 .fill-percent {
   color: #1e293b;
   font-size: 2.5rem;
   font-weight: 800;
+  text-align: center;
+  width: 100%;
 }
 
 .fill-bar {
@@ -1752,8 +2091,8 @@
   }
   
   .bin-list-cards {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .bin-list-card {
@@ -1917,6 +2256,32 @@
   
   .bin-detail-body {
     padding: 20px;
+    padding-top: 16px;
+    gap: 8px;
+  }
+  
+  .fill-info {
+    margin-top: 10px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .progress-track {
+    display: block !important;
+    margin: 12px auto 12px auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #000000 !important;
+    box-sizing: border-box !important;
+  }
+  
+  .meta-info {
+    margin: 12px auto 0 auto !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  
+  .meta-row {
+    width: 100% !important;
   }
   
   .category-bins-grid {
@@ -1925,11 +2290,12 @@
   }
   
   .bin-detail-card {
-    padding: 16px;
+    padding: 14px;
+    border-radius: 12px;
   }
   
   .bin-detail-large-visual {
-    height: 200px;
+    height: 180px;
   }
 }
 
@@ -1967,6 +2333,36 @@
   .bin-list-subtitle {
     font-size: 0.85rem;
     line-height: 1.4;
+  }
+  
+  .bin-monitoring-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .header-left-detail {
+    width: 100%;
+  }
+  
+  .bin-name-header {
+    font-size: 3rem;
+    margin-bottom: 6px;
+  }
+  
+  .header-left-detail p {
+    font-size: 1.05rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .back-btn {
+    width: auto;
+    min-width: 100px;
   }
   
   .bin-detail-header {
@@ -2027,31 +2423,83 @@
   }
   
   .bin-detail-header {
-    min-height: 160px;
-    padding: 24px 16px !important;
+    min-height: 140px;
+    padding: 16px 14px !important;
+    gap: 8px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
   }
   
   .bin-detail-body {
-    padding: 20px !important;
+    padding: 16px !important;
+    padding-top: 14px !important;
+    gap: 8px !important;
   }
   
   .bin-detail-icon-wrapper {
-    width: 56px;
-    height: 56px;
-    margin: 0 0 20px 0;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 16px auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
   
   .bin-detail-icon-wrapper svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
   
   .bin-detail-category-name {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+    text-align: center !important;
+    width: 100%;
+    margin: 0 auto !important;
   }
   
   .bin-detail-fill-info .fill-percent {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
+  }
+  
+  .fill-info {
+    align-items: center !important;
+    text-align: center !important;
+    margin-top: 10px !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .fill-info .label {
+    text-align: center !important;
+    width: 100%;
+    font-size: 0.75rem;
+  }
+  
+  .fill-info .value {
+    text-align: center !important;
+    width: 100%;
+    font-size: 1.6rem;
+  }
+  
+  .progress-track {
+    display: block !important;
+    margin: 12px auto 12px auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 2px solid #000000 !important;
+    box-sizing: border-box !important;
+  }
+  
+  .meta-info {
+    margin: 12px auto 0 auto !important;
+    padding: 12px !important;
+    align-items: center !important;
+    width: 100% !important;
+  }
+  
+  .meta-row {
+    font-size: 0.8rem !important;
+    width: 100% !important;
   }
   
   .category-bin-title {
@@ -2283,6 +2731,166 @@
   
   .full-width-group {
     grid-column: span 1 !important;
+  }
+  
+  .modal-header {
+    padding: 20px 25px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .employee-form {
+    padding: 20px 25px 30px;
+  }
+}
+
+/* Enhanced Responsive Styles */
+/* Tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .bin-monitoring-container {
+    padding: 18px;
+  }
+  
+  .bin-list-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  
+  .bin-monitoring-header {
+    margin-bottom: 20px;
+  }
+  
+  .add-bin-header-button {
+    padding: 9px 18px;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-container {
+    margin-top: 20px;
+    gap: 8px;
+  }
+  
+  .pagination-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Small mobile (481px - 640px) */
+@media (min-width: 481px) and (max-width: 640px) {
+  .bin-list-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .bin-monitoring-header {
+    flex-direction: column;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 14px;
+    margin-top: 0 !important;
+    margin-bottom: 18px;
+    padding-top: 0 !important;
+    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+  
+  .bin-monitoring-header > div {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .bin-monitoring-header h1 {
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .bin-monitoring-header p {
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .add-bin-header-button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-container {
+    flex-wrap: nowrap;
+    flex-direction: row;
+    justify-content: center;
+    gap: 6px;
+  }
+  
+  .pagination-btn {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    min-width: 40px;
+  }
+}
+
+/* Extra small mobile (max-width: 480px) */
+@media (max-width: 480px) {
+  .bin-monitoring-header {
+    margin-top: -15px;
+    margin-bottom: 16px;
+    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
+    padding-right: 15px;
+    box-sizing: border-box;
+  }
+  
+  .bin-monitoring-header > div {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .bin-monitoring-header h1 {
+    font-size: 1.35rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .bin-monitoring-header p {
+    font-size: 0.8rem;
+    text-align: center !important;
+    width: 100%;
+  }
+  
+  .add-bin-header-button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+  
+  .add-bin-header-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .pagination-container {
+    gap: 4px;
+  }
+  
+  .pagination-number {
+    min-width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: 36px;
+    height: 36px;
   }
 }
 

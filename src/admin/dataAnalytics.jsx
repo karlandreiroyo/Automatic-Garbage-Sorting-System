@@ -219,9 +219,8 @@ const DataAnalytics = () => {
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
-            <p className="accuracy-label">Sorting Accuracy</p>
+            <p className="accuracy-label">Sorting Percentage</p>
             <div className="accuracy-value">{categoryAccuracy['Biodegradable']}%</div>
-            <p className="accuracy-subtitle">Average accuracy rate</p>
           </div>
         </div>
         <div className="accuracy-card">
@@ -230,9 +229,8 @@ const DataAnalytics = () => {
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
-            <p className="accuracy-label">Sorting Accuracy</p>
+            <p className="accuracy-label">Sorting Percentage</p>
             <div className="accuracy-value">{categoryAccuracy['Non-Biodegradable']}%</div>
-            <p className="accuracy-subtitle">Average accuracy rate</p>
           </div>
         </div>
         <div className="accuracy-card">
@@ -241,9 +239,8 @@ const DataAnalytics = () => {
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
-            <p className="accuracy-label">Sorting Accuracy</p>
+            <p className="accuracy-label">Sorting Percentage</p>
             <div className="accuracy-value">{categoryAccuracy['Recycle']}%</div>
-            <p className="accuracy-subtitle">Average accuracy rate</p>
           </div>
         </div>
         <div className="accuracy-card">
@@ -252,9 +249,8 @@ const DataAnalytics = () => {
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
-            <p className="accuracy-label">Sorting Accuracy</p>
+            <p className="accuracy-label">Sorting Percentage</p>
             <div className="accuracy-value">{categoryAccuracy['Unsorted']}%</div>
-            <p className="accuracy-subtitle">Average accuracy rate</p>
           </div>
         </div>
       </div>

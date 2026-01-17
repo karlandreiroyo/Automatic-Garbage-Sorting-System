@@ -236,28 +236,32 @@ const BinDetailCard = ({ bin, onDrain }) => {
       
       {/* White Body Section - Bottom */}
       <div className="bin-detail-body">
-        <div className="fill-info">
-          <span className="label">Fill Level</span>
-          <span 
-            className="value" 
-            style={{ color: getCategoryColor() }}
-          >
-            {bin.fillLevel}%
-          </span>
-        </div>
-        <div className="progress-track">
-          <div 
-            className="progress-fill" 
-            style={{ 
-              width: `${bin.fillLevel}%`,
-              backgroundColor: getCategoryColor()
-            }}
-          ></div>
-        </div>
-        <div className="meta-info">
-          <div className="meta-row">
-            <span className="meta-label">Last Collection</span>
-            <strong className="meta-val">{bin.lastCollection}</strong>
+        <div className="bin-detail-fill-info">
+          <div className="fill-info">
+            <div className="fill-level-section">
+              <span className="fill-level-label">Fill Level</span>
+              <span 
+                className="fill-percent" 
+                style={{ color: getCategoryColor() }}
+              >
+                {bin.fillLevel}%
+              </span>
+            </div>
+            <div className="progress-track">
+              <div 
+                className="progress-fill" 
+                style={{ 
+                  width: `${bin.fillLevel}%`,
+                  backgroundColor: getCategoryColor()
+                }}
+              ></div>
+            </div>
+          </div>
+          <div className="meta-info">
+            <div className="meta-row">
+              <span className="meta-label">Last Collection</span>
+              <strong className="meta-val">{bin.lastCollection}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -1197,7 +1201,7 @@ const updateBinFillLevels = () => {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          ADD BIN
+          Add Bin
         </button>
       </div>
 
