@@ -39,11 +39,11 @@ const Accounts = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'COLLECTOR',
+    role: '',
     first_name: '',
     last_name: '',
     middle_name: '',
-    contact: '',
+    contact: '09',
   });
 
   useEffect(() => {
@@ -124,33 +124,62 @@ const Accounts = () => {
     switch(name) {
       case 'first_name':
         if (!value.trim()) error = 'First name is required';
-        else if (value.trim().length < 2) error = 'First name must be at least 2 characters';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'First name can only contain letters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'last_name':
         if (!value.trim()) error = 'Last name is required';
-        else if (value.trim().length < 2) error = 'Last name must be at least 2 characters';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Last name can only contain letters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middle_name':
-        if (value && !/^[a-zA-Z\s]*$/.test(value)) error = 'Middle name can only contain letters';
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        }
         break;
       case 'contact':
-        if (value && !/^[0-9+\-\s()]*$/.test(value)) error = 'Invalid contact number format';
-        else if (value && value.replace(/[^0-9]/g, '').length < 10) error = 'Contact must be at least 10 digits';
+        const contactStr = String(value || '');
+        if (!contactStr.trim()) {
+          error = 'Contact number is required';
+        } else if (contactStr.length < 11) {
+          error = `Remaining ${11 - contactStr.length} digits required`;
+        }
         break;
-      case 'email':
-        if (!value.trim()) error = 'Email is required';
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = 'Invalid email format';
+      case 'email': {
+        const emailVal = value.trim();
+        const atCount = (emailVal.match(/@/g) || []).length;
+        const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if (!emailVal) {
+          error = 'Email is required';
+        } else if (atCount > 1) {
+          // This only shows once the user puts 2 or more @ symbols
+          error = 'Email must contain exactly one @ symbol';
+        } else if (atCount === 1) {
+          // If there is exactly one @, check for valid domain structure
+          if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+            error = 'Email cannot end with @ or a period';
+          } else if (!emailRegex.test(emailVal)) {
+            error = 'Invalid domain format (e.g., .com, .ph)';
+          }
+        }
+        // If atCount is 0, we don't show the "Exactly one @" error yet 
+        // because they might still be typing the username.
         break;
+      }
       case 'password':
         if (!value) error = 'Password is required';
-        else if (value.length < 6) error = 'Password must be at least 6 characters';
+        else if (value.length < 8) error = 'Minimum 8 characters required';
+        else if (!/[0-9]/.test(value)) error = 'Must include at least 1 number';
+        else if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) error = 'Must include at least 1 special character';
         break;
       case 'confirmPassword':
-        if (value !== formData.password) error = 'Passwords do not match';
+        if (!value) error = 'Please confirm your password';
+        else if (value !== formData.password) error = 'Passwords do not match';
         break;
-      default: break;
+      default: 
+      break;
     }
     return error;
   };
@@ -160,20 +189,24 @@ const Accounts = () => {
     switch(name) {
       case 'first_name':
         if (!value.trim()) error = 'First name is required';
-        else if (value.trim().length < 2) error = 'First name must be at least 2 characters';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'First name can only contain letters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'last_name':
         if (!value.trim()) error = 'Last name is required';
-        else if (value.trim().length < 2) error = 'Last name must be at least 2 characters';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Last name can only contain letters';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middle_name':
-        if (value && !/^[a-zA-Z\s]*$/.test(value)) error = 'Middle name can only contain letters';
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        }
         break;
       case 'contact':
-        if (value && !/^[0-9+\-\s()]*$/.test(value)) error = 'Invalid contact number format';
-        else if (value && value.replace(/[^0-9]/g, '').length < 10) error = 'Contact must be at least 10 digits';
+        const contactStr = String(value || '');
+          if (contactStr && !/^[0-9+\-\s()]*$/.test(contactStr)) error = 'Invalid contact number format';
+          else if (contactStr && contactStr.replace(/[^0-9]/g, '').length < 10) error = 'Contact must be at least 10 digits';
         break;
       default: break;
     }
@@ -182,10 +215,41 @@ const Accounts = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (touched[name]) {
-      setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    let finalValue = value;
+
+    if (['first_name', 'last_name', 'middle_name'].includes(name)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    } 
+    
+    // Email Real-time cleaning
+    if (name === 'email') {
+      // 1. Remove invalid characters
+      let cleaned = value.replace(/[^a-zA-Z0-9@.]/g, '').toLowerCase();
+      
+      // 2. Prevent multiple '@' symbols as they type
+      const parts = cleaned.split('@');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '@' + parts.slice(1).join('');
+      }
+      finalValue = cleaned;
     }
+
+    if (name === 'contact') {
+      // 1. Remove everything that is not a number
+      let digits = value.replace(/\D/g, '');
+      
+      // 2. Ensure it always starts with 09
+      if (!digits.startsWith('09')) {
+        digits = '09' + digits;
+      }
+
+      // 3. Limit to exactly 11 digits
+      finalValue = digits.slice(0, 11);
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setErrors(prev => ({ ...prev, [name]: validateField(name, finalValue) }));
   };
 
   const handleBlur = (e) => {
@@ -196,10 +260,23 @@ const Accounts = () => {
 
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
-    setEditingUser(prev => ({ ...prev, [name]: value }));
-    if (editTouched[name]) {
-      setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
+    let finalValue = value;
+
+    // Keep names Uppercase and letters only
+    if (['first_name', 'last_name', 'middle_name'].includes(name)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
     }
+
+    // Keep Contact logic for "09"
+    if (name === 'contact') {
+      let digits = value.replace(/\D/g, '');
+      if (!digits.startsWith('09')) digits = '09' + digits;
+      finalValue = digits.slice(0, 11);
+    }
+
+    setEditingUser(prev => ({ ...prev, [name]: finalValue }));
+    setEditTouched(prev => ({ ...prev, [name]: true }));
+    setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, finalValue) }));
   };
 
   const handleEditBlur = (e) => {
@@ -211,58 +288,81 @@ const Accounts = () => {
   const handleAddEmployee = async (e) => {
     e.preventDefault();
     
+    // 1. Validate all fields locally first
     const newErrors = {};
-    ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'middle_name', 'contact'].forEach(f => {
+      ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'contact', 'role'].forEach(f => {
       const err = validateField(f, formData[f]);
       if (err) newErrors[f] = err;
     });
-    
+
+    if (!formData.role) {
+      alert('Please select an account role.');
+      return;
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setTouched({ 
-        first_name: true, 
-        last_name: true, 
-        email: true, 
-        password: true, 
-        confirmPassword: true,
-        middle_name: true,
-        contact: true 
+        first_name: true, last_name: true, email: true, 
+        password: true, confirmPassword: true,
+        middle_name: true, contact: true 
       });
       return;
     }
 
-    try {
-      setLoading(true);
+    if (!window.confirm('Are you sure you want to create this employee account?')) {
+  return;
+}
+
+try {
+  setLoading(true);
+
+      // 2. Gmail Normalization Check (Prevents duplicate accounts with different dots)
+      let checkEmail = formData.email.trim().toLowerCase();
+      if (checkEmail.endsWith('@gmail.com')) {
+        const [user, dom] = checkEmail.split('@');
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('email')
+          .or(`email.eq.${checkEmail},email.ilike.${user.replace(/\./g, '%')}@${dom}`)
+          .single();
+
+        if (existingUser) {
+          alert('This Gmail account (or a version of it with different dots) is already registered.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Create Auth Account using the validated password
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(),
-        password: formData.password,
+        password: formData.confirmPassword, // Using confirmPassword as the source
       });
 
       if (authError) throw authError;
 
+      // 4. Insert into 'users' table (mapping password to pass_hash)
       const { error: dbError } = await supabase.from('users').insert([{
         auth_id: authData.user.id,
         email: formData.email.trim(),
         role: formData.role,
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
-        middle_name: formData.middle_name?.trim() || null,
+        middle_name: formData.middle_name?.trim() || '',
         contact: formData.contact?.trim() || null,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        pass_hash: formData.confirmPassword // Storing the password in your required column
       }]);
 
       if (dbError) throw dbError;
       
+      // 5. Success UI cleanup
       setShowAddModal(false);
       setFormData({ 
-        email: '', 
-        password: '', 
-        confirmPassword: '', 
-        role: 'COLLECTOR', 
-        first_name: '', 
-        last_name: '', 
-        middle_name: '', 
-        contact: '' 
+        email: '', password: '', confirmPassword: '', 
+        role: 'COLLECTOR', first_name: '', last_name: '', 
+        middle_name: '', contact: '09' 
       });
       setErrors({});
       setTouched({});
@@ -276,46 +376,60 @@ const Accounts = () => {
   };
 
   const handleUpdateEmployee = async (e) => {
-    e.preventDefault();
-    
-    const newErrors = {};
-    ['first_name', 'last_name', 'middle_name', 'contact'].forEach(f => {
-      const err = validateEditField(f, editingUser[f]);
-      if (err) newErrors[f] = err;
-    });
-    
-    if (Object.keys(newErrors).length > 0) {
-      setEditErrors(newErrors);
-      setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
-      return;
-    }
+  e.preventDefault();
 
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('users')
-        .update({
-          first_name: editingUser.first_name.trim(),
-          last_name: editingUser.last_name.trim(),
-          middle_name: editingUser.middle_name?.trim() || null,
-          contact: editingUser.contact?.trim() || null,
-          role: editingUser.role
-        })
-        .eq('id', editingUser.id);
+  // Validate all required fields
+  const newErrors = {};
+  ['first_name', 'last_name', 'contact'].forEach(f => {
+    const err = validateEditField(f, editingUser[f]);
+    if (err) newErrors[f] = err;
+  });
 
-      if (error) throw error;
+  // Also validate middle_name if it has a value
+  if (editingUser.middle_name) {
+    const err = validateEditField('middle_name', editingUser.middle_name);
+    if (err) newErrors['middle_name'] = err;
+  }
 
-      setEditingUser(null);
-      setEditErrors({});
-      setEditTouched({});
-      fetchUsers();
-      showSuccessNotification(`${editingUser.first_name}'s personal information has been updated successfully!`);
-    } catch (error) {
-      alert('Error updating user: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (Object.keys(newErrors).length > 0) {
+    setEditErrors(newErrors);
+    setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
+    return;
+  }
+
+  // Confirmation dialog
+  if (!window.confirm('Are you sure you want to save these changes?')) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        first_name: editingUser.first_name.trim(),
+        last_name: editingUser.last_name.trim(),
+        middle_name: editingUser.middle_name?.trim() || '',
+        contact: String(editingUser.contact || '').trim(),
+        role: editingUser.role
+      })
+      .eq('auth_id', editingUser.auth_id);
+
+    if (error) throw error;
+
+    setEditingUser(null);
+    setEditErrors({});
+    setEditTouched({});
+    await fetchUsers(); // Wait for refresh
+    showSuccessNotification('Employee updated successfully!');
+  } catch (error) {
+    console.error("Supabase Error:", error.message);
+    alert('Error: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getFullName = (user) => {
     const middle = user.middle_name ? ` ${user.middle_name} ` : ' ';
@@ -373,6 +487,28 @@ const Accounts = () => {
     setCurrentPage(1);
   }, [searchTerm, filterRole, filterStatus]);
 
+  const generateStrongPassword = () => {
+    const length = 12;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    let generated = "";
+    
+    // Ensure requirements are met
+    generated += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Letter
+    generated += "0123456789"[Math.floor(Math.random() * 10)]; // Number
+    generated += "!@#$%^&*()"[Math.floor(Math.random() * 10)]; // Special Char
+    
+    for (let i = 0; i < length - 3; ++i) {
+      generated += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    
+    // Shuffle and update only the password field
+    const finalPw = generated.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    setFormData(prev => ({ ...prev, password: finalPw }));
+    // Trigger validation for the new password immediately
+    setErrors(prev => ({ ...prev, password: validateField('password', finalPw) }));
+  };
+
   return (
     <div className="accounts-container">
       
@@ -391,7 +527,7 @@ const Accounts = () => {
       {/* --- ADD MODAL --- */}
       {showAddModal && (
         <div className="modal-overlay">
-          <div className="modal-content maximized">
+          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Employee</h2>
             </div>
@@ -438,7 +574,13 @@ const Accounts = () => {
                     value={formData.contact} 
                     onChange={handleInputChange} 
                     onBlur={handleBlur} 
-                    placeholder="e.g., +63 912 345 6789"
+                    placeholder="09XXXXXXXXX"
+                    onKeyDown={(e) => {
+                      // Prevent backspacing the "09"
+                      if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
+                        e.preventDefault();
+                      }
+                    }}
                   />
                   {errors.contact && <span className="error-message">{errors.contact}</span>}
                 </div>
@@ -456,32 +598,62 @@ const Accounts = () => {
                 <div className="form-group">
                   <label>Account Role</label>
                   <select name="role" value={formData.role} onChange={handleInputChange}>
+                    <option value="" disabled>Select Role</option>
                     <option value="COLLECTOR">Collector</option>
                     <option value="ADMIN">Admin</option>
+                    <option value="SUPERVISOR">Supervisor</option>
                   </select>
                 </div>
-                <div className={`form-group ${errors.password ? 'has-error' : ''}`}>
-                  <label>Password *</label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    value={formData.password} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur}
-                  />
-                  {errors.password && <span className="error-message">{errors.password}</span>}
+                <div className="password-container" style={{ gridColumn: '1 / -1' }}>
+                <div className="form-grid">
+                  {/* Password Field */}
+                  <div className={`form-group ${errors.password ? 'has-error' : ''}`}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <label>Password *</label>
+                      <span 
+                        onClick={generateStrongPassword} 
+                        style={{ color: '#007bff', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                      >
+                        Generate Password
+                      </span>
+                    </div>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      name="password" 
+                      value={formData.password} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                    />
+                    {errors.password && <span className="error-message">{errors.password}</span>}
+                  </div>
+
+                  {/* Confirm Password Field */}
+                  <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`}>
+                    <label>Confirm Password *</label>
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      name="confirmPassword" 
+                      value={formData.confirmPassword} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                    />
+                    {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+                  </div>
                 </div>
-                <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`}>
-                  <label>Confirm Password *</label>
+
+                {/* Show Password Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px' }}>
                   <input 
-                    type="password" 
-                    name="confirmPassword" 
-                    value={formData.confirmPassword} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur}
+                    type="checkbox" 
+                    id="togglePassword" 
+                    checked={showPassword} 
+                    onChange={() => setShowPassword(!showPassword)} 
                   />
-                  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+                  <label htmlFor="togglePassword" style={{ cursor: 'pointer', fontSize: '14px' }}>
+                    Show Passwords
+                  </label>
                 </div>
+              </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
@@ -497,7 +669,7 @@ const Accounts = () => {
       {/* --- EDIT MODAL --- */}
       {editingUser && (
         <div className="modal-overlay">
-          <div className="modal-content maximized">
+          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Edit Employee Account</h2>
             </div>
@@ -508,7 +680,7 @@ const Accounts = () => {
                   <input 
                     type="text" 
                     name="first_name"
-                    value={editingUser.first_name} 
+                    value={editingUser.first_name || ''}
                     onChange={handleEditInputChange}
                     onBlur={handleEditBlur}
                   />
@@ -537,26 +709,34 @@ const Accounts = () => {
                   {editErrors.middle_name && <span className="error-message">{editErrors.middle_name}</span>}
                 </div>
                 <div className={`form-group ${editErrors.contact ? 'has-error' : ''}`}>
-                  <label>Contact Number</label>
+                <label>Contact Number *</label>
                   <input 
                     type="text" 
                     name="contact"
                     value={editingUser.contact || ''} 
                     onChange={handleEditInputChange}
                     onBlur={handleEditBlur}
-                    placeholder="e.g., +63 912 345 6789"
+                    placeholder="09XXXXXXXXX"
+                    onKeyDown={(e) => {
+                      // Prevent backspacing the "09" prefix
+                      if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
+                        e.preventDefault();
+                      }
+                    }}
                   />
                   {editErrors.contact && <span className="error-message">{editErrors.contact}</span>}
                 </div>
                 <div className="form-group">
                   <label>Role</label>
-                  <select 
+                  <select
                     name="role"
-                    value={editingUser.role} 
-                    onChange={handleEditInputChange}
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    required
                   >
                     <option value="COLLECTOR">Collector</option>
                     <option value="ADMIN">Admin</option>
+                    <option value="SUPERVISOR">Supervisor</option>
                   </select>
                 </div>
               </div>
@@ -589,6 +769,7 @@ const Accounts = () => {
           <option value="all">All Roles</option>
           <option value="ADMIN">Admin</option>
           <option value="COLLECTOR">Collector</option>
+          <option value="SUPERVISOR">Supervisor</option>
         </select>
         <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="all">All Status</option>
