@@ -154,7 +154,7 @@
     gap: 14px;
     padding-top: 0;
     margin-top: 0;
-    margin-bottom: 18px;
+    margin-bottom: 0;
     padding-left: 50px; /* Add padding on left to avoid hamburger menu */
     padding-right: 20px;
     box-sizing: border-box;
@@ -177,13 +177,14 @@
   }
   
   .bin-monitoring-header h1.bin-name-header {
-    font-size: 1.8rem !important;
+    font-size: 2.5rem !important;
   }
   
   .bin-monitoring-header p {
     font-size: 1rem;
     text-align: center;
     width: 100%;
+    margin-bottom: 0;
   }
   
   .add-bin-header-button {
@@ -194,11 +195,12 @@
   }
   
   .bin-name-header {
-    font-size: 3.5rem;
+    font-size: 4.5rem;
   }
   
   .header-left-detail p {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
+    margin-bottom: 0;
   }
   
   .bin-monitoring-header .header-actions {
@@ -222,7 +224,7 @@
   
   /* Adjust margin-top for category cards since Back button is at top */
   .bin-detail-cards {
-    margin-top: 0;
+    margin-top: -12px;
   }
 }
 
@@ -234,7 +236,7 @@
     gap: 10px;
     padding-top: 0;
     margin-top: 0;
-    margin-bottom: 16px;
+    margin-bottom: 0;
   }
   
   .header-left-detail {
@@ -248,19 +250,21 @@
   }
   
   .bin-monitoring-header h1.bin-name-header {
-    font-size: 1.7rem !important;
+    font-size: 2.3rem !important;
   }
   
   .bin-monitoring-header p {
     font-size: 0.95rem;
+    margin-bottom: 0;
   }
   
   .bin-name-header {
-    font-size: 1.4rem;
+    font-size: 2.5rem;
   }
   
   .header-left-detail p {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+    margin-bottom: 0;
   }
   
   .bin-monitoring-header .header-actions {
@@ -286,7 +290,7 @@
   
   /* Adjust margin-top for category cards since Back button is at top */
   .bin-detail-cards {
-    margin-top: 0;
+    margin-top: -12px;
   }
 }
 
@@ -1579,7 +1583,7 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
   border: 1px solid #e5e7eb;
   flex: 1;
-  min-height: 520px;
+  min-height: 420px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -1590,16 +1594,16 @@
 
 /* Colored Header Section - Top */
 .bin-detail-header {
-  padding: 30px 20px;
+  padding: 24px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: white;
-  gap: 12px;
+  gap: 10px;
   flex-shrink: 0;
-  min-height: 180px;
+  min-height: 140px;
   position: relative;
 }
 
@@ -1654,8 +1658,8 @@
 }
 
 .bin-detail-icon-wrapper {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1666,14 +1670,14 @@
 }
 
 .bin-detail-icon-wrapper svg {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   color: white;
 }
 
 .bin-detail-category-name {
   margin: 0 auto;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   text-align: center;
@@ -1682,13 +1686,13 @@
 
 /* White Body Section - Bottom */
 .bin-detail-body {
-  padding: 32px 28px;
+  padding: 24px 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   background: white;
-  min-height: 340px;
+  min-height: 280px;
 }
 
 /* Fill Level - Large Colored Text */
@@ -2183,12 +2187,13 @@
   }
   
   .bin-detail-header {
-    min-height: 160px;
-    padding: 24px 16px !important;
+    min-height: 120px;
+    padding: 18px 14px !important;
   }
   
   .bin-detail-body {
-    padding: 20px !important;
+    padding: 16px !important;
+    min-height: 240px !important;
   }
   
   .bin-detail-large-visual {
@@ -2292,6 +2297,17 @@
   .bin-detail-card {
     padding: 14px;
     border-radius: 12px;
+    min-height: 380px !important;
+  }
+  
+  .bin-detail-header {
+    min-height: 110px !important;
+    padding: 16px 12px !important;
+  }
+  
+  .bin-detail-body {
+    padding: 14px !important;
+    min-height: 270px !important;
   }
   
   .bin-detail-large-visual {
@@ -2423,43 +2439,48 @@
   }
   
   .bin-detail-header {
-    min-height: 140px;
-    padding: 16px 14px !important;
-    gap: 8px !important;
+    min-height: 110px;
+    padding: 14px 12px !important;
+    gap: 6px !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
   }
   
   .bin-detail-body {
-    padding: 16px !important;
-    padding-top: 14px !important;
-    gap: 8px !important;
+    padding: 14px !important;
+    padding-top: 12px !important;
+    gap: 6px !important;
+    min-height: 200px !important;
+  }
+  
+  .bin-detail-card {
+    min-height: 310px !important;
   }
   
   .bin-detail-icon-wrapper {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto 16px auto !important;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px auto !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
   }
   
   .bin-detail-icon-wrapper svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
   
   .bin-detail-category-name {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
     text-align: center !important;
     width: 100%;
     margin: 0 auto !important;
   }
   
   .bin-detail-fill-info .fill-percent {
-    font-size: 2.2rem;
+    font-size: 1.9rem;
   }
   
   .fill-info {
@@ -2791,7 +2812,7 @@
     text-align: center !important;
     gap: 14px;
     margin-top: 0 !important;
-    margin-bottom: 18px;
+    margin-bottom: 0 !important;
     padding-top: 0 !important;
     padding-left: 50px; /* Add padding on left to avoid hamburger menu */
     padding-right: 20px;
@@ -2812,6 +2833,15 @@
   .bin-monitoring-header p {
     text-align: center !important;
     width: 100%;
+    margin-bottom: 0 !important;
+  }
+  
+  .header-left-detail p {
+    margin-bottom: 0 !important;
+  }
+  
+  .bin-detail-cards {
+    margin-top: -12px !important;
   }
   
   .add-bin-header-button {
