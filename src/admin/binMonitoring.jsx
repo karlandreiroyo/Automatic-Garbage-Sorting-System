@@ -137,17 +137,17 @@ const BinListCard = ({ bin, onClick }) => {
         {/* Icon Circle */}
         <div className="bin-list-icon-wrapper">
           {getCategoryIcon()}
-        </div>
+          </div>
         
         {/* Bin Name */}
         <h3 className="bin-list-category-name">{bin.name}</h3>
       </div>
-      
+
       {/* White Body Section */}
       <div className="bin-list-body">
         <div className="bin-list-fill-info">
           <div className="fill-level-section">
-            <span className="fill-level-label">Fill Level</span>
+          <span className="fill-level-label">Fill Level</span>
             <span 
               className="fill-percent" 
               style={{ color: getFillLevelColor(bin.fillLevel) }}
@@ -163,7 +163,7 @@ const BinListCard = ({ bin, onClick }) => {
                 backgroundColor: getFillLevelColor(bin.fillLevel)
               }}
             ></div>
-          </div>
+            </div>
           <div className="bin-list-meta-info">
             <div className="bin-list-info-row">
               <span className="info-label">Last Collection</span>
@@ -239,31 +239,31 @@ const BinDetailCard = ({ bin, onDrain }) => {
         <div className="bin-detail-fill-info">
           <div className="fill-info">
             <div className="fill-level-section">
-              <span className="fill-level-label">Fill Level</span>
-              <span 
-                className="fill-percent" 
+            <span className="fill-level-label">Fill Level</span>
+            <span 
+              className="fill-percent" 
                 style={{ color: getCategoryColor() }}
-              >
-                {bin.fillLevel}%
-              </span>
-            </div>
-            <div className="progress-track">
-              <div 
-                className="progress-fill" 
-                style={{ 
-                  width: `${bin.fillLevel}%`,
-                  backgroundColor: getCategoryColor()
-                }}
-              ></div>
-            </div>
+            >
+              {bin.fillLevel}%
+            </span>
           </div>
+            <div className="progress-track">
+            <div 
+                className="progress-fill" 
+              style={{ 
+                width: `${bin.fillLevel}%`,
+                  backgroundColor: getCategoryColor()
+              }}
+            ></div>
+          </div>
+            </div>
           <div className="meta-info">
             <div className="meta-row">
               <span className="meta-label">Last Collection</span>
               <strong className="meta-val">{bin.lastCollection}</strong>
-            </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -490,7 +490,7 @@ const BinMonitoring = () => {
     systemPower: 80, 
     capacity: '20kg', 
     lastUpdate: '2 hours ago', 
-    category: 'Biodegradable',
+        category: 'Biodegradable', 
     categoryBins: [
       { 
         id: 'bio-5', 
@@ -624,7 +624,7 @@ const BinMonitoring = () => {
       }
     ]
   }
-  ]);
+]);
 
   // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
@@ -1146,7 +1146,7 @@ const updateBinFillLevels = () => {
           <div className="modal-content maximized">
             <div className="modal-header">
               <h2>Add New Bin</h2>
-            </div>
+        </div>
             <form onSubmit={handleAddBin} className="employee-form">
               <div className="form-grid">
                 <div className="form-group">
@@ -1158,7 +1158,7 @@ const updateBinFillLevels = () => {
                     onChange={handleBinInputChange}
                     placeholder="e.g., Bin 5"
                   />
-                </div>
+      </div>
                 <div className="form-group">
                   <label>Category</label>
                   <select name="category" value={binFormData.category} onChange={handleBinInputChange}>

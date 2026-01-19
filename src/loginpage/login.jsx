@@ -3,63 +3,93 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient.jsx';
 import './Login.css';
 
-// Waste Sorting Logo Component
-const SortingLogo = () => (
-  <svg width="350" height="350" viewBox="0 0 350 350" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Bin Container - Main rectangular body */}
-    <rect x="80" y="195" width="190" height="125" rx="4" fill="white"/>
+// System Logo Component - Three-compartment bin with gear
+const SystemLogo = () => (
+  <svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Gear Symbol - Centered behind items */}
+    <g transform="translate(200, 140)">
+      {/* Outer gear teeth */}
+      <circle cx="0" cy="0" r="35" fill="none" stroke="#047857" strokeWidth="3"/>
+      {/* Gear teeth */}
+      <rect x="-2" y="-40" width="4" height="12" fill="#047857"/>
+      <rect x="-2" y="28" width="4" height="12" fill="#047857"/>
+      <rect x="-40" y="-2" width="12" height="4" fill="#047857"/>
+      <rect x="28" y="-2" width="12" height="4" fill="#047857"/>
+      {/* Diagonal teeth */}
+      <rect x="25" y="-25" width="4" height="12" fill="#047857" transform="rotate(45 27 -19)"/>
+      <rect x="-29" y="-25" width="4" height="12" fill="#047857" transform="rotate(-45 -27 -19)"/>
+      <rect x="25" y="25" width="4" height="12" fill="#047857" transform="rotate(-45 27 19)"/>
+      <rect x="-29" y="25" width="4" height="12" fill="#047857" transform="rotate(45 -27 19)"/>
+      {/* Inner circle */}
+      <circle cx="0" cy="0" r="20" fill="none" stroke="#047857" strokeWidth="2"/>
+      {/* Center hub */}
+      <circle cx="0" cy="0" r="8" fill="#047857"/>
+    </g>
     
-    {/* Curved Top Opening with slight overflow */}
-    <path d="M75 195 Q175 175 275 195" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    <rect x="80" y="195" width="190" height="8" rx="4" fill="white"/>
+    {/* Banana - Left side (oval shape) */}
+    <g transform="translate(120, 150)">
+      <ellipse cx="0" cy="0" rx="18" ry="25" fill="#047857"/>
+      <ellipse cx="0" cy="0" rx="12" ry="18" fill="#065f46"/>
+    </g>
+    
+    {/* Plastic Bottle - Right side */}
+    <g transform="translate(280, 150)">
+      {/* Bottle body */}
+      <rect x="0" y="0" width="20" height="50" rx="3" fill="#047857"/>
+      {/* Bottle neck */}
+      <rect x="6" y="-8" width="8" height="8" rx="2" fill="#047857"/>
+      {/* Bottle cap */}
+      <rect x="7" y="-12" width="6" height="4" rx="1" fill="#065f46"/>
+      {/* Bottle label area */}
+      <rect x="2" y="10" width="16" height="20" rx="1" fill="none" stroke="#065f46" strokeWidth="1"/>
+    </g>
+    
+    {/* Bin Container - Main trapezoidal body (dark green) */}
+    <path d="M80 220 L320 220 L340 320 L60 320 Z" fill="#047857" stroke="#065f46" strokeWidth="3"/>
+    
+    {/* Rounded top rim */}
+    <ellipse cx="200" cy="220" rx="130" ry="8" fill="#065f46"/>
     
     {/* Three Vertical Dividers for compartments */}
-    <line x1="143.33" y1="195" x2="143.33" y2="320" stroke="white" strokeWidth="3"/>
-    <line x1="208.33" y1="195" x2="208.33" y2="320" stroke="white" strokeWidth="3"/>
+    <line x1="160" y1="220" x2="160" y2="320" stroke="#065f46" strokeWidth="4"/>
+    <line x1="240" y1="220" x2="240" y2="320" stroke="#065f46" strokeWidth="4"/>
     
-    {/* Left Compartment - Leaf Icon (Biodegradable) */}
-    <g transform="translate(105, 245)">
+    {/* Left Compartment - Leaf Icon (Biodegradable) - WHITE */}
+    <g transform="translate(120, 270)">
       {/* Main leaf shape */}
-      <path d="M18 0 Q18 6 18 10 Q18 16 18 20 Q18 24 15 26 Q12 28 10 26 Q8 24 8 20 Q8 16 10 12 Q12 6 15 3 Q18 0 18 0" fill="white"/>
-      <path d="M18 0 Q22 3 25 6 Q28 10 30 14 Q32 18 30 22 Q28 26 25 28 Q22 30 18 28 Q14 30 11 28 Q8 26 6 22 Q4 18 6 14 Q8 10 11 6 Q14 3 18 0" fill="white"/>
+      <path d="M20 0 Q20 8 20 15 Q20 22 16 28 Q12 34 8 32 Q4 30 4 22 Q4 14 8 8 Q12 2 16 1 Q20 0 20 0" fill="white"/>
+      <path d="M20 0 Q25 4 30 8 Q35 12 38 18 Q41 24 38 30 Q35 36 30 38 Q25 40 20 38 Q15 40 10 38 Q5 36 2 30 Q-1 24 2 18 Q5 12 10 8 Q15 4 20 0" fill="white"/>
       {/* Stem */}
-      <line x1="18" y1="20" x2="18" y2="32" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="20" y1="25" x2="20" y2="40" stroke="white" strokeWidth="3" strokeLinecap="round"/>
     </g>
     
-    {/* Middle Compartment - Cube Icon (General Waste) */}
-    <g transform="translate(170, 245)">
-      {/* 3D cube */}
-      <rect x="12" y="12" width="16" height="16" fill="none" stroke="white" strokeWidth="2.5"/>
-      <line x1="12" y1="12" x2="20" y2="8" stroke="white" strokeWidth="2.5"/>
-      <line x1="28" y1="12" x2="20" y2="8" stroke="white" strokeWidth="2.5"/>
-      <line x1="20" y1="8" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
-      <line x1="12" y1="28" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
-      <line x1="28" y1="28" x2="20" y2="24" stroke="white" strokeWidth="2.5"/>
+    {/* Middle Compartment - House/Cube Icon (General Waste) - WHITE */}
+    <g transform="translate(200, 270)">
+      {/* House shape */}
+      <rect x="10" y="20" width="20" height="20" fill="white"/>
+      <path d="M10 20 L20 10 L30 20 Z" fill="white"/>
+      <rect x="15" y="25" width="6" height="8" fill="#047857"/>
     </g>
     
-    {/* Right Compartment - Recycling Symbol (Recyclables) */}
-    <g transform="translate(235, 245)">
+    {/* Right Compartment - Recycling Symbol (Recyclables) - WHITE */}
+    <g transform="translate(280, 270)">
       {/* Three chasing arrows */}
-      <path d="M22 6 L30 6 L26 16 Z" fill="white"/>
-      <path d="M14 18 L22 18 L18 8 Z" fill="white"/>
-      <path d="M26 22 L34 22 L30 12 Z" fill="white"/>
-      <path d="M22 6 L26 16 L14 18 L18 8 L30 12 L26 22" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M25 8 L35 8 L30 20 Z" fill="white"/>
+      <path d="M15 22 L25 22 L20 10 Z" fill="white"/>
+      <path d="M30 28 L40 28 L35 16 Z" fill="white"/>
+      <path d="M25 8 L30 20 L15 22 L20 10 L35 16 L30 28" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
     </g>
-    
-    {/* Overflowing Organic Waste from Top */}
-    {/* Banana Peel */}
-    <path d="M105 180 Q115 170 125 180 Q135 190 130 195 Q125 200 115 195 Q105 190 105 180 Z" fill="white"/>
-    
-    {/* Leafy Greens / Cabbage/Lettuce */}
-    <path d="M145 175 Q150 165 160 175 Q165 180 160 185 Q155 190 150 185 Q145 180 145 175 Z" fill="white"/>
-    <path d="M155 170 Q160 165 170 170 Q175 175 170 180 Q165 185 160 180 Q155 175 155 170 Z" fill="white"/>
-    <path d="M165 165 Q170 160 180 165 Q185 170 180 175 Q175 180 170 175 Q165 170 165 165 Z" fill="white"/>
-    
-    {/* Additional Food Scraps */}
-    <circle cx="195" cy="175" r="6" fill="white"/>
-    <ellipse cx="205" cy="170" rx="5" ry="7" fill="white"/>
-    <path d="M215 165 Q220 160 225 165 Q230 170 225 175 Q220 180 215 175 Q215 170 215 165 Z" fill="white"/>
   </svg>
+);
+
+// Decorative Green Translucent Shapes Component
+const DecorativeShapes = () => (
+  <div className="decorative-shapes">
+    {/* Top-left shape */}
+    <div className="shape shape-1"></div>
+    {/* Bottom-right shape */}
+    <div className="shape shape-2"></div>
+  </div>
 );
 
 // Eye icon component
@@ -158,19 +188,6 @@ function Login({ setIsLoggedIn, setUserRole }) {
 
   return (
     <div className="app-container">
-      <div className="left-panel">
-        <div className="content-wrapper">
-          <h1>
-            Automatic<br />
-            Garbage Sorting<br />
-            System
-          </h1>
-          <div className="illustration-container">
-            <SortingLogo />
-          </div>
-        </div>
-      </div>
-
       <div className="right-panel">
         <div className="form-container">
           <h2>Login Form</h2>
