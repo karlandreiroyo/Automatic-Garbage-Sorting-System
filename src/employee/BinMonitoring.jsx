@@ -24,8 +24,13 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
-        <div className="bin-checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
-          <input type="checkbox" className="bin-checkbox" checked={isSelected} onChange={onToggle} />
+        <div className="bin-checkbox-wrapper" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+          <input 
+            type="checkbox" 
+            className="bin-checkbox" 
+            checked={isSelected} 
+            onChange={() => {}} // Controlled by wrapper click
+          />
         </div>
         <div className="icon-circle"><Icon /></div>
         <h3>{title}</h3>
@@ -73,55 +78,71 @@ const BinMonitoring = () => {
 
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
-  const [confirmModal, setConfirmModal] = useState({ show: false, type: '', target: '' });
+  const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
 
+  // --- STATE OF THE ART VALIDATION LOGIC ---
+  
+  // 1. Identify valid candidates globally (anything that HAS trash)
+  const filledBins = useMemo(() => bins.filter(b => b.fillLevel > 0), [bins]);
   const urgentBinsCount = useMemo(() => bins.filter(bin => bin.fillLevel > 75).length, [bins]);
 
-  // Check 1: Did the user select a bin that is empty?
-  const hasEmptyBinSelected = useMemo(() => {
-    return bins.some(b => selectedBins.includes(b.id) && b.fillLevel === 0);
-  }, [bins, selectedBins]);
+  // 2. Identify "Actionable" bins based on user selection
+  const actionableBins = useMemo(() => {
+    // If user has manually selected bins
+    if (selectedBins.length > 0) {
+      // Return intersection: Selected Bins that are ALSO Not Empty
+      // This is "Forgiving Validation" - we ignore empty selections instead of blocking
+      return bins.filter(b => selectedBins.includes(b.id) && b.fillLevel > 0);
+    }
+    // If no selection, action applies to ALL filled bins
+    return filledBins;
+  }, [bins, selectedBins, filledBins]);
 
-  // Check 2: Are ALL bins in the system empty?
-  const areAllBinsEmpty = useMemo(() => {
-    return bins.every(b => b.fillLevel === 0);
-  }, [bins]);
+  // 3. Determine button state
+  const isButtonDisabled = actionableBins.length === 0;
+  
+  // 4. Determine button text
+  const getButtonText = () => {
+    if (selectedBins.length > 0) {
+      // Smart Text: Show how many valid bins will be affected
+      return `DRAIN SELECTED (${actionableBins.length})`;
+    }
+    return `DRAIN ALL (${actionableBins.length})`;
+  };
 
-  // Main Validation Logic
-  const isDrainActionValid = useMemo(() => {
-    // 1. If selection contains an empty bin -> INVALID
-    if (hasEmptyBinSelected) return false;
-    
-    // 2. If NO selection, but ALL bins are empty -> INVALID
-    if (selectedBins.length === 0 && areAllBinsEmpty) return false;
+  // --- HANDLERS ---
 
-    // 3. Otherwise valid
-    return true;
-  }, [selectedBins, hasEmptyBinSelected, areAllBinsEmpty]);
+  const handleToggleSelect = (id) => {
+    setSelectedBins(prev => 
+      prev.includes(id) ? prev.filter(binId => binId !== id) : [...prev, id]
+    );
+  };
 
-  const handleToggleSelect = (id) => setSelectedBins(prev => prev.includes(id) ? prev.filter(binId => binId !== id) : [...prev, id]);
-  const handleDrainSingle = (id) => setConfirmModal({ show: true, type: 'single', target: id });
+  const handleDrainSingle = (id) => {
+    const bin = bins.find(b => b.id === id);
+    if (bin && bin.fillLevel > 0) {
+      setConfirmModal({ show: true, binsToDrain: [bin] });
+    }
+  };
   
   const handleMainButtonAction = () => {
-    if (selectedBins.length > 0) setConfirmModal({ show: true, type: 'selected', target: `${selectedBins.length} selected` });
-    else setConfirmModal({ show: true, type: 'all', target: 'ALL' });
+    if (actionableBins.length > 0) {
+      setConfirmModal({ show: true, binsToDrain: actionableBins });
+    }
   };
 
   const performDrain = () => {
+    const idsToDrain = confirmModal.binsToDrain.map(b => b.id);
+    
     setBins(prevBins => prevBins.map(bin => {
-      let shouldDrain = false;
-      if (confirmModal.type === 'all') shouldDrain = true;
-      if (confirmModal.type === 'selected' && selectedBins.includes(bin.id)) shouldDrain = true;
-      if (confirmModal.type === 'single' && confirmModal.target === bin.id) shouldDrain = true;
-
-      if (shouldDrain && bin.fillLevel > 0) {
+      if (idsToDrain.includes(bin.id)) {
         return { ...bin, fillLevel: 0, status: '', lastCollection: 'Just now' };
       }
       return bin;
     }));
 
-    if (confirmModal.type === 'selected') setSelectedBins([]);
-    setConfirmModal({ show: false, type: '', target: '' });
+    setSelectedBins([]); // Clear selection after action
+    setConfirmModal({ show: false, binsToDrain: [] });
     setNotification("Draining Process Complete.");
     setTimeout(() => { setNotification(""); }, 3000);
   };
@@ -133,35 +154,39 @@ const BinMonitoring = () => {
           <h1>Real-Time Bin Monitoring</h1>
           <p>Monitor bin fill levels in real-time</p>
         </div>
+        
+        {/* SMART BUTTON */}
         <button 
           className={`primary-action-btn ${selectedBins.length > 0 ? 'btn-blue' : 'btn-green'}`} 
           onClick={handleMainButtonAction}
-          disabled={!isDrainActionValid} 
+          disabled={isButtonDisabled} 
         >
           <DrainAllIcon />
-          {selectedBins.length > 0 ? `DRAIN (${selectedBins.length})` : 'DRAIN ALL'}
+          {getButtonText()}
         </button>
       </div>
 
-      {/* --- VALIDATION 1: Selection Error --- */}
-      {hasEmptyBinSelected && (
-        <div className="notification-banner error">
-           <span>🚫</span>
-           <p><strong>Selection Error:</strong> You have selected an empty bin. Please deselect it to proceed.</p>
-        </div>
+      {/* --- SMART NOTIFICATIONS (No blocking errors) --- */}
+      
+      {/* Informational: User selected some empty bins, but we don't block action */}
+      {selectedBins.length > actionableBins.length && actionableBins.length > 0 && (
+         <div className="notification-banner warning" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+           <span>ℹ️</span>
+           <p>Note: {selectedBins.length - actionableBins.length} selected bin(s) are already empty and will be skipped.</p>
+         </div>
       )}
 
-      {/* --- VALIDATION 2: All Bins Empty (System Notice) --- */}
-      {areAllBinsEmpty && selectedBins.length === 0 && (
-        <div className="notification-banner error">
-           <span>ℹ️</span>
-           <p><strong>System Notice:</strong> All bins are currently empty. No drainage required.</p>
+      {/* System Notice: Everything is empty */}
+      {filledBins.length === 0 && (
+        <div className="notification-banner success">
+           <span>✓</span>
+           <p><strong>System Optimized:</strong> All bins are currently empty. No actions needed.</p>
         </div>
       )}
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
       
-      {urgentBinsCount > 0 && !hasEmptyBinSelected && !areAllBinsEmpty && (
+      {urgentBinsCount > 0 && filledBins.length > 0 && !notification && (
         <div className="notification-banner warning">
           <span>⚠️</span> 
           <div><strong>Action Required:</strong> {urgentBinsCount} bin{urgentBinsCount > 1 ? 's' : ''} almost full or full</div>
@@ -186,9 +211,15 @@ const BinMonitoring = () => {
           <div className="modal-card">
             <div className="modal-icon-wrapper"><AlertTriangle /></div>
             <h2>Confirm Drain</h2>
-            <p>Are you sure you want to drain the bin(s)?</p>
+            <p>
+              You are about to drain <strong>{confirmModal.binsToDrain.length}</strong> bin(s).
+              <br/>
+              <span style={{fontSize: '0.85rem', color: '#9ca3af'}}>
+                ({confirmModal.binsToDrain.map(b => b.title).join(', ')})
+              </span>
+            </p>
             <div className="modal-btn-group">
-              <button className="btn-cancel" onClick={() => setConfirmModal({ show: false })}>Cancel</button>
+              <button className="btn-cancel" onClick={() => setConfirmModal({ show: false, binsToDrain: [] })}>Cancel</button>
               <button className="btn-confirm" onClick={performDrain}>Yes, Drain</button>
             </div>
           </div>
