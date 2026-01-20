@@ -154,13 +154,7 @@ const Dashboard = ({ onLogout }) => {
         </nav>
 
         <div className="sidebar-footer">
-          {/* Today Status Card - Keep if you want it, remove if you want exactly like Admin */}
-          <div className="today-status-card" style={{marginBottom: '15px'}}>
-            <p>Today's Status</p>
-            <h2>98.2%</h2>
-            <span>Sorting Accuracy</span>
-          </div>
-
+          
           <button className="sign-out-btn" onClick={() => setShowLogoutModal(true)}>
             <div className="nav-icon"><SignOutIcon /></div>
             Sign Out

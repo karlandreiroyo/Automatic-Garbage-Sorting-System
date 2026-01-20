@@ -160,10 +160,6 @@ body, #root {
   justify-content: center;
 }
 
-.today-status-card { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; }
-.today-status-card p, .today-status-card span { font-size: 0.8rem; color: #a7f3d0; }
-.today-status-card h2 { font-size: 1.8rem; margin: 5px 0; }
-
 /* --- MAIN CONTENT AREA --- */
 .main-content { flex: 1; padding: 40px; overflow-y: auto; background-color: #ffffff; }
 
