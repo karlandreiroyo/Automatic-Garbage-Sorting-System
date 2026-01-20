@@ -46,12 +46,14 @@ const forgotPasswordRoutes = require('./routes/forgotPassword');
 const profilePasswordRoutes = require('./routes/profilePassword');
 const loginVerificationRoutes = require('./routes/loginVerification');
 const healthRoutes = require('./routes/health');
+const securityAlertRoutes = require('./routes/securityAlert');
 
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
 app.use('/api/login', loginVerificationRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/security', securityAlertRoutes);
 
 // Start server
 app.listen(PORT, () => {

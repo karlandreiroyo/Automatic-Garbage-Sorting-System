@@ -182,25 +182,20 @@ async function sendLoginVerificationEmail({ to, code, expiresMinutes = 10 }) {
   const subject = 'Login Verification';
   const actionType = 'LOGIN_VERIFICATION';
   const text =
-    `Action: ${actionType}\n\n` +
-    `You have requested a login verification code.\n\n` +
+    `Login Verification\n\n` +
     `Your login verification code is: ${code}\n\n` +
     `This code expires in ${expiresMinutes} minutes.\n\n` +
     `If you did not attempt to log in, please ignore this email.`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
-      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-        <p style="margin:0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Action Performed</p>
-        <p style="margin:4px 0 0 0; font-size: 14px; font-weight: 600; color: #111;">${actionType}</p>
-      </div>
-      <h2 style="margin:0 0 12px 0;">Login Verification</h2>
-      <p style="margin:0 0 12px 0;">You have requested a login verification code. Use the code below to complete your login:</p>
-      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; display:inline-block; background:#f9fafb;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">Login Verification</h1>
+      <p style="margin: 0 0 16px 0; color: #374151;">Your login verification code is:</p>
+      <div style="font-size: 32px; letter-spacing: 8px; font-weight: 600; padding: 20px; text-align: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 20px 0; font-family: 'Courier New', monospace;">
         ${code}
       </div>
-      <p style="margin:12px 0 0 0;">This code expires in <b>${expiresMinutes} minutes</b>.</p>
-      <p style="margin:12px 0 0 0; color:#6b7280;">If you did not attempt to log in, you can ignore this email.</p>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">If you did not attempt to log in, you can ignore this email.</p>
     </div>
   `;
 
@@ -319,25 +314,20 @@ async function sendChangePasswordVerificationEmail({ to, code, expiresMinutes = 
   const subject = 'Change Password Verification';
   const actionType = 'CHANGE_PASSWORD';
   const text =
-    `Action: ${actionType}\n\n` +
-    `You have requested to change your password.\n\n` +
+    `Change Password Verification\n\n` +
     `Your password change verification code is: ${code}\n\n` +
     `This code expires in ${expiresMinutes} minutes.\n\n` +
     `If you did not request to change your password, please ignore this email.`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
-      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-        <p style="margin:0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Action Performed</p>
-        <p style="margin:4px 0 0 0; font-size: 14px; font-weight: 600; color: #111;">${actionType}</p>
-      </div>
-      <h2 style="margin:0 0 12px 0;">Change Password Verification</h2>
-      <p style="margin:0 0 12px 0;">You have requested to change your password. Use the code below to verify your password change:</p>
-      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; display:inline-block; background:#f9fafb;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">Change Password Verification</h1>
+      <p style="margin: 0 0 16px 0; color: #374151;">Your password change verification code is:</p>
+      <div style="font-size: 32px; letter-spacing: 8px; font-weight: 600; padding: 20px; text-align: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 20px 0; font-family: 'Courier New', monospace;">
         ${code}
       </div>
-      <p style="margin:12px 0 0 0;">This code expires in <b>${expiresMinutes} minutes</b>.</p>
-      <p style="margin:12px 0 0 0; color:#6b7280;">If you did not request to change your password, you can ignore this email.</p>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">If you did not request to change your password, you can ignore this email.</p>
     </div>
   `;
 
@@ -456,25 +446,20 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
   const subject = 'Reset Password Verification';
   const actionType = 'RESET_PASSWORD';
   const text =
-    `Action: ${actionType}\n\n` +
-    `You have requested to reset your password.\n\n` +
+    `Reset Password Verification\n\n` +
     `Your password reset verification code is: ${code}\n\n` +
     `This code expires in ${expiresMinutes} minutes.\n\n` +
     `If you did not request to reset your password, please ignore this email.`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111;">
-      <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-        <p style="margin:0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Action Performed</p>
-        <p style="margin:4px 0 0 0; font-size: 14px; font-weight: 600; color: #111;">${actionType}</p>
-      </div>
-      <h2 style="margin:0 0 12px 0;">Reset Password Verification</h2>
-      <p style="margin:0 0 12px 0;">You have requested to reset your password. Use the code below to reset your password:</p>
-      <div style="font-size: 28px; letter-spacing: 6px; font-weight: 700; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 10px; display:inline-block; background:#f9fafb;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">Reset Password Verification</h1>
+      <p style="margin: 0 0 16px 0; color: #374151;">Your password reset verification code is:</p>
+      <div style="font-size: 32px; letter-spacing: 8px; font-weight: 600; padding: 20px; text-align: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 20px 0; font-family: 'Courier New', monospace;">
         ${code}
       </div>
-      <p style="margin:12px 0 0 0;">This code expires in <b>${expiresMinutes} minutes</b>.</p>
-      <p style="margin:12px 0 0 0; color:#6b7280;">If you did not request to reset your password, you can ignore this email.</p>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">If you did not request to reset your password, you can ignore this email.</p>
     </div>
   `;
 
@@ -548,6 +533,100 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
   }
 }
 
+/**
+ * Send security alert email to notify user of suspicious login attempts
+ * @param {string} to - Recipient email address
+ * @param {number} failedAttempts - Number of failed login attempts
+ * @param {string} attemptedEmail - Email address that was used in failed attempts
+ * @param {string} timestamp - Timestamp of the attempts
+ * 
+ * Note: This email is sent when multiple failed login attempts are detected.
+ */
+async function sendSecurityAlertEmail({ to, failedAttempts, attemptedEmail, timestamp }) {
+  const cfg = getSmtpConfig();
+  
+  if (cfg.hasPlaceholders) {
+    return { 
+      ok: false, 
+      reason: 'SMTP configuration contains placeholder values. Please update backend/.env with actual SMTP credentials.', 
+      subject: 'Security Alert: Suspicious Login Attempts' 
+    };
+  }
+
+  if (!cfg.userEmailValid) {
+    return {
+      ok: false,
+      reason: `SMTP_USER is not a valid email address: "${cfg.user}". Please check your backend/.env file.`,
+      subject: 'Security Alert: Suspicious Login Attempts'
+    };
+  }
+
+  if (cfg.validationErrors && cfg.validationErrors.length > 0) {
+    return {
+      ok: false,
+      reason: `SMTP configuration errors:\n${cfg.validationErrors.map(e => `  - ${e}`).join('\n')}`,
+      subject: 'Security Alert: Suspicious Login Attempts'
+    };
+  }
+  
+  const transporter = createTransport();
+
+  if (!transporter) {
+    return { ok: false, reason: 'SMTP not configured', subject: 'Security Alert: Suspicious Login Attempts' };
+  }
+
+  const subject = 'Security Alert: Suspicious Login Attempts';
+  const text =
+    `Security Alert: Suspicious Login Attempts\n\n` +
+    `We detected ${failedAttempts} failed login attempts on your account.\n\n` +
+    `Attempted Email: ${attemptedEmail}\n` +
+    `Time: ${timestamp}\n\n` +
+    `If this was you, you can ignore this message. However, if you did not attempt to log in, please change your password immediately.\n\n` +
+    `For your security, login has been temporarily disabled for 3 minutes.`;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #dc2626;">Security Alert: Suspicious Login Attempts</h1>
+      <p style="margin: 0 0 16px 0; color: #374151;">We detected ${failedAttempts} failed login attempts on your account.</p>
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Attempted Email:</p>
+        <p style="margin: 0 0 12px 0; color: #111; font-size: 16px; font-family: 'Courier New', monospace;">${attemptedEmail}</p>
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Time:</p>
+        <p style="margin: 0; color: #111; font-size: 16px;">${timestamp}</p>
+      </div>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">If this was you, you can ignore this message. However, if you did not attempt to log in, please change your password immediately.</p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">For your security, login has been temporarily disabled for 3 minutes.</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: cfg.from,
+      to,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, subject, to };
+  } catch (error) {
+    let reason = error.message;
+    const cfg = getSmtpConfig();
+    
+    if (error.message && error.message.includes('535')) {
+      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+      reason = 'Gmail authentication failed. Please check your SMTP configuration in backend/.env';
+    } else if (error.message && error.message.includes('Invalid login')) {
+      reason = 'Invalid SMTP credentials. Please check your backend/.env file.';
+    } else if (error.message && error.message.includes('ENOTFOUND')) {
+      reason = `SMTP server not found: ${cfg.host}`;
+    } else if (error.message && error.message.includes('ECONNREFUSED')) {
+      reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}`;
+    }
+    
+    return { ok: false, reason, subject, to, originalError: error.message };
+  }
+}
+
 module.exports = {
   getSmtpConfig,
   createTransport,
@@ -555,5 +634,6 @@ module.exports = {
   sendLoginVerificationEmail,
   sendChangePasswordVerificationEmail,
   sendResetPasswordVerificationEmail,
+  sendSecurityAlertEmail,
 };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient.jsx';
 import './login.css';
@@ -36,13 +36,76 @@ function Login({ setIsLoggedIn, setUserRole }) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
   const navigate = useNavigate();
 
   // Backend API base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+  // Check for existing lockout on component mount
+  useEffect(() => {
+    const lockoutData = localStorage.getItem('loginLockout');
+    if (lockoutData) {
+      const { lockoutUntil } = JSON.parse(lockoutData);
+      const now = Date.now();
+      if (lockoutUntil > now) {
+        setIsLockedOut(true);
+        setLockoutTimeRemaining(Math.ceil((lockoutUntil - now) / 1000));
+      } else {
+        // Lockout expired, clear it
+        localStorage.removeItem('loginLockout');
+        localStorage.removeItem('failedLoginAttempts');
+        setFailedAttempts(0);
+      }
+    }
+
+    // Restore failed attempts count (only if not locked out)
+    const savedAttempts = localStorage.getItem('failedLoginAttempts');
+    if (savedAttempts && !lockoutData) {
+      const attempts = parseInt(savedAttempts, 10);
+      setFailedAttempts(attempts);
+    }
+  }, []);
+
+  // Countdown timer for lockout
+  useEffect(() => {
+    if (!isLockedOut || lockoutTimeRemaining <= 0) return;
+
+    const timer = setInterval(() => {
+      setLockoutTimeRemaining((prev) => {
+        if (prev <= 1) {
+          // Lockout expired
+          setIsLockedOut(false);
+          setFailedAttempts(0);
+          localStorage.removeItem('loginLockout');
+          localStorage.removeItem('failedLoginAttempts');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isLockedOut, lockoutTimeRemaining]);
+
+  // Format time remaining as MM:SS
+  const formatTimeRemaining = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
+    
+    // Prevent login if locked out
+    if (isLockedOut) {
+      alert(`Login is temporarily disabled. Please wait ${formatTimeRemaining(lockoutTimeRemaining)} before trying again.`);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -53,10 +116,52 @@ function Login({ setIsLoggedIn, setUserRole }) {
       });
 
       if (authError) {
-        alert('Invalid email or password!');
+        // Increment failed attempts
+        const newAttempts = failedAttempts + 1;
+        setFailedAttempts(newAttempts);
+        localStorage.setItem('failedLoginAttempts', newAttempts.toString());
+
+        // If 3 failed attempts, lock out for 3 minutes and send security alert
+        if (newAttempts >= 3) {
+          const lockoutUntil = Date.now() + (3 * 60 * 1000); // 3 minutes
+          localStorage.setItem('loginLockout', JSON.stringify({ lockoutUntil }));
+          setIsLockedOut(true);
+          setLockoutTimeRemaining(180); // 3 minutes in seconds
+          
+          // Send security alert email to the user
+          try {
+            const alertResponse = await fetch(`${API_BASE_URL}/api/security/send-alert`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: email,
+                failedAttempts: newAttempts
+              }),
+            });
+
+            const alertData = await alertResponse.json();
+            if (alertData.success) {
+              console.log('Security alert sent successfully');
+            }
+          } catch (alertError) {
+            console.error('Failed to send security alert:', alertError);
+            // Don't block the user flow if alert fails
+          }
+
+          alert('Too many failed login attempts. Login is disabled for 3 minutes. A security alert has been sent to your email.');
+        } else {
+          alert(`Invalid email or password! ${3 - newAttempts} attempt(s) remaining.`);
+        }
         setLoading(false);
         return;
       }
+
+      // Successful login - reset failed attempts
+      setFailedAttempts(0);
+      localStorage.removeItem('failedLoginAttempts');
+      localStorage.removeItem('loginLockout');
 
       // 2. Get user details AND status from the users table
       const { data: userData, error: userError } = await supabase
@@ -179,7 +284,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || isLockedOut}
               />
             </div>
 
@@ -192,13 +297,13 @@ function Login({ setIsLoggedIn, setUserRole }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={loading}
+                  disabled={loading || isLockedOut}
                 />
                 <button
                   type="button"
                   className="eye-icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+                  disabled={loading || isLockedOut}
                 >
                   <EyeIcon visible={showPassword} />
                 </button>
@@ -223,9 +328,19 @@ function Login({ setIsLoggedIn, setUserRole }) {
               </span>
             </div>
 
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
+            <button 
+              type="submit" 
+              className="login-btn" 
+              disabled={loading || isLockedOut}
+            >
+              {loading ? 'Logging in...' : isLockedOut ? `Login Disabled (${formatTimeRemaining(lockoutTimeRemaining)})` : 'Login'}
             </button>
+            
+            {isLockedOut && (
+              <div className="lockout-message">
+                <p>Too many failed login attempts. Please wait {formatTimeRemaining(lockoutTimeRemaining)} before trying again.</p>
+              </div>
+            )}
           </form>
 
           {/* Role Selection Buttons */}

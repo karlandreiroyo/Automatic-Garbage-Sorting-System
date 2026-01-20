@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Forgot.css';
+import './forgot.css';
+
+// Eye icon component
+const EyeIcon = ({ visible }) => (
+  visible ? (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ) : (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.36 21.36 0 0 1 5.06-6.06M1 1l22 22"/>
+    </svg>
+  )
+);
 
 // Backend API base URL - adjust this to match your backend server
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -16,8 +30,44 @@ const Forgot = () => {
   const [loading, setLoading] = useState(false);
   const [resetToken, setResetToken] = useState(null);
   const [error, setError] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({});
 
   const navigate = useNavigate();
+
+  // Password validation function
+  const validatePassword = (password) => {
+    const errors = {};
+    
+    if (password.length < 8) {
+      errors.minLength = 'Password must be at least 8 characters';
+    }
+    
+    if (password.length > 128) {
+      errors.maxLength = 'Password must be at most 128 characters';
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      errors.capital = 'Password must contain at least 1 capital letter';
+    }
+    
+    if (!/[0-9]/.test(password)) {
+      errors.number = 'Password must contain at least 1 numerical character';
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errors.special = 'Password must contain at least 1 special character';
+    }
+    
+    return errors;
+  };
+
+  // Check if password is valid
+  const isPasswordValid = (password) => {
+    const errors = validatePassword(password);
+    return Object.keys(errors).length === 0;
+  };
 
   const sendCode = async () => {
     if (!emailOrMobile.trim()) {
@@ -118,8 +168,11 @@ const Forgot = () => {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
+    // Validate password
+    const errors = validatePassword(newPassword);
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      setError('Please fix the password requirements');
       return;
     }
 
@@ -298,33 +351,83 @@ const Forgot = () => {
             Enter your new password
           </p>
 
-          <input
-            type="password"
-            placeholder="New password"
-            value={newPassword}
-            onChange={(e) => {
-              setNewPassword(e.target.value);
-              setError('');
-            }}
-            disabled={loading}
-          />
+          <div className="password-input-wrapper">
+            <input
+              type={showNewPassword ? 'text' : 'password'}
+              placeholder="New password"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                setError('');
+                const errors = validatePassword(e.target.value);
+                setPasswordErrors(errors);
+              }}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+              disabled={loading}
+            >
+              <EyeIcon visible={showNewPassword} />
+            </button>
+          </div>
 
-          <input
-            type="password"
-            placeholder="Confirm new password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setError('');
-            }}
-            disabled={loading}
-            style={{ marginTop: '10px' }}
-          />
+          {/* Password validation messages */}
+          {newPassword && (
+            <div className="password-validation">
+              <div className={`validation-item ${newPassword.length >= 8 && newPassword.length <= 128 ? 'valid' : 'invalid'}`}>
+                {newPassword.length >= 8 && newPassword.length <= 128 ? '✓' : '✗'} 8-128 characters
+              </div>
+              <div className={`validation-item ${/[A-Z]/.test(newPassword) ? 'valid' : 'invalid'}`}>
+                {/[A-Z]/.test(newPassword) ? '✓' : '✗'} 1 capital letter
+              </div>
+              <div className={`validation-item ${/[0-9]/.test(newPassword) ? 'valid' : 'invalid'}`}>
+                {/[0-9]/.test(newPassword) ? '✓' : '✗'} 1 numerical character
+              </div>
+              <div className={`validation-item ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? 'valid' : 'invalid'}`}>
+                {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? '✓' : '✗'} 1 special character
+              </div>
+            </div>
+          )}
+
+          <div className="password-input-wrapper" style={{ marginTop: '16px' }}>
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                setError('');
+              }}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={loading}
+            >
+              <EyeIcon visible={showConfirmPassword} />
+            </button>
+          </div>
+
+          {/* Checkbox to show/hide confirm password */}
+          <label className="show-password-checkbox">
+            <input
+              type="checkbox"
+              checked={showConfirmPassword}
+              onChange={(e) => setShowConfirmPassword(e.target.checked)}
+              disabled={loading}
+            />
+            <span>Show password</span>
+          </label>
 
           <button 
             className="btn primary full" 
             onClick={resetPassword}
-            disabled={loading}
+            disabled={loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
             style={{ marginTop: '20px' }}
           >
             {loading ? 'Resetting...' : 'Reset Password'}

@@ -74,6 +74,26 @@ router.post('/send-verification', requireAuth, async (req, res) => {
     
     if (emailResult.ok) {
       console.log('✅ Status: Email sent successfully!');
+      console.log('\n' + '─'.repeat(75));
+      console.log('📧 EMAIL CONTENT (as sent to user):');
+      console.log('─'.repeat(75));
+      console.log(`From: Automatic Garbage Sorting System <${authenticatedUserEmail}>`);
+      console.log(`To: ${authenticatedUserEmail}`);
+      console.log(`Subject: ${emailSubject}`);
+      console.log('');
+      console.log('Action Performed: LOGIN_VERIFICATION');
+      console.log('');
+      console.log('You have requested a login verification code.');
+      console.log('Use the code below to complete your login:');
+      console.log('');
+      console.log('   ╔═══════════════════════════════╗');
+      console.log(`   ║      ${code}      ║`);
+      console.log('   ╚═══════════════════════════════╝');
+      console.log('');
+      console.log('This code expires in 10 minutes.');
+      console.log('');
+      console.log('If you did not attempt to log in, you can ignore this email.');
+      console.log('─'.repeat(75));
       console.log(`🔑 Verification Code: ${code}`);
       console.log(`⏰ Expires in: 10 minutes`);
       console.log('💡 The user should check their email inbox for the verification code.');
@@ -87,6 +107,23 @@ router.post('/send-verification', requireAuth, async (req, res) => {
           console.log('   ' + line);
         }
       });
+      console.log('─'.repeat(75));
+      console.log('\n📧 EMAIL CONTENT (would be sent if SMTP was configured):');
+      console.log('─'.repeat(75));
+      console.log(`From: Automatic Garbage Sorting System <${authenticatedUserEmail}>`);
+      console.log(`To: ${authenticatedUserEmail}`);
+      console.log(`Subject: ${emailSubject}`);
+      console.log('');
+      console.log('Action Performed: LOGIN_VERIFICATION');
+      console.log('');
+      console.log('You have requested a login verification code.');
+      console.log('Use the code below to complete your login:');
+      console.log('');
+      console.log('   ╔═══════════════════════════════╗');
+      console.log(`   ║      ${code}      ║`);
+      console.log('   ╚═══════════════════════════════╝');
+      console.log('');
+      console.log('This code expires in 10 minutes.');
       console.log('─'.repeat(75));
       console.log(`🔑 Verification Code: ${code} (available for testing)`);
       console.log(`⏰ Expires in: 10 minutes`);

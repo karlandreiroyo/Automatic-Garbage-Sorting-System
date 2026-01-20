@@ -264,6 +264,24 @@
 .login-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  background-color: #9ca3af;
+}
+
+/* Lockout message */
+.lockout-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.lockout-message p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* Role selection cards - Hidden on desktop/website view */
