@@ -135,11 +135,6 @@ const Dashboard = ({ onLogout }) => {
             <SignOutIcon /> Sign Out
           </button>
 
-          <div className="today-status-card">
-            <p>Today's Status</p>
-            <h2>98.2%</h2>
-            <span>Sorting Accuracy</span>
-          </div>
         </div>
       </div>
 

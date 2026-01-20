@@ -287,391 +287,129 @@ const BinMonitoring = () => {
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-    name: '',
-    category: 'Biodegradable',
-    capacity: '20kg'
-  });
+  location: '',
+  assigned_collector_id: ''
+});
   const [loading, setLoading] = useState(false);
   
-  // State for list view bins, each with its own independent category bins
-  const [bins, setBins] = useState([
-  { 
-    id: 1, 
-    name: 'Bin 1', 
-    fillLevel: 80, // Already multiple of 10
-    systemPower: 100, 
-    capacity: '20kg', 
-    lastUpdate: '2 hours ago', 
-    category: 'Biodegradable',
-    categoryBins: [
-      { 
-        id: 'bio-1', 
-        category: 'Biodegradable', 
-        fillLevel: 80, // Already multiple of 10
-        capacity: '100 L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-1', 
-        category: 'Non Biodegradable', 
-        fillLevel: 100, // Already multiple of 10
-        capacity: '100 L', 
-        lastCollection: '4 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-1', 
-        category: 'Recyclable', 
-        fillLevel: 90, // Changed from 86 to 90
-        capacity: '100L', 
-        lastCollection: '1 hours ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-1', 
-        category: 'Unsorted', 
-        fillLevel: 80, // Changed from 83 to 80
-        capacity: '100L', 
-        lastCollection: '1 hours ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 2, 
-    name: 'Bin 2', 
-    fillLevel: 90, // Changed from 86 to 90
-    systemPower: 50, 
-    capacity: '20kg', 
-    lastUpdate: '1 hour ago', 
-    category: 'Non-Biodegradable',
-    categoryBins: [
-      { 
-        id: 'bio-2', 
-        category: 'Biodegradable', 
-        fillLevel: 80, // Changed from 75 to 80
-        capacity: '100 L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-2', 
-        category: 'Non Biodegradable', 
-        fillLevel: 100, // Changed from 95 to 100
-        capacity: '100 L', 
-        lastCollection: '3 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-2', 
-        category: 'Recyclable', 
-        fillLevel: 90, // Already multiple of 10
-        capacity: '100L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-2', 
-        category: 'Unsorted', 
-        fillLevel: 70, // Already multiple of 10
-        capacity: '100L', 
-        lastCollection: '30 minutes ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 3, 
-    name: 'Bin 3', 
-    fillLevel: 90, // Changed from 85 to 90
-    systemPower: 20, 
-    capacity: '20kg', 
-    lastUpdate: '3 hours ago', 
-    category: 'Recycle',
-    categoryBins: [
-      { 
-        id: 'bio-3', 
-        category: 'Biodegradable', 
-        fillLevel: 80, // Changed from 82 to 80
-        capacity: '100 L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-3', 
-        category: 'Non Biodegradable', 
-        fillLevel: 90, // Changed from 88 to 90
-        capacity: '100 L', 
-        lastCollection: '5 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-3', 
-        category: 'Recyclable', 
-        fillLevel: 90, // Changed from 85 to 90
-        capacity: '100L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-3', 
-        category: 'Unsorted', 
-        fillLevel: 90, // Already multiple of 10
-        capacity: '100L', 
-        lastCollection: '45 minutes ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 4, 
-    name: 'Bin 4', 
-    fillLevel: 90, // Already multiple of 10
-    systemPower: 100, 
-    capacity: '20kg', 
-    lastUpdate: '1 hour ago', 
-    category: 'Unsorted',
-    categoryBins: [
-      { 
-        id: 'bio-4', 
-        category: 'Biodegradable', 
-        fillLevel: 90, // Changed from 88 to 90
-        capacity: '100 L', 
-        lastCollection: '3 hours ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-4', 
-        category: 'Non Biodegradable', 
-        fillLevel: 90, // Changed from 92 to 90
-        capacity: '100 L', 
-        lastCollection: '6 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-4', 
-        category: 'Recyclable', 
-        fillLevel: 90, // Changed from 91 to 90
-        capacity: '100L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-4', 
-        category: 'Unsorted', 
-        fillLevel: 90, // Already multiple of 10
-        capacity: '100L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 5, 
-    name: 'Bin 5', 
-    fillLevel: 75,
-    systemPower: 80, 
-    capacity: '20kg', 
-    lastUpdate: '2 hours ago', 
-        category: 'Biodegradable', 
-    categoryBins: [
-      { 
-        id: 'bio-5', 
-        category: 'Biodegradable', 
-        fillLevel: 75,
-        capacity: '100 L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-5', 
-        category: 'Non Biodegradable', 
-        fillLevel: 75,
-        capacity: '100 L', 
-        lastCollection: '3 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-5', 
-        category: 'Recyclable', 
-        fillLevel: 75,
-        capacity: '100L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-5', 
-        category: 'Unsorted', 
-        fillLevel: 75,
-        capacity: '100L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 6, 
-    name: 'Bin 6', 
-    fillLevel: 60,
-    systemPower: 70, 
-    capacity: '20kg', 
-    lastUpdate: '1 hour ago', 
-    category: 'Non-Biodegradable',
-    categoryBins: [
-      { 
-        id: 'bio-6', 
-        category: 'Biodegradable', 
-        fillLevel: 60,
-        capacity: '100 L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-6', 
-        category: 'Non Biodegradable', 
-        fillLevel: 60,
-        capacity: '100 L', 
-        lastCollection: '2 hours ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-6', 
-        category: 'Recyclable', 
-        fillLevel: 60,
-        capacity: '100L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-6', 
-        category: 'Unsorted', 
-        fillLevel: 60,
-        capacity: '100L', 
-        lastCollection: '30 minutes ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
-  },
-  { 
-    id: 7, 
-    name: 'Bin 7', 
-    fillLevel: 50,
-    systemPower: 60, 
-    capacity: '20kg', 
-    lastUpdate: '30 minutes ago', 
-    category: 'Recyclable',
-    categoryBins: [
-      { 
-        id: 'bio-7', 
-        category: 'Biodegradable', 
-        fillLevel: 50,
-        capacity: '100 L', 
-        lastCollection: '30 minutes ago',
-        colorClass: 'green',
-        icon: <LeafIcon />
-      },
-      { 
-        id: 'non-bio-7', 
-        category: 'Non Biodegradable', 
-        fillLevel: 50,
-        capacity: '100 L', 
-        lastCollection: '1 hour ago',
-        colorClass: 'red',
-        icon: <TrashIcon />
-      },
-      { 
-        id: 'recycle-7', 
-        category: 'Recyclable', 
-        fillLevel: 50,
-        capacity: '100L', 
-        lastCollection: '30 minutes ago',
-        colorClass: 'blue',
-        icon: <RecycleIcon />
-      },
-      { 
-        id: 'unsorted-7', 
-        category: 'Unsorted', 
-        fillLevel: 50,
-        capacity: '100L', 
-        lastCollection: '15 minutes ago',
-        colorClass: 'lime',
-        icon: <GearIcon />
-      }
-    ]
+const fetchCollectors = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, middle_name')
+      .eq('role', 'COLLECTOR')
+      .eq('status', 'ACTIVE')
+      .order('first_name', { ascending: true });
+    
+    if (error) throw error;
+    setCollectors(data || []);
+  } catch (error) {
+    console.error('Error fetching collectors:', error);
   }
-]);
+};
+
+  // State for list view bins, each with its own independent category bins
+const [bins, setBins] = useState([]);
+const [collectors, setCollectors] = useState([]);
 
   // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
-    fetchBinData();
-    
-    // Set up real-time polling every 2 seconds to update bin fill levels
-    const interval = setInterval(() => {
-      updateBinFillLevels();
-    }, 2000); // Update every 2 seconds
+  fetchBinData();
+  fetchCollectors(); // Add this line
+  
+  const interval = setInterval(() => {
+    updateBinFillLevels();
+  }, 2000);
 
-    // Cleanup interval on component unmount
-    return () => clearInterval(interval);
-  }, []);
+  return () => clearInterval(interval);
+}, []);
 
   /**
    * Fetches bin data from Supabase database
    * Falls back to default data if database fetch fails
    */
-  const fetchBinData = async () => {
-    try {
-      // Try to fetch from Supabase if you have a bins table
-      const { data, error } = await supabase
-        .from('bins')
-        .select('*');
+const fetchBinData = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('bins')
+      .select(`
+        *,
+        assigned_collector:users!bins_assigned_collector_id_fkey(
+          id,
+          first_name,
+          last_name,
+          middle_name
+        )
+      `)
+      .eq('status', 'ACTIVE')
+      .order('id', { ascending: true });
 
-      if (!error && data) {
-        // Update bins from database
-        // Note: If you have category bins in database, you'll need to fetch them separately
-        // For now, we'll keep the default category bins structure
-        const updatedBins = data.map(bin => ({
-          id: bin.id,
-          name: bin.name || `Bin ${bin.id}`,
-          fillLevel: bin.fill_level || bin.fillLevel || 0,
-          systemPower: bin.system_power || bin.systemPower || 100,
-          capacity: bin.capacity || '20kg',
-          lastUpdate: bin.last_update || 'Just now',
-          category: bin.category || 'General',
-          // Keep existing categoryBins or initialize with defaults
-          categoryBins: bins.find(b => b.id === bin.id)?.categoryBins || []
-        }));
-        setBins(updatedBins);
-      }
-    } catch (error) {
-      console.error('Error fetching bin data:', error);
-      // Use default data if fetch fails
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const updatedBins = data.map(bin => ({
+        id: bin.id,
+        name: bin.name,
+        fillLevel: 0, // Will be updated from IoT later
+        systemPower: bin.system_power || 100,
+        capacity: bin.capacity || '20kg',
+        lastUpdate: 'Just now',
+        category: 'Biodegradable',
+        location: bin.location,
+        assigned_collector_id: bin.assigned_collector_id,
+        assigned_collector_name: bin.assigned_collector 
+          ? `${bin.assigned_collector.first_name} ${bin.assigned_collector.middle_name || ''} ${bin.assigned_collector.last_name}`.trim()
+          : 'Unassigned',
+        categoryBins: [
+          {
+            id: `bio-${bin.id}`,
+            category: 'Biodegradable',
+            fillLevel: 0,
+            capacity: '100 L',
+            lastCollection: 'Just now',
+            colorClass: 'green',
+            icon: <LeafIcon />
+          },
+          {
+            id: `non-bio-${bin.id}`,
+            category: 'Non Biodegradable',
+            fillLevel: 0,
+            capacity: '100 L',
+            lastCollection: 'Just now',
+            colorClass: 'red',
+            icon: <TrashIcon />
+          },
+          {
+            id: `recycle-${bin.id}`,
+            category: 'Recyclable',
+            fillLevel: 0,
+            capacity: '100L',
+            lastCollection: 'Just now',
+            colorClass: 'blue',
+            icon: <RecycleIcon />
+          },
+          {
+            id: `unsorted-${bin.id}`,
+            category: 'Unsorted',
+            fillLevel: 0,
+            capacity: '100L',
+            lastCollection: 'Just now',
+            colorClass: 'lime',
+            icon: <GearIcon />
+          }
+        ]
+      }));
+      
+      setBins(updatedBins);
+    } else {
+      // No bins in database
+      setBins([]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching bin data:', error);
+    setBins([]);
+  }
+};
 
   /**
    * Updates bin fill levels in real-time based on category bins
@@ -1059,83 +797,141 @@ const updateBinFillLevels = () => {
   };
 
   // Handle Add Bin form submission
-  const handleAddBin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleAddBin = async (e) => {
+  e.preventDefault();
+  
+  if (!binFormData.assigned_collector_id) {
+    alert('Please select a collector to assign to this bin.');
+    return;
+  }
 
-    try {
-      // Generate next bin number
-      const nextBinNumber = bins.length + 1;
-      const newBinName = binFormData.name || `Bin ${nextBinNumber}`;
+  if (!binFormData.location || !binFormData.location.trim()) {
+    alert('Please enter the bin location.');
+    return;
+  }
+  
+  setLoading(true);
 
-      // Create new bin with default category bins
-      const newBin = {
-        id: nextBinNumber,
+  try {
+    // Get current bins count to generate next bin number
+    const { data: existingBins, error: countError } = await supabase
+      .from('bins')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    if (countError) throw countError;
+
+    // Generate bin name (Bin 1, Bin 2, etc.)
+    const nextBinNumber = existingBins && existingBins.length > 0 
+      ? existingBins[0].id + 1 
+      : 1;
+    const newBinName = `Bin ${nextBinNumber}`;
+
+    // Insert into database
+    const { data: newBinData, error } = await supabase
+      .from('bins')
+      .insert([{
         name: newBinName,
-        fillLevel: 0,
-        systemPower: 100,
-        capacity: binFormData.capacity || '20kg',
-        lastUpdate: 'Just now',
-        category: binFormData.category || 'Biodegradable',
-        categoryBins: [
-          {
-            id: `bio-${nextBinNumber}`,
-            category: 'Biodegradable',
-            fillLevel: 0,
-            capacity: '100 L',
-            lastCollection: 'Just now',
-            colorClass: 'green',
-            icon: <LeafIcon />
-          },
-          {
-            id: `non-bio-${nextBinNumber}`,
-            category: 'Non Biodegradable',
-            fillLevel: 0,
-            capacity: '100 L',
-            lastCollection: 'Just now',
-            colorClass: 'red',
-            icon: <TrashIcon />
-          },
-          {
-            id: `recycle-${nextBinNumber}`,
-            category: 'Recyclable',
-            fillLevel: 0,
-            capacity: '100L',
-            lastCollection: 'Just now',
-            colorClass: 'blue',
-            icon: <RecycleIcon />
-          },
-          {
-            id: `unsorted-${nextBinNumber}`,
-            category: 'Unsorted',
-            fillLevel: 0,
-            capacity: '100L',
-            lastCollection: 'Just now',
-            colorClass: 'lime',
-            icon: <GearIcon />
-          }
-        ]
-      };
+        location: binFormData.location.trim(),
+        capacity: '20kg', // Default capacity
+        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
+        system_power: 100,
+        status: 'ACTIVE'
+      }])
+      .select(`
+        *,
+        assigned_collector:users!bins_assigned_collector_id_fkey(
+          id,
+          first_name,
+          last_name,
+          middle_name
+        )
+      `)
+      .single();
 
-      // Add to bins array
-      setBins(prev => [...prev, newBin]);
+    if (error) throw error;
 
-      // Reset form
-      setBinFormData({
-        name: '',
-        category: 'Biodegradable',
-        capacity: '20kg'
-      });
+    // Create new bin object for local state
+    const newBin = {
+      id: newBinData.id,
+      name: newBinData.name,
+      fillLevel: 0,
+      systemPower: 100,
+      capacity: newBinData.capacity,
+      lastUpdate: 'Just now',
+      category: 'Biodegradable',
+      location: newBinData.location,
+      assigned_collector_id: newBinData.assigned_collector_id,
+      assigned_collector_name: newBinData.assigned_collector 
+        ? `${newBinData.assigned_collector.first_name} ${newBinData.assigned_collector.middle_name || ''} ${newBinData.assigned_collector.last_name}`.trim()
+        : 'Unassigned',
+      categoryBins: [
+        {
+          id: `bio-${newBinData.id}`,
+          category: 'Biodegradable',
+          fillLevel: 0,
+          capacity: '100 L',
+          lastCollection: 'Just now',
+          colorClass: 'green',
+          icon: <LeafIcon />
+        },
+        {
+          id: `non-bio-${newBinData.id}`,
+          category: 'Non Biodegradable',
+          fillLevel: 0,
+          capacity: '100 L',
+          lastCollection: 'Just now',
+          colorClass: 'red',
+          icon: <TrashIcon />
+        },
+        {
+          id: `recycle-${newBinData.id}`,
+          category: 'Recyclable',
+          fillLevel: 0,
+          capacity: '100L',
+          lastCollection: 'Just now',
+          colorClass: 'blue',
+          icon: <RecycleIcon />
+        },
+        {
+          id: `unsorted-${newBinData.id}`,
+          category: 'Unsorted',
+          fillLevel: 0,
+          capacity: '100L',
+          lastCollection: 'Just now',
+          colorClass: 'lime',
+          icon: <GearIcon />
+        }
+      ]
+    };
 
-      // Close modal
-      setShowAddBinModal(false);
-    } catch (error) {
-      console.error('Error adding bin:', error);
-      alert('Error adding bin. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Add to bins array
+    setBins(prev => [...prev, newBin]);
+
+    // Log activity
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'BIN_ADDED',
+      description: `Added ${newBinData.name} at ${newBinData.location}`,
+      bin_id: newBinData.id
+    }]);
+
+    // Reset form
+    setBinFormData({
+      location: '',
+      assigned_collector_id: ''
+    });
+
+    // Close modal
+    setShowAddBinModal(false);
+    alert(`${newBinName} created successfully at ${newBinData.location}!`);
+  } catch (error) {
+    console.error('Error adding bin:', error);
+    alert('Error adding bin: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Render list view (default) - Shows main bins (Bin 1, Bin 2, etc.)
   return (
@@ -1148,44 +944,46 @@ const updateBinFillLevels = () => {
               <h2>Add New Bin</h2>
         </div>
             <form onSubmit={handleAddBin} className="employee-form">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Bin Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={binFormData.name}
-                    onChange={handleBinInputChange}
-                    placeholder="e.g., Bin 5"
-                  />
-      </div>
-                <div className="form-group">
-                  <label>Category</label>
-                  <select name="category" value={binFormData.category} onChange={handleBinInputChange}>
-                    <option value="Biodegradable">Biodegradable</option>
-                    <option value="Non-Biodegradable">Non-Biodegradable</option>
-                    <option value="Recyclable">Recyclable</option>
-                    <option value="Unsorted">Unsorted</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Capacity</label>
-                  <input
-                    type="text"
-                    name="capacity"
-                    value={binFormData.capacity}
-                    onChange={handleBinInputChange}
-                    placeholder="e.g., 20kg"
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddBinModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Bin'}
-                </button>
-              </div>
-            </form>
+  <div className="form-grid">
+    <div className="form-group">
+      <label>Bin Location *</label>
+      <input
+        type="text"
+        name="location"
+        value={binFormData.location}
+        onChange={handleBinInputChange}
+        placeholder="e.g., Building A - 1st Floor"
+        required
+      />
+    </div>
+    
+    <div className="form-group">
+      <label>Assigned Collector *</label>
+      <select 
+        name="assigned_collector_id" 
+        value={binFormData.assigned_collector_id} 
+        onChange={handleBinInputChange}
+        required
+      >
+        <option value="">Select Collector</option>
+        {collectors.map(collector => (
+          <option key={collector.id} value={collector.id}>
+            {collector.first_name} {collector.middle_name ? collector.middle_name + ' ' : ''}{collector.last_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+  
+  <div className="modal-footer">
+    <button type="button" className="btn-secondary" onClick={() => setShowAddBinModal(false)}>
+      Cancel
+    </button>
+    <button type="submit" className="btn-primary" disabled={loading}>
+      {loading ? 'Creating...' : 'Create Bin'}
+    </button>
+  </div>
+</form>
           </div>
         </div>
       )}

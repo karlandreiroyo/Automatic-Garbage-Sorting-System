@@ -58,85 +58,95 @@ const AdminDash = () => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch users to get employee counts
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('role, status');
+const fetchDashboardData = async () => {
+  try {
+    // Fetch total bins
+    const { data: binsData, error: binsError } = await supabase
+      .from('bins')
+      .select('*')
+      .eq('status', 'ACTIVE');
+    
+    if (binsError) throw binsError;
+    
+    // Fetch users to get employee counts
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('role, status');
 
-      if (usersError) throw usersError;
+    if (usersError) throw usersError;
 
-      const collectors = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE').length || 0;
-      const supervisors = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE').length || 0;
-      const totalEmployees = usersData?.filter(u => u.status === 'ACTIVE').length || 0;
+    const collectors = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE').length || 0;
+    const supervisors = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE').length || 0;
+    const totalEmployees = usersData?.filter(u => u.status === 'ACTIVE').length || 0;
 
-      // Fetch waste items for statistics
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('waste_items')
-        .select('*');
+    // Fetch waste items for statistics
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('waste_items')
+      .select('*, bins(name)')
+      .gte('created_at', today.toISOString());
 
-      if (itemsError) throw itemsError;
+    if (itemsError) throw itemsError;
 
-      const overallItemsSorted = itemsData?.length || 974;
+    const overallItemsSorted = itemsData?.length || 0;
+    
+    // Calculate average processing time
+    const avgTime = itemsData?.length > 0
+      ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
+      : 2.3;
 
-      // Create distribution data (6 items as shown in photo)
-      const distributionArray = [
-        { name: 'Item', count: 195 },
-        { name: 'Item', count: 165 },
-        { name: 'Item', count: 120 },
-        { name: 'Item', count: 90 },
-        { name: 'Item', count: 105 },
-        { name: 'Item', count: 75 }
-      ];
+    // Create distribution data by category
+    const categoryCounts = {
+      'Biodegradable': 0,
+      'Non-Bio': 0,
+      'Recycle': 0,
+      'Unsorted': 0
+    };
+    
+    itemsData?.forEach(item => {
+      if (categoryCounts.hasOwnProperty(item.category)) {
+        categoryCounts[item.category]++;
+      }
+    });
 
-      // Recent activity data
-      const formattedActivity = [
-        { text: 'Collector 1 drained Bin 1', time: '2 min ago' },
-        { text: 'Collector 2 drained Bin 2', time: '2 min ago' },
-        { text: 'Added Person 1 as a Colector', time: '2 min ago' },
-        { text: 'Added New Bin 4', time: '2 min ago' }
-      ];
+    const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
+      name,
+      count
+    }));
 
-      setStats({
-        totalBins: 15,
-        overallItemsSorted,
-        avgProcessingTime: 2.3,
-        collectors,
-        supervisor: supervisors,
-        totalEmployees
-      });
+    // Fetch recent activity
+    const { data: activityData, error: activityError } = await supabase
+      .from('activity_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(4);
 
-      setDistribution(distributionArray);
-      setRecentActivity(formattedActivity);
+    if (activityError) throw activityError;
 
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      // Set default values if error
-      setStats({
-        totalBins: 15,
-        overallItemsSorted: 974,
-        avgProcessingTime: 2.3,
-        collectors: 15,
-        supervisor: 2,
-        totalEmployees: 17
-      });
-      setDistribution([
-        { name: 'Item', count: 195 },
-        { name: 'Item', count: 165 },
-        { name: 'Item', count: 120 },
-        { name: 'Item', count: 90 },
-        { name: 'Item', count: 105 },
-        { name: 'Item', count: 75 }
-      ]);
-      setRecentActivity([
-        { text: 'Collector 1 drained Bin 1', time: '2 min ago' },
-        { text: 'Collector 2 drained Bin 2', time: '2 min ago' },
-        { text: 'Added Person 1 as a Colector', time: '2 min ago' },
-        { text: 'Added New Bin 4', time: '2 min ago' }
-      ]);
-    }
-  };
+    const formattedActivity = activityData?.map(activity => ({
+      text: activity.description,
+      time: getTimeAgo(activity.created_at)
+    })) || [];
+
+    setStats({
+      totalBins: binsData?.length || 0,
+      overallItemsSorted,
+      avgProcessingTime: avgTime,
+      collectors,
+      supervisor: supervisors,
+      totalEmployees
+    });
+
+    setDistribution(distributionArray);
+    setRecentActivity(formattedActivity);
+
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    // Keep your existing fallback values
+  }
+};
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();

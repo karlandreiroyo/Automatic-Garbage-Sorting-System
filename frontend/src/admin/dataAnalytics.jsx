@@ -73,81 +73,200 @@ const GearIcon = () => (
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [categoryAccuracy, setCategoryAccuracy] = useState({
-    'Unsorted': 98.2,
-    'Biodegradable': 89.4,
-    'Non-Biodegradable': 90.6,
-    'Recycle': 92.3
-  });
-  const [wasteDistribution, setWasteDistribution] = useState([
-    { name: 'Biodegradable', percentage: 50, color: '#10b981' },
-    { name: 'Non-Biodegradable', percentage: 20, color: '#ef4444' },
-    { name: 'Recycle', percentage: 10, color: '#f97316' },
-    { name: 'Unsorted', percentage: 20, color: '#6b7280' }
-  ]);
-  const [dailyTrend, setDailyTrend] = useState([
-    { day: 'Mon', value: 550 },
-    { day: 'Tue', value: 280 },
-    { day: 'Wed', value: 980 },
-    { day: 'Thu', value: 850 },
-    { day: 'Fri', value: 450 },
-    { day: 'Sat', value: 1150 },
-    { day: 'Sun', value: 0 }
-  ]);
+  'Unsorted': 0,
+  'Biodegradable': 0,
+  'Non-Biodegradable': 0,
+  'Recycle': 0
+});
+
+const [wasteDistribution, setWasteDistribution] = useState([
+  { name: 'Biodegradable', percentage: 0, count: 0, color: '#10b981' },
+  { name: 'Non-Biodegradable', percentage: 0, count: 0, color: '#ef4444' },
+  { name: 'Recycle', percentage: 0, count: 0, color: '#f97316' },
+  { name: 'Unsorted', percentage: 0, count: 0, color: '#6b7280' }
+]);
+  const [dailyTrend, setDailyTrend] = useState([]);
+
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchAnalyticsData();
   }, [timeFilter]);
 
-  const fetchAnalyticsData = async () => {
-    try {
-      let query = supabase
-        .from('waste_items')
-        .select('*');
+const fetchAnalyticsData = async () => {
+  setLoading(true);
+  try {
+    let query = supabase
+      .from('waste_items')
+      .select('*');
 
-      // Apply time filter
-      if (timeFilter === 'daily') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        query = query.gte('created_at', today.toISOString());
-      } else if (timeFilter === 'weekly') {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        query = query.gte('created_at', weekAgo.toISOString());
-      } else if (timeFilter === 'monthly') {
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        query = query.gte('created_at', monthAgo.toISOString());
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Calculate distribution from actual data if available
-      if (data && data.length > 0) {
-        const categoryCounts = {};
-        data.forEach(item => {
-          const category = item.category || 'Unsorted';
-          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-        });
-
-        const total = data.length;
-        const distribution = [
-          { name: 'Biodegradable', count: categoryCounts['Biodegradable'] || 0, color: '#10b981' },
-          { name: 'Non-Biodegradable', count: categoryCounts['Non-Biodegradable'] || 0, color: '#ef4444' },
-          { name: 'Recycle', count: categoryCounts['Recycle'] || 0, color: '#f97316' },
-          { name: 'Unsorted', count: categoryCounts['Unsorted'] || 0, color: '#6b7280' }
-        ].map(item => ({
-          ...item,
-          percentage: total > 0 ? ((item.count / total) * 100).toFixed(0) : 0
-        }));
-
-        setWasteDistribution(distribution);
-      }
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
+    // Apply time filter
+    if (timeFilter === 'daily') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', today.toISOString());
+    } else if (timeFilter === 'weekly') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      query = query.gte('created_at', weekAgo.toISOString());
+    } else if (timeFilter === 'monthly') {
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      query = query.gte('created_at', monthAgo.toISOString());
     }
-  };
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Calculate distribution from actual data
+    if (data && data.length > 0) {
+      const categoryCounts = {
+        'Biodegradable': 0,
+        'Non-Biodegradable': 0,
+        'Recycle': 0,
+        'Unsorted': 0
+      };
+
+      data.forEach(item => {
+        const category = item.category || 'Unsorted';
+        if (categoryCounts.hasOwnProperty(category)) {
+          categoryCounts[category]++;
+        } else {
+          categoryCounts['Unsorted']++;
+        }
+      });
+
+      const total = data.length;
+      
+      // Calculate percentages for distribution
+      const distribution = [
+        { name: 'Biodegradable', count: categoryCounts['Biodegradable'], color: '#10b981' },
+        { name: 'Non-Biodegradable', count: categoryCounts['Non-Biodegradable'], color: '#ef4444' },
+        { name: 'Recycle', count: categoryCounts['Recycle'], color: '#f97316' },
+        { name: 'Unsorted', count: categoryCounts['Unsorted'], color: '#6b7280' }
+      ].map(item => ({
+        ...item,
+        percentage: total > 0 ? parseFloat(((item.count / total) * 100).toFixed(1)) : 0
+      }));
+
+      setWasteDistribution(distribution);
+
+      // Calculate sorting accuracy (percentage of correctly sorted items)
+      const accuracy = {
+        'Biodegradable': total > 0 ? ((categoryCounts['Biodegradable'] / total) * 100).toFixed(1) : 0,
+        'Non-Biodegradable': total > 0 ? ((categoryCounts['Non-Biodegradable'] / total) * 100).toFixed(1) : 0,
+        'Recycle': total > 0 ? ((categoryCounts['Recycle'] / total) * 100).toFixed(1) : 0,
+        'Unsorted': total > 0 ? ((categoryCounts['Unsorted'] / total) * 100).toFixed(1) : 0
+      };
+
+      setCategoryAccuracy(accuracy);
+
+      // Calculate daily trend based on time filter
+      await calculateDailyTrend(timeFilter, data);
+    } else {
+      // No data available - set to zeros
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      
+      setCategoryAccuracy({
+        'Biodegradable': 0,
+        'Non-Biodegradable': 0,
+        'Recycle': 0,
+        'Unsorted': 0
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+  } finally {
+    setLoading(false); // Add this
+  }
+};
+
+const calculateDailyTrend = async (filter, wasteData) => {
+  try {
+    let trendData = [];
+    
+    if (filter === 'daily') {
+      // Group by hour for today
+      const hourCounts = new Array(24).fill(0);
+      
+      wasteData.forEach(item => {
+        const hour = new Date(item.created_at).getHours();
+        hourCounts[hour]++;
+      });
+      
+      // Show last 7 hours with data or current time slots
+      const currentHour = new Date().getHours();
+      const labels = [];
+      const values = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const hour = (currentHour - i + 24) % 24;
+        labels.push(`${hour}:00`);
+        values.push(hourCounts[hour]);
+      }
+      
+      trendData = labels.map((label, idx) => ({
+        day: label,
+        value: values[idx]
+      }));
+      
+    } else if (filter === 'weekly') {
+      // Group by day of week
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dayCounts = new Array(7).fill(0);
+      
+      wasteData.forEach(item => {
+        const dayOfWeek = new Date(item.created_at).getDay();
+        dayCounts[dayOfWeek]++;
+      });
+      
+      trendData = dayNames.map((day, idx) => ({
+        day,
+        value: dayCounts[idx]
+      }));
+      
+    } else if (filter === 'monthly') {
+      // Group by week
+      const weekCounts = {};
+      
+      wasteData.forEach(item => {
+        const date = new Date(item.created_at);
+        const weekNum = Math.ceil(date.getDate() / 7);
+        const weekKey = `Week ${weekNum}`;
+        weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
+      });
+      
+      trendData = Object.keys(weekCounts).map(week => ({
+        day: week,
+        value: weekCounts[week]
+      }));
+      
+      // Ensure we have all 4 weeks
+      for (let i = 1; i <= 4; i++) {
+        const weekKey = `Week ${i}`;
+        if (!trendData.find(d => d.day === weekKey)) {
+          trendData.push({ day: weekKey, value: 0 });
+        }
+      }
+      
+      trendData.sort((a, b) => {
+        const weekA = parseInt(a.day.split(' ')[1]);
+        const weekB = parseInt(b.day.split(' ')[1]);
+        return weekA - weekB;
+      });
+    }
+    
+    setDailyTrend(trendData);
+  } catch (error) {
+    console.error('Error calculating daily trend:', error);
+  }
+};
 
   // Calculate pie chart segments
   const calculateDonutSegments = () => {
@@ -175,10 +294,49 @@ const DataAnalytics = () => {
   };
 
   const donutSegments = calculateDonutSegments();
-  const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 1200);
+  const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 100); // Minimum of 100 for better visualization
+
+const calculateYAxisLabels = () => {
+  const maxValue = Math.max(...dailyTrend.map(d => d.value), 0);
+  
+  // Round up to nearest nice number
+  let roundedMax;
+  if (maxValue === 0) {
+    roundedMax = 100; // Default minimum scale
+  } else if (maxValue <= 10) {
+    roundedMax = 10;
+  } else if (maxValue <= 50) {
+    roundedMax = 50;
+  } else if (maxValue <= 100) {
+    roundedMax = 100;
+  } else if (maxValue <= 200) {
+    roundedMax = 200;
+  } else if (maxValue <= 500) {
+    roundedMax = 500;
+  } else if (maxValue <= 1000) {
+    roundedMax = 1000;
+  } else {
+    roundedMax = Math.ceil(maxValue / 500) * 500;
+  }
+  
+  // Create 5 labels (including 0)
+  const step = roundedMax / 4;
+  return [
+    roundedMax,
+    Math.round(roundedMax - step),
+    Math.round(roundedMax - (step * 2)),
+    Math.round(roundedMax - (step * 3)),
+    0
+  ];
+};
 
   return (
     <div className="data-analytics-container">
+      {loading && (
+      <div style={{ textAlign: 'center', padding: '20px' }}>
+        <p>Loading analytics data...</p>
+      </div>
+    )}
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
@@ -285,34 +443,32 @@ const DataAnalytics = () => {
           </div>
         </div>
 
-        {/* Daily Sorting Trend Bar Chart */}
-        <div className="chart-card">
-          <h3 className="chart-title">Daily Sorting Trend</h3>
-          <div className="bar-chart-container">
-            <div className="bar-chart-y-axis">
-              <span className="y-axis-label">1200</span>
-              <span className="y-axis-label">900</span>
-              <span className="y-axis-label">600</span>
-              <span className="y-axis-label">300</span>
-              <span className="y-axis-label">0</span>
+{/* Daily Sorting Trend Bar Chart */}
+<div className="chart-card">
+  <h3 className="chart-title">Daily Sorting Trend</h3>
+  <div className="bar-chart-container">
+    <div className="bar-chart-y-axis">
+      {calculateYAxisLabels().map((label, index) => (
+        <span key={index} className="y-axis-label">{label}</span>
+      ))}
+    </div>
+    <div className="bar-chart-bars">
+      {dailyTrend.map((item, index) => (
+        <div key={index} className="bar-chart-item">
+          {item.value > 0 && (
+            <div
+              className="bar"
+              style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
+            >
+              <span className="bar-value">{item.value}</span>
             </div>
-            <div className="bar-chart-bars">
-              {dailyTrend.map((item, index) => (
-                <div key={index} className="bar-chart-item">
-                  {item.value > 0 && (
-                    <div
-                      className="bar"
-                      style={{ height: `${(item.value / maxTrendValue) * 100}%` }}
-                    >
-                      <span className="bar-value">{item.value}</span>
-                    </div>
-                  )}
-                  <span className="bar-label">{item.day}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
+          <span className="bar-label">{item.day}</span>
         </div>
+      ))}
+    </div>
+  </div>
+</div>
       </div>
     </div>
   );
