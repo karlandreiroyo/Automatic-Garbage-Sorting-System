@@ -583,6 +583,12 @@ const updateBinFillLevels = () => {
         )
       );
     }
+    // After updating local state, add:
+await supabase.from('activity_logs').insert([{
+  activity_type: 'BIN_DRAINED',
+  description: `Drained ${bins.find(b => b.id === binId)?.name || 'Bin'}`,
+  bin_id: binId
+}]);
   };
 
   /**
@@ -660,6 +666,15 @@ const updateBinFillLevels = () => {
       // Close the modal even if there's an error
       setShowDrainAllModal(false);
     }
+
+      // After closing the modal, add:
+      const selectedBin = bins.find(b => b.id === selectedBinId);
+        await supabase.from('activity_logs').insert([{
+          activity_type: 'BIN_DRAINED_ALL',
+          description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
+          bin_id: selectedBinId
+      }]);
+
   };
 
   /**

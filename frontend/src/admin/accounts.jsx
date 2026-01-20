@@ -96,34 +96,36 @@ const Accounts = () => {
     }, 300);
   };
 
-  const handleToggleStatus = (user) => {
-    const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    const actionLabel = newStatus === 'INACTIVE' ? 'archive' : 'activate';
-    
-    setUserToConfirm(user);
-    setConfirmAction(() => async () => {
-      try {
-        setLoading(true);
-        const { error } = await supabase
-          .from('users')
-          .update({ status: newStatus })
-          .eq('id', user.id);
+const handleToggleStatus = async (user) => {
+  const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+  const actionLabel = newStatus === 'INACTIVE' ? 'archive' : 'activate';
 
-        if (error) throw error;
-        
-        setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-        setShowConfirmModal(false);
-        setUserToConfirm(null);
-        setConfirmAction(null);
-        showSuccessNotification(`Employee ${actionLabel}d successfully!`);
-      } catch (error) {
-        alert('Error: ' + error.message);
-      } finally {
-        setLoading(false);
-      }
-    });
-    setShowConfirmModal(true);
-  };
+  if (!window.confirm(`Are you sure you want to ${actionLabel} ${user.first_name}?`)) return;
+
+  try {
+    setLoading(true);
+    const { error } = await supabase
+      .from('users')
+      .update({ status: newStatus })
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    // ADD ACTIVITY LOGGING HERE
+    const actionText = newStatus === 'INACTIVE' ? 'archived' : 'activated';
+    await supabase.from('activity_logs').insert([{
+      activity_type: newStatus === 'INACTIVE' ? 'USER_ARCHIVED' : 'USER_ACTIVATED',
+      description: `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ${user.first_name} ${user.last_name}`,
+      user_id: user.id
+    }]);
+    
+    setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleConfirmAction = () => {
     if (confirmAction) {
@@ -309,107 +311,107 @@ const Accounts = () => {
     setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
   };
 
-  const handleAddEmployee = async (e) => {
-    e.preventDefault();
-    
-    // 1. Validate all fields locally first
-    const newErrors = {};
-      ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'contact', 'role'].forEach(f => {
-      const err = validateField(f, formData[f]);
-      if (err) newErrors[f] = err;
+const handleAddEmployee = async (e) => {
+  e.preventDefault();
+  
+  const newErrors = {};
+  ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'contact', 'role'].forEach(f => {
+    const err = validateField(f, formData[f]);
+    if (err) newErrors[f] = err;
+  });
+
+  if (!formData.role) {
+    alert('Please select an account role.');
+    return;
+  }
+
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    setTouched({ 
+      first_name: true, last_name: true, email: true, 
+      password: true, confirmPassword: true,
+      middle_name: true, contact: true 
+    });
+    return;
+  }
+
+  if (!window.confirm('Are you sure you want to create this employee account?')) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    let checkEmail = formData.email.trim().toLowerCase();
+    if (checkEmail.endsWith('@gmail.com')) {
+      const [user, dom] = checkEmail.split('@');
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('email')
+        .or(`email.eq.${checkEmail},email.ilike.${user.replace(/\./g, '%')}@${dom}`)
+        .single();
+
+      if (existingUser) {
+        alert('This Gmail account (or a version of it with different dots) is already registered.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.email.trim(),
+      password: formData.confirmPassword,
     });
 
-    if (!formData.role) {
-      alert('Please select an account role.');
-      return;
-    }
+    if (authError) throw authError;
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setTouched({ 
-        first_name: true, last_name: true, email: true, 
-        password: true, confirmPassword: true,
-        middle_name: true, contact: true 
-      });
-      return;
-    }
+    const { error: dbError } = await supabase.from('users').insert([{
+      auth_id: authData.user.id,
+      email: formData.email.trim(),
+      role: formData.role,
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      middle_name: formData.middle_name?.trim() || '',
+      contact: formData.contact?.trim() || null,
+      status: 'ACTIVE',
+      pass_hash: formData.confirmPassword
+    }]);
 
-    if (!window.confirm('Are you sure you want to create this employee account?')) {
-  return;
-}
+    if (dbError) throw dbError;
 
-try {
-  setLoading(true);
+    // ADD ACTIVITY LOGGING HERE
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'USER_ADDED',
+      description: `Added ${formData.first_name} ${formData.last_name} as a ${formData.role}`,
+      user_id: null
+    }]);
+    
+    setShowAddModal(false);
+    setFormData({ 
+      email: '', password: '', confirmPassword: '', 
+      role: 'COLLECTOR', first_name: '', last_name: '', 
+      middle_name: '', contact: '09' 
+    });
+    setErrors({});
+    setTouched({});
+    fetchUsers();
+    showSuccessNotification('Employee account created successfully!');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      // 2. Gmail Normalization Check (Prevents duplicate accounts with different dots)
-      let checkEmail = formData.email.trim().toLowerCase();
-      if (checkEmail.endsWith('@gmail.com')) {
-        const [user, dom] = checkEmail.split('@');
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('email')
-          .or(`email.eq.${checkEmail},email.ilike.${user.replace(/\./g, '%')}@${dom}`)
-          .single();
-
-        if (existingUser) {
-          alert('This Gmail account (or a version of it with different dots) is already registered.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Create Auth Account using the validated password
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        password: formData.confirmPassword, // Using confirmPassword as the source
-      });
-
-      if (authError) throw authError;
-
-      // 4. Insert into 'users' table (mapping password to pass_hash)
-      const { error: dbError } = await supabase.from('users').insert([{
-        auth_id: authData.user.id,
-        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        role: formData.role,
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
-        middle_name: formData.middle_name?.trim() || '',
-        contact: formData.contact?.trim() || null,
-        status: 'ACTIVE',
-        pass_hash: formData.confirmPassword // Storing the password in your required column
-      }]);
-
-      if (dbError) throw dbError;
-      
-      // 5. Success UI cleanup
-      setShowAddModal(false);
-      setFormData({ 
-        email: '', password: '', confirmPassword: '', 
-        role: 'COLLECTOR', first_name: '', last_name: '', 
-        middle_name: '', contact: '09' 
-      });
-      setErrors({});
-      setTouched({});
-      fetchUsers();
-      showSuccessNotification('Employee account created successfully!');
-    } catch (error) {
-      alert('Error: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateEmployee = async (e) => {
+const handleUpdateEmployee = async (e) => {
   e.preventDefault();
 
-  // Validate all required fields
   const newErrors = {};
   ['first_name', 'last_name', 'contact'].forEach(f => {
     const err = validateEditField(f, editingUser[f]);
     if (err) newErrors[f] = err;
   });
 
-  // Also validate middle_name if it has a value
   if (editingUser.middle_name) {
     const err = validateEditField('middle_name', editingUser.middle_name);
     if (err) newErrors['middle_name'] = err;
@@ -421,7 +423,6 @@ try {
     return;
   }
 
-  // Confirmation dialog
   if (!window.confirm('Are you sure you want to save these changes?')) {
     return;
   }
@@ -442,10 +443,17 @@ try {
 
     if (error) throw error;
 
+    // ADD ACTIVITY LOGGING HERE
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'USER_UPDATED',
+      description: `Updated ${editingUser.first_name} ${editingUser.last_name}'s information`,
+      user_id: editingUser.id
+    }]);
+
     setEditingUser(null);
     setEditErrors({});
     setEditTouched({});
-    await fetchUsers(); // Wait for refresh
+    await fetchUsers();
     showSuccessNotification('Employee updated successfully!');
   } catch (error) {
     console.error("Supabase Error:", error.message);
