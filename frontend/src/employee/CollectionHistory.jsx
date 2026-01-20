@@ -78,7 +78,6 @@ const SearchIcon = () => (
 const CollectionHistory = () => {
   const [filter, setFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 4;
 
   // Sample data - replace with API call or props
@@ -95,7 +94,7 @@ const CollectionHistory = () => {
   const validFilters = ['All', 'Biodegradable', 'Non-Biodegradable', 'Recyclable'];
   const safeFilter = validFilters.includes(filter) ? filter : 'All';
 
-  // Filter and search logic
+  // Filter logic
   const filteredList = useMemo(() => {
     let result = [...historyData];
 
@@ -104,19 +103,8 @@ const CollectionHistory = () => {
       result = result.filter(item => item.type === safeFilter);
     }
 
-    // Apply search query
-    if (searchQuery && typeof searchQuery === 'string') {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(item => 
-        item.type.toLowerCase().includes(query) ||
-        item.collector.toLowerCase().includes(query) ||
-        item.date.toLowerCase().includes(query) ||
-        item.weight.toLowerCase().includes(query)
-      );
-    }
-
     return result;
-  }, [safeFilter, searchQuery, historyData]);
+  }, [safeFilter, historyData]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -178,22 +166,8 @@ const CollectionHistory = () => {
     }
   };
 
-  const handleSearchChange = (e) => {
-    const value = e.target.value;
-    if (value.length <= 50) {
-      setSearchQuery(value);
-      setCurrentPage(1);
-    }
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
-
   const handleClearAllFilters = () => {
     setFilter('All');
-    setSearchQuery('');
     setCurrentPage(1);
   };
 
@@ -210,26 +184,6 @@ const CollectionHistory = () => {
         <div className="history-header-text">
           <h1>Collection History</h1>
           <p>Track all waste collection activities and logs</p>
-        </div>
-        
-        {/* Search Bar */}
-        <div className="search-container">
-          <div className="search-input-wrapper">
-            <SearchIcon />
-            <input
-              type="text"
-              placeholder="Search by type, collector, date..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="search-input"
-              maxLength={50}
-            />
-            {searchQuery && (
-              <button className="clear-search-btn" onClick={handleClearSearch}>
-                ×
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -287,16 +241,11 @@ const CollectionHistory = () => {
       </div>
 
       {/* Active Filters Info */}
-      {(searchQuery || safeFilter !== 'All') && hasFilteredResults && (
+      {safeFilter !== 'All' && hasFilteredResults && (
         <div className="active-filters-info">
           <span>
             Showing {filteredList.length} of {historyData.length} collection{filteredList.length !== 1 ? 's' : ''}
           </span>
-          {searchQuery && (
-            <button className="clear-filters-btn" onClick={handleClearSearch}>
-              Clear search
-            </button>
-          )}
         </div>
       )}
 
@@ -318,10 +267,7 @@ const CollectionHistory = () => {
           </div>
           <h3>No Results Found</h3>
           <p>
-            {searchQuery 
-              ? `No collections match "${searchQuery}"`
-              : `No ${safeFilter} collections found`
-            }
+            No {safeFilter} collections found
           </p>
           <button className="reset-btn" onClick={handleClearAllFilters}>
             Clear all filters
@@ -368,7 +314,7 @@ const CollectionHistory = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="pagination">
+            <div className={`pagination pagination-${safeFilter.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-')}`}>
               <button 
                 className="page-btn nav-btn" 
                 onClick={() => handlePageChange(safePage - 1)}

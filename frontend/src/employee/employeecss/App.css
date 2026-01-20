@@ -97,20 +97,69 @@ body, #root {
   box-shadow: 4px 0 10px rgba(0,0,0,0.1); 
 }
 
-/* NEW: Vertical Logo Styles */
-.sidebar-logo-vertical {
+/* Sidebar Header - Vertical Layout */
+.sidebar-header {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+}
+
+/* Power Indicator at Top */
+.power-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #a7f3d0;
+  opacity: 0.8;
+  width: 100%;
+}
+
+.battery-icon {
+  width: 25px;
+  height: 12px;
+  border: 1px solid #a7f3d0;
+  border-radius: 2px;
+  padding: 1px;
+  position: relative;
+}
+
+.battery-level {
+  height: 100%;
+  background-color: #10b981;
+  border-radius: 1px;
+}
+
+/* Logo Container in Middle */
+.sidebar-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .sidebar-img-large {
-  width: 85px;
+  width: 90px;
   height: auto;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+/* Text at Bottom */
+.logo-text-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  gap: 4px;
 }
 
 .logo-text-vertical h3 {

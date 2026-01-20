@@ -70,18 +70,6 @@ const MailIcon = () => (
 );
 
 const About = () => {
-  const [openSections, setOpenSections] = useState({
-    specs: false,
-    about: false,
-    team: false
-  });
-
-  const toggleSection = (section) => {
-    setOpenSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
 
   return (
     <div className="about-container">
@@ -192,119 +180,103 @@ const About = () => {
         </div>
       </div>
 
-      {/* INFO SECTIONS - ALWAYS VISIBLE */}
+      {/* INFO SECTIONS */}
       <div className="info-sections-grid">
         {/* SPECS */}
         <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
+          <div className="info-card-header purple">
             <div className="info-icon-wrapper">
               <GearIcon />
             </div>
             <h3>Specs</h3>
-            <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
-              <ChevronDown />
+          </div>
+          <div className="info-card-content">
+            <div className="specs-grid">
+              <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
+              <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
+              <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
+              <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
+              <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
+              <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
+              <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
+              <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
             </div>
           </div>
-          {openSections.specs && (
-            <div className="info-card-content">
-              <div className="specs-grid">
-                <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
-                <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
-                <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
-                <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
-                <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
-                <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
-                <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
-                <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ABOUT PROJECT */}
         <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
+          <div className="info-card-header yellow">
             <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
-            <div className={`chevron ${openSections.about ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.about && (
-            <div className="info-card-content">
-              <p>
-                The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
-                waste management through artificial intelligence and automation. Our system uses advanced 
-                computer vision and machine learning algorithms to accurately classify waste into three 
-                categories: biodegradable, recyclable, and non-biodegradable materials.
-              </p>
-              <p>
-                By automating the sorting process, we reduce human error, increase recycling rates, and 
-                minimize contamination in waste streams. The system provides real-time monitoring and 
-                analytics, helping facilities optimize their waste management operations while contributing 
-                to environmental sustainability.
-              </p>
-            </div>
-          )}
+          <div className="info-card-content">
+            <p>
+              The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
+              waste management through artificial intelligence and automation. Our system uses advanced 
+              computer vision and machine learning algorithms to accurately classify waste into three 
+              categories: biodegradable, recyclable, and non-biodegradable materials.
+            </p>
+            <p>
+              By automating the sorting process, we reduce human error, increase recycling rates, and 
+              minimize contamination in waste streams. The system provides real-time monitoring and 
+              analytics, helping facilities optimize their waste management operations while contributing 
+              to environmental sustainability.
+            </p>
+          </div>
         </div>
 
         {/* TEAM MEMBERS */}
         <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
+          <div className="info-card-header cyan">
             <div className="info-icon-wrapper">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
-            <div className={`chevron ${openSections.team ? 'open' : ''}`}>
-              <ChevronDown />
-            </div>
           </div>
-          {openSections.team && (
-            <div className="info-card-content">
-              <div className="team-list">
-                <div className="team-member">
-                  <div className="member-avatar">KR</div>
-                  <div className="member-info">
-                    <strong>Karl Andrei Royo</strong>
-                    <span>Project Manager, Hardware, Backend</span>
-                  </div>
+          <div className="info-card-content">
+            <div className="team-list">
+              <div className="team-member">
+                <div className="member-avatar">KR</div>
+                <div className="member-info">
+                  <strong>Karl Andrei Royo</strong>
+                  <span>Project Manager, Hardware, Backend</span>
                 </div>
-                <div className="team-member">
-                  <div className="member-avatar">KA</div>
-                  <div className="member-info">
-                    <strong>Khyl Arcilla</strong>
-                    <span>Lead Hardware</span>
-                  </div>
+              </div>
+              <div className="team-member">
+                <div className="member-avatar">KA</div>
+                <div className="member-info">
+                  <strong>Khyl Arcilla</strong>
+                  <span>Lead Hardware</span>
                 </div>
-                <div className="team-member">
-                  <div className="member-avatar">LB</div>
-                  <div className="member-info">
-                    <strong>Lei Barcelona</strong>
-                    <span>Backend and Database</span>
-                  </div>
+              </div>
+              <div className="team-member">
+                <div className="member-avatar">LB</div>
+                <div className="member-info">
+                  <strong>Lei Barcelona</strong>
+                  <span>Backend and Database</span>
                 </div>
-                <div className="team-member">
-                  <div className="member-avatar">EG</div>
-                  <div className="member-info">
-                    <strong>Eugene Gamotia</strong>
-                    <span>Frontend</span>
-                  </div>
+              </div>
+              <div className="team-member">
+                <div className="member-avatar">EG</div>
+                <div className="member-info">
+                  <strong>Eugene Gamotia</strong>
+                  <span>Frontend</span>
                 </div>
-                <div className="team-member">
-                  <div className="member-avatar">JS</div>
-                  <div className="member-info">
-                    <strong>John Ivan Santos</strong>
-                    <span>Frontend</span>              
-                  </div>
+              </div>
+              <div className="team-member">
+                <div className="member-avatar">JS</div>
+                <div className="member-info">
+                  <strong>John Ivan Santos</strong>
+                  <span>Frontend</span>              
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
-
-      </div> {/* end of info-sections-grid */}
+      </div>
 
       {/* FOOTER */}
       <footer className="footer-container">

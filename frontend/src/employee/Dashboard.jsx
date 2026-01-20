@@ -91,6 +91,7 @@ const Dashboard = ({ onLogout }) => {
       <div className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         
         <div className="sidebar-header">
+          {/* System Power at Top */}
           <div className="power-indicator">
             <span>SYSTEM POWER</span>
             <div className="battery-icon">
@@ -99,12 +100,15 @@ const Dashboard = ({ onLogout }) => {
             <span>100%</span>
           </div>
 
-          <div className="sidebar-logo-vertical">
+          {/* Logo in Middle */}
+          <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-img-large" />
-            <div className="logo-text-vertical">
-              <h3>Sorting System</h3>
-              <p>Waste Management</p>
-            </div>
+          </div>
+
+          {/* Text at Bottom */}
+          <div className="logo-text-vertical">
+            <h3>Sorting System</h3>
+            <p>Waste Management</p>
           </div>
         </div>
 

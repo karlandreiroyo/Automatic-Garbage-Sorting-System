@@ -81,10 +81,10 @@
 }
 
 /* Dynamic Backgrounds */
-.bin-card.green .bin-header { background-color: #10b981; }
-.bin-card.red .bin-header   { background-color: #ef4444; }
-.bin-card.blue .bin-header  { background-color: #3b82f6; }
-.bin-card.lime .bin-header  { background-color: #84cc16; }
+.bin-card.green .bin-header { background-color: #10b981; } /* Biodegradable */
+.bin-card.red .bin-header   { background-color: #ef4444; } /* Non-Biodegradable */
+.bin-card.blue .bin-header  { background-color: #f97316; } /* Recyclable */
+.bin-card.lime .bin-header  { background-color: #6b7280; } /* Unsorted */
 
 /* White Icon Circle in Header */
 .icon-circle {

@@ -9,16 +9,27 @@ const Icons = {
   success: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
   trash: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
   check: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>,
-  x: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  x: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+  calendar: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+  clock: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+  user: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+  location: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>,
+  weight: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3h12l4 6-10 12L2 9z"></path></svg>
+};
+
+// Helper function to get bin class name from subtext
+const getBinClassName = (subtext) => {
+  if (!subtext) return '';
+  return `bin-${subtext.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-')}`;
 };
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([
-    { id: 1, type: 'critical', title: 'Bin Full Alert', time: '2 minutes ago', message: 'Non-biodegradable bin has reached 100% capacity', subtext: 'Non-Biodegradable', isUnread: true },
-    { id: 2, type: 'warning', title: 'Bin Almost Full', time: '15 minutes ago', message: 'Recyclable bin is at 85% capacity', subtext: 'Recyclable', isUnread: true },
-    { id: 3, type: 'warning', title: 'Bin Almost Full', time: '1 hour ago', message: 'Biodegradable bin is at 78% capacity', subtext: 'Biodegradable', isUnread: false },
-    { id: 4, type: 'success', title: 'Collection Completed', time: '3 hours ago', message: 'Non-biodegradable bin has been emptied', subtext: 'Non-Biodegradable', isUnread: false },
-    { id: 5, type: 'info', title: 'Scheduled Collection', time: '5 hours ago', message: 'Recyclable bin collection scheduled for tomorrow 9:00 AM', subtext: 'Recyclable', isUnread: false },
+    { id: 1, type: 'critical', title: 'Bin Full Alert', time: '2 minutes ago', date: 'Jan 17, 2025', message: 'Non-biodegradable bin has reached 100% capacity', subtext: 'Non-Biodegradable', fillLevel: '100%', capacity: '100 L', location: 'Zone A', isUnread: true },
+    { id: 2, type: 'warning', title: 'Bin Almost Full', time: '15 minutes ago', date: 'Jan 17, 2025', message: 'Recyclable bin is at 85% capacity', subtext: 'Recyclable', fillLevel: '85%', capacity: '100 L', location: 'Zone B', isUnread: true },
+    { id: 3, type: 'warning', title: 'Bin Almost Full', time: '1 hour ago', date: 'Jan 17, 2025', message: 'Biodegradable bin is at 78% capacity', subtext: 'Biodegradable', fillLevel: '78%', capacity: '100 L', location: 'Zone C', isUnread: false },
+    { id: 4, type: 'success', title: 'Collection Completed', time: '3 hours ago', date: 'Jan 17, 2025', message: 'Non-biodegradable bin has been emptied', subtext: 'Non-Biodegradable', collector: 'Kelly', weight: '45.2 kg', location: 'Zone A', isUnread: false },
+    { id: 5, type: 'info', title: 'Scheduled Collection', time: '5 hours ago', date: 'Jan 17, 2025', message: 'Recyclable bin collection scheduled for tomorrow 9:00 AM', subtext: 'Recyclable', scheduledTime: '9:00 AM', location: 'Zone B', isUnread: false },
   ]);
 
   const [activeFilter, setActiveFilter] = useState(null);
@@ -26,9 +37,12 @@ const Notifications = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
 
+  // Filter logic: 
+  // - When no filter is active: show only unread notifications (main view)
+  // - When filter is active: show all notifications (read and unread) filtered by type
   const filteredNotifications = activeFilter 
     ? notifications.filter(n => n.type === activeFilter)
-    : notifications;
+    : notifications.filter(n => n.isUnread);
 
   const stats = [
     { type: 'critical', label: 'Critical', count: notifications.filter(n => n.type === 'critical').length },
@@ -39,6 +53,7 @@ const Notifications = () => {
 
   // Validation: Check if there are any notifications
   const hasNotifications = notifications.length > 0;
+  const hasUnreadNotifications = notifications.filter(n => n.isUnread).length > 0;
   const hasFilteredNotifications = filteredNotifications.length > 0;
 
   // Show success message with auto-hide
@@ -164,23 +179,14 @@ const Notifications = () => {
         </div>
         <div className="header-actions">
           {notifications.length > 0 && (
-            <>
-              <button 
-                className="clear-all-btn" 
-                onClick={handleClearAll}
-                title="Delete all notifications"
-              >
-                Clear All
-              </button>
-              <button 
-                className="mark-all-btn" 
-                onClick={handleMarkAllRead}
-                disabled={unreadCount === 0}
-                title={unreadCount === 0 ? 'All notifications are read' : 'Mark all as read'}
-              >
-                Mark all as read
-              </button>
-            </>
+            <button 
+              className="mark-all-btn" 
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0}
+              title={unreadCount === 0 ? 'All notifications are read' : 'Mark all as read'}
+            >
+              Mark all as read
+            </button>
           )}
         </div>
       </header>
@@ -225,11 +231,20 @@ const Notifications = () => {
       ) : !hasFilteredNotifications ? (
         <div className="empty-state">
           <div className="empty-icon">{Icons.info}</div>
-          <h3>No {activeFilter} notifications</h3>
-          <p>There are no {activeFilter} notifications to display.</p>
-          <button className="reset-filter-btn" onClick={() => setActiveFilter(null)}>
-            View all notifications
-          </button>
+          {activeFilter ? (
+            <>
+              <h3>No {activeFilter} notifications</h3>
+              <p>There are no {activeFilter} notifications to display.</p>
+              <button className="reset-filter-btn" onClick={() => setActiveFilter(null)}>
+                View all notifications
+              </button>
+            </>
+          ) : (
+            <>
+              <h3>All notifications read</h3>
+              <p>You have no unread notifications. Use the filters above to view past notifications.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="notification-list">
@@ -238,7 +253,7 @@ const Notifications = () => {
               key={notif.id} 
               className={`notif-card ${notif.type} ${notif.isUnread ? 'unread' : ''} ${deleteConfirm === notif.id ? 'deleting' : ''}`}
             >
-              <div className={`notif-icon-box ${notif.type}`}>{Icons[notif.type]}</div>
+              <div className={`notif-icon-box ${notif.type} ${getBinClassName(notif.subtext)}`}>{Icons[notif.type]}</div>
               <div className="notif-content">
                 <div className="notif-header">
                   <h3>

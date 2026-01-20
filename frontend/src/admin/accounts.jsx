@@ -360,7 +360,7 @@ try {
 
       // 3. Create Auth Account using the validated password
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
         password: formData.confirmPassword, // Using confirmPassword as the source
       });
 
@@ -369,7 +369,7 @@ try {
       // 4. Insert into 'users' table (mapping password to pass_hash)
       const { error: dbError } = await supabase.from('users').insert([{
         auth_id: authData.user.id,
-        email: formData.email.trim(),
+        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
         role: formData.role,
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),

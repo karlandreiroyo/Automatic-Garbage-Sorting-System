@@ -44,9 +44,6 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
           <div className="meta-row"><span className="meta-label">Capacity</span><strong className="meta-val">{capacity}</strong></div>
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
         </div>
-        <button className="drain-btn" onClick={(e) => { e.stopPropagation(); onDrain(); }} disabled={isEmpty}>
-           {isEmpty ? 'Empty' : 'Drain Bin'}
-        </button>
       </div>
     </div>
   );

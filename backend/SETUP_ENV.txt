@@ -1,0 +1,22 @@
+INSTRUCTIONS TO CREATE .env FILE:
+
+1. In the 'backend' folder, create a new file named exactly: .env
+   (Make sure it starts with a dot: .env not env.txt)
+
+2. Copy and paste this content into the .env file:
+
+SUPABASE_SERVICE_KEY=your_service_role_key_here
+PORT=3001
+NODE_ENV=development
+
+3. Replace 'your_service_role_key_here' with your actual Service Role Key:
+   - Go to: https://supabase.com/dashboard
+   - Select your project
+   - Go to: Settings > API
+   - Copy the "service_role" key (the long secret key)
+   - Paste it in place of 'your_service_role_key_here'
+
+4. Save the file
+
+5. Restart the backend server:
+   npm start
