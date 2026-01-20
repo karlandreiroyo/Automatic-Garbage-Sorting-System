@@ -38,6 +38,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Backend API base URL
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -91,17 +94,45 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // 5. Store user info and redirect
-      localStorage.setItem('userRole', reactRole);
-      localStorage.setItem('userEmail', userData.email);
-      localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
+      // 5. Store user data temporarily (don't set logged in yet)
+      const pendingLoginUser = {
+        email: userData.email,
+        role: reactRole,
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        authId: authData.user.id
+      };
 
-      setIsLoggedIn(true);
-      setUserRole(reactRole);
+      // 6. Send verification code, then go to verification page
+      try {
+        const accessToken = authData?.session?.access_token;
+        if (!accessToken) {
+          alert('Login session not found. Please try again.');
+          return;
+        }
 
-      if (reactRole === 'admin') navigate('/admin');
-      else if (reactRole === 'supervisor') navigate('/supervisor');
-      else if (reactRole === 'employee') navigate('/');
+        const response = await fetch(`${API_BASE_URL}/api/login/send-verification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({}),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          sessionStorage.setItem('pendingLoginUser', JSON.stringify(pendingLoginUser));
+          sessionStorage.setItem('pendingLoginAccessToken', accessToken);
+          navigate('/verify-login');
+        } else {
+          alert(data.message || 'Failed to send verification code');
+        }
+      } catch (error) {
+        console.error('Send verification error:', error);
+        alert('Failed to send verification code. Please try again.');
+      }
 
     } catch (error) {
       console.error('Login error:', error);

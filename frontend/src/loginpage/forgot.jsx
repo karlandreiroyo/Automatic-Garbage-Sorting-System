@@ -41,11 +41,24 @@ const Forgot = () => {
 
       if (data.success) {
         setShowToast(true);
-        setToastMessage(data.message || 'Password reset email sent. Check your email for the verification link.');
+        // Show the code in the message if available
+        const message = data.code 
+          ? `Verification code: ${data.code} (Check terminal or email)`
+          : (data.message || 'Password reset email sent. Check your email for the verification code.');
+        setToastMessage(message);
+        
+        // Also log to browser console
+        if (data.code) {
+          console.log('═══════════════════════════════════════');
+          console.log('🔑 VERIFICATION CODE:', data.code);
+          console.log('📧 Email:', emailOrMobile);
+          console.log('═══════════════════════════════════════');
+        }
+        
         setTimeout(() => {
           setShowToast(false);
           setStep('confirm');
-        }, 3000);
+        }, 5000); // Show longer so user can see the code
       } else {
         setError(data.message || 'Failed to send verification code');
       }
@@ -241,21 +254,20 @@ const Forgot = () => {
 
           <h2>Confirm your account</h2>
           <p className="subtitle">
-            Enter the token from the email link you received
-          </p>
-          <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
-            Check your email and copy the token from the reset link (the part after "token=")
+            Enter the verification code sent to your email
           </p>
 
           <input
             type="text"
-            placeholder="Enter token from email"
+            placeholder="Enter 6-digit code"
             value={code}
             onChange={(e) => {
               setCode(e.target.value);
               setError('');
             }}
             disabled={loading}
+            maxLength="6"
+            style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.2rem' }}
           />
 
           <button 

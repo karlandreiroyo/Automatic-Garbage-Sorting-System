@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient.jsx';
 // Employee components
 import Login from './loginpage/login';
 import Forgot from './loginpage/forgot'; 
+import VerifyLogin from './loginpage/verifyLogin';
 import Dashboard from './employee/Dashboard';
 import BinMonitoring from './employee/BinMonitoring';
 import CollectionHistory from './employee/CollectionHistory';
@@ -99,6 +100,16 @@ function App() {
               <Login setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />
             )
           } 
+        />
+        <Route
+          path="/verify-login"
+          element={isLoggedIn ? (
+            userRole === 'admin' ? <Navigate to="/admin" /> :
+            userRole === 'supervisor' ? <Navigate to="/supervisor" /> :
+            <Navigate to="/" />
+          ) : (
+            <VerifyLogin setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />
+          )}
         />
         <Route path="/forgot" element={<Forgot />} />
 
