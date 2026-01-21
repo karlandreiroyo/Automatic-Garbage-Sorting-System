@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../employee/employeecss/Profile.css';
 import { supabase } from '../supabaseClient.jsx';
+import AddressDropdowns from '../components/AddressDropdowns';
 
 // --- ICONS ---
 const CameraIcon = () => (
@@ -56,12 +57,19 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [formData, setFormData] = useState({ 
-    firstName: 'Employee',
-    middleName: 'User',
-    lastName: 'User',
-    email: 'employee@ecosort.com',
-    phone: 'employee@ecosort.com'
-  });
+  firstName: 'Employee',
+  middleName: 'User',
+  lastName: 'User',
+  email: 'employee@ecosort.com',
+  phone: 'employee@ecosort.com',
+  address: {
+    region: '',
+    province: '',
+    city_municipality: '',
+    barangay: '',
+    street_address: ''
+  }
+});
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -92,40 +100,47 @@ const Profile = () => {
   const [touched, setTouched] = useState({});
   const [showTermsModal, setShowTermsModal] = useState(false);
 
-  // Fetch profile from Supabase
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.error("No user logged in");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('first_name, last_name, middle_name, email, contact')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setFormData({
-          firstName: data.first_name || 'Employee',
-          middleName: data.middle_name || 'User',
-          lastName: data.last_name || 'User',
-          email: data.email || 'employee@ecosort.com',
-          phone: String(data.contact || 'employee@ecosort.com')
-        });
-      }
-    } catch (err) {
-      console.error("Fetch Error:", err.message);
-    } finally {
-      setLoading(false);
+// Fetch profile from Supabase
+const fetchProfile = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("No user logged in");
+      return;
     }
-  };
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('first_name, last_name, middle_name, email, contact, region, province, city_municipality, barangay, street_address')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+      setFormData({
+        firstName: data.first_name || 'Employee',
+        middleName: data.middle_name || 'User',
+        lastName: data.last_name || 'User',
+        email: data.email || 'employee@ecosort.com',
+        phone: String(data.contact || 'employee@ecosort.com'),
+        address: {
+          region: data.region || '',
+          province: data.province || '',
+          city_municipality: data.city_municipality || '',
+          barangay: data.barangay || '',
+          street_address: data.street_address || ''
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Fetch Error:", err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchProfile();
@@ -147,6 +162,26 @@ const Profile = () => {
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
+  
+  // Validate address fields
+const validateAddress = () => {
+  const addressErrors = {};
+  
+  if (!formData.address.region) {
+    addressErrors.region = 'Region is required';
+  }
+  if (!formData.address.province) {
+    addressErrors.province = 'Province is required';
+  }
+  if (!formData.address.city_municipality) {
+    addressErrors.city_municipality = 'City/Municipality is required';
+  }
+  if (!formData.address.barangay) {
+    addressErrors.barangay = 'Barangay is required';
+  }
+  
+  return addressErrors;
+};
 
   // Password validation
   const validatePassword = (password) => {
@@ -262,41 +297,63 @@ const Profile = () => {
     setShowTermsModal(true);
   };
 
-  // Handle accept terms and save
-  const handleAcceptTermsAndSave = async () => {
+// Handle accept terms and save
+const handleAcceptTermsAndSave = async () => {
+  // Validate address fields first
+  const addressErrors = validateAddress();
+  
+  if (Object.keys(addressErrors).length > 0) {
+    setErrors({ ...errors, ...addressErrors });
+    setTouched({ 
+      ...touched, 
+      region: true, 
+      province: true, 
+      city_municipality: true, 
+      barangay: true 
+    });
     setShowTermsModal(false);
+    alert('Please fill in all required address fields');
+    return;
+  }
+
+  setShowTermsModal(false);
+  
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
     
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        alert("Not logged in");
-        return;
-      }
-
-      const { error } = await supabase
-        .from('users')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          middle_name: formData.middleName,
-          contact: formData.phone
-        })
-        .eq('auth_id', user.id);
-
-      if (error) throw error;
-
-      setSaveSuccess(true);
-      setIsEditing(false);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err) {
-      console.error("Update error:", err);
-      alert("Update failed: " + err.message);
-    } finally {
-      setLoading(false);
+    if (!user) {
+      alert("Not logged in");
+      return;
     }
-  };
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        middle_name: formData.middleName,
+        contact: formData.phone,
+        region: formData.address.region,
+        province: formData.address.province,
+        city_municipality: formData.address.city_municipality,
+        barangay: formData.address.barangay,
+        street_address: formData.address.street_address
+      })
+      .eq('auth_id', user.id);
+
+    if (error) throw error;
+
+    setSaveSuccess(true);
+    setIsEditing(false);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  } catch (err) {
+    console.error("Update error:", err);
+    alert("Update failed: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Backend API base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -569,6 +626,18 @@ const Profile = () => {
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   disabled={!isEditing}
                   placeholder="Last Name"
+                />
+              </div>
+
+              {/* Address Section */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <h4 style={{ marginBottom: '15px', marginTop: '10px', color: '#374151' }}>Address Information</h4>
+                <AddressDropdowns
+                  value={formData.address}
+                  onChange={(newAddress) => setFormData({ ...formData, address: newAddress })}
+                  disabled={!isEditing}
+                  errors={errors}
+                  touched={touched}
                 />
               </div>
 
