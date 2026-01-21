@@ -183,13 +183,8 @@ const About = () => {
       {/* INFO SECTIONS */}
       <div className="info-sections-grid">
         {/* SPECS */}
-<<<<<<< HEAD:src/employee/About.jsx
-        <div className="info-card">
-          <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
-=======
         <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header purple">
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/About.jsx
             <div className="info-icon-wrapper">
               <GearIcon />
             </div>
@@ -210,13 +205,8 @@ const About = () => {
         </div>
 
         {/* ABOUT PROJECT */}
-<<<<<<< HEAD:src/employee/About.jsx
-        <div className="info-card">
-          <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
-=======
         <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header yellow">
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/About.jsx
             <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
@@ -239,13 +229,8 @@ const About = () => {
         </div>
 
         {/* TEAM MEMBERS */}
-<<<<<<< HEAD:src/employee/About.jsx
-        <div className="info-card">
-          <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
-=======
         <div className="info-card" style={{ border: '2px solid #000000' }}>
           <div className="info-card-header cyan">
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/About.jsx
             <div className="info-icon-wrapper">
               <UsersIcon />
             </div>

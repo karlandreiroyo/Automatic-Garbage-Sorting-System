@@ -30,10 +30,6 @@
   min-height: 100vh;
 }
 
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.welcome-banner {
-  background: var(--green-bg);
-=======
 .welcome-message {
   text-align: center;
   margin-bottom: 40px;
@@ -45,7 +41,6 @@
 .welcome-message h2 {
   font-size: 2rem;
   font-weight: bold;
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
   color: #065F46;
   padding: 24px;
   border-radius: 16px;
@@ -80,18 +75,6 @@
   margin-bottom: 60px;
 }
 
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.waste-card {
-  background: white;
-  border-radius: 20px;
-  border: var(--card-border);
-  box-shadow: var(--card-shadow);
-  transition: transform 0.2s;
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  height: 100%;
-  min-height: 400px;
-=======
 .waste-card { 
   background: white; 
   border: 1px solid #000000; 
@@ -103,21 +86,15 @@
 .waste-card:hover { 
   box-shadow: 0 6px 16px rgba(0,0,0,0.1); 
   transform: translateY(-3px);
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
 }
 .waste-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
 
 .card-header { 
-<<<<<<< HEAD:src/employee/employeecss/About.css
-  padding: 30px; display: flex; align-items: center; gap: 20px; 
-  border-bottom: 1px solid #F3F4F6; background: #FAFAFA;
-=======
   display: flex; 
   align-items: center; 
   gap: 20px; 
   padding: 20px; 
   transition: background-color 0.2s ease; 
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
 }
 .card-icon-wrapper {
   width: 64px; height: 64px; border-radius: 16px;
@@ -142,13 +119,6 @@
   margin-bottom: 80px;
   align-items: start; 
 }
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.info-card {
-  background: white; border-radius: 20px;
-  border: var(--card-border);
-  box-shadow: var(--card-shadow);
-  overflow: hidden;
-=======
 
 .card-icon-wrapper.green { 
   background-color: #10b981; 
@@ -225,7 +195,6 @@
   border: 1px solid #000000; 
   border-radius: 14px; 
   overflow: hidden; 
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
   transition: all 0.3s ease;
 }
 .info-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
@@ -234,27 +203,6 @@
   background: white; cursor: pointer; transition: background 0.2s;
   min-height: 80px; 
 }
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.info-card-header:hover { background: #FAFAFA; }
-.info-icon-wrapper {
-  width: 50px; height: 50px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--gray-bg); color: var(--text-primary);
-}
-.info-card-header h3 { margin: 0; font-size: 1.25rem; font-weight: 700; flex: 1; }
-.chevron { color: #9CA3AF; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.chevron.open { transform: rotate(180deg); }
-.info-card-content {
-  padding: 30px; 
-  background: #FFFFFF;
-  border-top: 1px solid #E5E7EB;
-  animation: slideDown 0.3s ease-out;
-}
-.specs-grid { display: flex; flex-direction: column; gap: 12px; }
-.spec-item {
-  display: flex; justify-content: space-between; padding: 12px;
-  background: #F9FAFB; border-radius: 8px; border: none;
-=======
 
 .info-card-header { 
   display: flex; 
@@ -271,7 +219,6 @@
   display: flex; 
   align-items: center; 
   margin-left: auto;
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
 }
 .spec-item strong { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; }
 .spec-item span { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
@@ -289,55 +236,6 @@
 .member-info strong { display: block; font-size: 1.05rem; }
 .member-info span { font-size: 0.9rem; color: var(--text-secondary); }
 
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.footer-container {
-  margin-top: 60px; padding: 50px;
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  color: white; 
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
-}
-.footer-content {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 40px;
-}
-.footer-item { display: flex; align-items: flex-start; gap: 16px; }
-.footer-item svg { color: white; margin-top: 4px; width: 24px; height: 24px; }
-.footer-text strong { display: block; font-size: 0.9rem; opacity: 0.8; color: white; margin-bottom: 6px; text-transform: uppercase; }
-.footer-text span, .footer-text a { font-size: 1.1rem; color: white; text-decoration: none; font-weight: 600; }
-.footer-text a:hover { text-decoration: underline; opacity: 0.9; }
-
-/* =========================================
-   3. PROFILE PAGE SPECIFIC STYLES
-      (Added to support Profile.jsx)
-   ========================================= */
-.profile-container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px;
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  color: var(--text-primary);
-}
-
-.profile-header {
-  margin-bottom: 30px;
-}
-
-.profile-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.success-message {
-  background: var(--green-bg);
-  color: #059669;
-  padding: 10px 15px;
-  border-radius: 8px;
-  display: inline-block;
-  margin-top: 10px;
-=======
 .info-card-header.purple { 
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); 
 }
@@ -548,14 +446,10 @@
 .member-info strong { 
   font-size: 1.25rem; 
   color: #000000; 
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
   font-weight: 600;
   line-height: 1.2;
 }
 
-<<<<<<< HEAD:src/employee/employeecss/About.css
-.profile-content {
-=======
 .member-info span { 
   font-size: 1.1rem; 
   color: #000000; 
@@ -842,7 +736,6 @@
 }
 
 .footer-content {
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/About.css
   display: flex;
   gap: 30px;
   align-items: flex-start;

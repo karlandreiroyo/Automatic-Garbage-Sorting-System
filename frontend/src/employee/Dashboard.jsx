@@ -117,14 +117,6 @@ const Dashboard = ({ onLogout }) => {
       <div className={`sidebar ${isMobile && !isSidebarCollapsed ? 'mobile-open' : ''} ${!isMobile && isSidebarCollapsed ? 'collapsed' : ''}`}>
         
         <div className="sidebar-header">
-<<<<<<< HEAD:src/employee/Dashboard.jsx
-          <div className="sidebar-logo-container">
-            <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
-            <div className="logo-text-stacked">
-              <h3>Sorting System</h3>
-              <p>Waste Management</p>
-            </div>
-=======
           {/* System Power at Top */}
           <div className="power-indicator">
             <span>SYSTEM POWER</span>
@@ -143,7 +135,6 @@ const Dashboard = ({ onLogout }) => {
           <div className="logo-text-vertical">
             <h3>Sorting System</h3>
             <p>Waste Management</p>
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/Dashboard.jsx
           </div>
         </div>
 
@@ -180,10 +171,6 @@ const Dashboard = ({ onLogout }) => {
             <div className="nav-icon"><SignOutIcon /></div>
             Sign Out
           </button>
-<<<<<<< HEAD:src/employee/Dashboard.jsx
-=======
-
->>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/Dashboard.jsx
         </div>
       </div>
 
