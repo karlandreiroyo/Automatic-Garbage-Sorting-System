@@ -24,17 +24,8 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
-        <div className="bin-checkbox-wrapper" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
-          <input 
-            type="checkbox" 
-            className="bin-checkbox" 
-            checked={isSelected} 
-            onChange={() => {}} // Controlled by wrapper click
-          />
-        </div>
         <div className="icon-circle"><Icon /></div>
         <h3>{title}</h3>
-        {!isEmpty && status && <span className="bin-status">{status}</span>}
       </div>
 
       <div className="bin-body">
@@ -148,19 +139,9 @@ const BinMonitoring = () => {
     <div className="bin-monitoring-container">
       <div className="header-section">
         <div className="header-titles">
-          <h1>Real-Time Bin Monitoring</h1>
-          <p>Monitor bin fill levels in real-time</p>
+          <h1>Bin Monitoring</h1>
+          <p>Monitor bin fill levels</p>
         </div>
-        
-        {/* SMART BUTTON */}
-        <button 
-          className={`primary-action-btn ${selectedBins.length > 0 ? 'btn-blue' : 'btn-green'}`} 
-          onClick={handleMainButtonAction}
-          disabled={isButtonDisabled} 
-        >
-          <DrainAllIcon />
-          {getButtonText()}
-        </button>
       </div>
 
       {/* --- SMART NOTIFICATIONS (No blocking errors) --- */}
@@ -182,13 +163,6 @@ const BinMonitoring = () => {
       )}
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
-      
-      {urgentBinsCount > 0 && filledBins.length > 0 && !notification && (
-        <div className="notification-banner warning">
-          <span>⚠️</span> 
-          <div><strong>Action Required:</strong> {urgentBinsCount} bin{urgentBinsCount > 1 ? 's' : ''} almost full or full</div>
-        </div>
-      )}
 
       <div className="bin-grid-layout">
         {bins.map((bin) => (

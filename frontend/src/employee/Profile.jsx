@@ -91,6 +91,7 @@ const Profile = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 
   // Fetch profile from Supabase
   const fetchProfile = async () => {
@@ -143,9 +144,98 @@ const Profile = () => {
     return nameParts.join(' ').trim() || 'Employee';
   };
 
+  // Validation function
+  const validateField = (field, value) => {
+    let error = '';
+    switch(field) {
+      case 'firstName':
+        if (!value.trim()) error = 'First name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'lastName':
+        if (!value.trim()) error = 'Last name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'middleName':
+        if (!value.trim()) error = 'Middle name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'email': {
+        const emailVal = value.trim();
+        const atCount = (emailVal.match(/@/g) || []).length;
+        const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailVal) {
+          error = 'Email is required';
+        } else if (atCount === 0) {
+          error = 'You need to put @';
+        } else if (atCount > 1) {
+          error = 'Email must contain exactly one @ symbol';
+        } else if (atCount === 1) {
+          if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+            error = 'Email cannot end with @ or a period';
+          } else if (!emailRegex.test(emailVal)) {
+            error = 'Invalid domain format (e.g., .com, .ph)';
+          }
+        }
+        break;
+      }
+      case 'phone':
+        const contactStr = String(value || '');
+        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
+        if (!contactStr.trim()) {
+          error = 'Contact number is required';
+        } else if (digitsOnly.length < 11) {
+          error = `Remaining ${11 - digitsOnly.length} digits required`;
+        } else if (!digitsOnly.startsWith('09')) {
+          error = 'Contact number must start with 09';
+        }
+        break;
+      default:
+        break;
+    }
+    return error;
+  };
+
   // Handle input change
   const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    let finalValue = value;
+
+    // Format names to uppercase and letters only
+    if (['firstName', 'lastName', 'middleName'].includes(field)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    }
+
+    // Format email to lowercase and remove invalid characters
+    if (field === 'email') {
+      let cleaned = value.replace(/[^a-zA-Z0-9@.]/g, '').toLowerCase();
+      const parts = cleaned.split('@');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '@' + parts.slice(1).join('');
+      }
+      finalValue = cleaned;
+    }
+
+    // Format contact number - ensure it starts with "09" and is 11 digits
+    if (field === 'phone') {
+      let digits = value.replace(/\D/g, '');
+      if (!digits.startsWith('09')) {
+        digits = '09' + digits;
+      }
+      finalValue = digits.slice(0, 11);
+    }
+
+    setFormData({ ...formData, [field]: finalValue });
+    setTouched({ ...touched, [field]: true });
+    setErrors({ ...errors, [field]: validateField(field, finalValue) });
+  };
+
+  // Handle blur
+  const handleBlur = (field) => {
+    setTouched({ ...touched, [field]: true });
+    setErrors({ ...errors, [field]: validateField(field, formData[field]) });
   };
 
   // Password validation
@@ -258,13 +348,53 @@ const Profile = () => {
       return;
     }
 
+    // Validate all fields before showing terms modal
+    const newErrors = {};
+    ['firstName', 'lastName', 'middleName', 'email', 'phone'].forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({
+        firstName: true,
+        lastName: true,
+        middleName: true,
+        email: true,
+        phone: true
+      });
+      alert('Please fix all validation errors before saving.');
+      return;
+    }
+
     // Show Terms and Conditions modal before saving
+    setHasScrolledToBottom(false); // Reset scroll state when modal opens
     setShowTermsModal(true);
   };
 
+  // Check if content is already at bottom when modal opens
+  useEffect(() => {
+    if (showTermsModal) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const modalBody = document.querySelector('.terms-modal-body');
+        if (modalBody) {
+          const isAtBottom = modalBody.scrollHeight - modalBody.scrollTop <= modalBody.clientHeight + 10;
+          setHasScrolledToBottom(isAtBottom);
+        }
+      }, 100);
+    }
+  }, [showTermsModal]);
+
   // Handle accept terms and save
   const handleAcceptTermsAndSave = async () => {
+    if (!hasScrolledToBottom) {
+      return;
+    }
+    
     setShowTermsModal(false);
+    setHasScrolledToBottom(false); // Reset for next time
     
     try {
       setLoading(true);
@@ -506,9 +636,6 @@ const Profile = () => {
               <div className="avatar-circle">
                 {getInitials()}
               </div>
-              <button className="camera-button">
-                <CameraIcon />
-              </button>
             </div>
             <div className="profile-info-middle">
               <h2 className="user-name">{getFullName()}</h2>
@@ -536,64 +663,90 @@ const Profile = () => {
             </div>
 
             <div className="personal-info-grid">
-              <div className="form-group">
-                <label>First Name</label>
+              <div className={`form-group ${touched.firstName && errors.firstName ? 'has-error' : ''}`}>
+                <label>First Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.firstName && errors.firstName ? 'error' : ''}`}
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  onBlur={() => handleBlur('firstName')}
                   disabled={!isEditing}
                   placeholder="First Name"
                 />
+                {touched.firstName && errors.firstName && (
+                  <span className="error-message">{errors.firstName}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Middle Name</label>
+              <div className={`form-group ${touched.middleName && errors.middleName ? 'has-error' : ''}`}>
+                <label>Middle Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.middleName && errors.middleName ? 'error' : ''}`}
                   value={formData.middleName}
                   onChange={(e) => handleInputChange('middleName', e.target.value)}
+                  onBlur={() => handleBlur('middleName')}
                   disabled={!isEditing}
                   placeholder="Middle Name"
                 />
+                {touched.middleName && errors.middleName && (
+                  <span className="error-message">{errors.middleName}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Last Name</label>
+              <div className={`form-group ${touched.lastName && errors.lastName ? 'has-error' : ''}`}>
+                <label>Last Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.lastName && errors.lastName ? 'error' : ''}`}
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  onBlur={() => handleBlur('lastName')}
                   disabled={!isEditing}
                   placeholder="Last Name"
                 />
+                {touched.lastName && errors.lastName && (
+                  <span className="error-message">{errors.lastName}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Email Address</label>
+              <div className={`form-group ${touched.email && errors.email ? 'has-error' : ''}`}>
+                <label>Email Address *</label>
                 <input
                   type="email"
-                  className="form-input"
+                  className={`form-input ${touched.email && errors.email ? 'error' : ''}`}
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
+                  onBlur={() => handleBlur('email')}
                   disabled={!isEditing}
                   placeholder="Email Address"
                 />
+                {touched.email && errors.email && (
+                  <span className="error-message">{errors.email}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Phone Number</label>
+              <div className={`form-group ${touched.phone && errors.phone ? 'has-error' : ''}`}>
+                <label>Contact Number *</label>
                 <input
                   type="tel"
-                  className="form-input"
+                  className={`form-input ${touched.phone && errors.phone ? 'error' : ''}`}
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onBlur={() => handleBlur('phone')}
                   disabled={!isEditing}
-                  placeholder="Phone Number"
+                  placeholder="09XXXXXXXXX"
+                  onKeyDown={(e) => {
+                    // Prevent backspacing the "09" prefix
+                    if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
+                {touched.phone && errors.phone && (
+                  <span className="error-message">{errors.phone}</span>
+                )}
               </div>
             </div>
 
@@ -878,7 +1031,14 @@ const Profile = () => {
               <button className="terms-close-btn" onClick={() => setShowTermsModal(false)}>×</button>
             </div>
             
-            <div className="terms-modal-body">
+            <div 
+              className="terms-modal-body"
+              onScroll={(e) => {
+                const element = e.target;
+                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10; // 10px threshold
+                setHasScrolledToBottom(isAtBottom);
+              }}
+            >
               {/* Terms and Conditions Card */}
               <div className="terms-card">
                 <h3 className="terms-card-title">Terms and Conditions</h3>
@@ -1023,10 +1183,17 @@ const Profile = () => {
             </div>
             
             <div className="terms-modal-footer">
-              <button className="terms-cancel-btn" onClick={() => setShowTermsModal(false)}>
+              <button className="terms-cancel-btn" onClick={() => {
+                setShowTermsModal(false);
+                setHasScrolledToBottom(false);
+              }}>
                 Cancel
               </button>
-              <button className="terms-accept-btn" onClick={handleAcceptTermsAndSave}>
+              <button 
+                className="terms-accept-btn" 
+                onClick={handleAcceptTermsAndSave}
+                disabled={!hasScrolledToBottom}
+              >
                 Done / Accept
               </button>
             </div>
