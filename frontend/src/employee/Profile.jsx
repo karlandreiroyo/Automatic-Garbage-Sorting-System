@@ -91,6 +91,7 @@ const Profile = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
 
   // Fetch profile from Supabase
   const fetchProfile = async () => {
@@ -259,12 +260,32 @@ const Profile = () => {
     }
 
     // Show Terms and Conditions modal before saving
+    setHasScrolledToBottom(false); // Reset scroll state when modal opens
     setShowTermsModal(true);
   };
 
+  // Check if content is already at bottom when modal opens
+  useEffect(() => {
+    if (showTermsModal) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const modalBody = document.querySelector('.terms-modal-body');
+        if (modalBody) {
+          const isAtBottom = modalBody.scrollHeight - modalBody.scrollTop <= modalBody.clientHeight + 10;
+          setHasScrolledToBottom(isAtBottom);
+        }
+      }, 100);
+    }
+  }, [showTermsModal]);
+
   // Handle accept terms and save
   const handleAcceptTermsAndSave = async () => {
+    if (!hasScrolledToBottom) {
+      return;
+    }
+    
     setShowTermsModal(false);
+    setHasScrolledToBottom(false); // Reset for next time
     
     try {
       setLoading(true);
@@ -506,9 +527,6 @@ const Profile = () => {
               <div className="avatar-circle">
                 {getInitials()}
               </div>
-              <button className="camera-button">
-                <CameraIcon />
-              </button>
             </div>
             <div className="profile-info-middle">
               <h2 className="user-name">{getFullName()}</h2>
@@ -878,7 +896,14 @@ const Profile = () => {
               <button className="terms-close-btn" onClick={() => setShowTermsModal(false)}>×</button>
             </div>
             
-            <div className="terms-modal-body">
+            <div 
+              className="terms-modal-body"
+              onScroll={(e) => {
+                const element = e.target;
+                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10; // 10px threshold
+                setHasScrolledToBottom(isAtBottom);
+              }}
+            >
               {/* Terms and Conditions Card */}
               <div className="terms-card">
                 <h3 className="terms-card-title">Terms and Conditions</h3>
@@ -1023,10 +1048,17 @@ const Profile = () => {
             </div>
             
             <div className="terms-modal-footer">
-              <button className="terms-cancel-btn" onClick={() => setShowTermsModal(false)}>
+              <button className="terms-cancel-btn" onClick={() => {
+                setShowTermsModal(false);
+                setHasScrolledToBottom(false);
+              }}>
                 Cancel
               </button>
-              <button className="terms-accept-btn" onClick={handleAcceptTermsAndSave}>
+              <button 
+                className="terms-accept-btn" 
+                onClick={handleAcceptTermsAndSave}
+                disabled={!hasScrolledToBottom}
+              >
                 Done / Accept
               </button>
             </div>

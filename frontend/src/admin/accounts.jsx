@@ -37,24 +37,41 @@ const Accounts = () => {
   const [userToConfirm, setUserToConfirm] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   
+  // Save changes confirmation modal states
+  const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState(null);
+  
+  // Create account confirmation modal states
+  const [showCreateConfirmModal, setShowCreateConfirmModal] = useState(false);
+  const [pendingCreateData, setPendingCreateData] = useState(null);
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
     role: '',
     first_name: '',
     last_name: '',
     middle_name: '',
-    contact: '09',
   });
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal]);
 
   const fetchUsers = async () => {
     try {
@@ -157,10 +174,9 @@ const Accounts = () => {
         else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middle_name':
-        if (value && value.trim().length > 0) {
-          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
-          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
-        }
+        if (!value.trim()) error = 'Middle name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'contact':
         const contactStr = String(value || '');
@@ -177,8 +193,9 @@ const Accounts = () => {
 
         if (!emailVal) {
           error = 'Email is required';
+        } else if (atCount === 0) {
+          error = 'You need to put @';
         } else if (atCount > 1) {
-          // This only shows once the user puts 2 or more @ symbols
           error = 'Email must contain exactly one @ symbol';
         } else if (atCount === 1) {
           // If there is exactly one @, check for valid domain structure
@@ -188,8 +205,6 @@ const Accounts = () => {
             error = 'Invalid domain format (e.g., .com, .ph)';
           }
         }
-        // If atCount is 0, we don't show the "Exactly one @" error yet 
-        // because they might still be typing the username.
         break;
       }
       case 'password':
@@ -201,6 +216,9 @@ const Accounts = () => {
       case 'confirmPassword':
         if (!value) error = 'Please confirm your password';
         else if (value !== formData.password) error = 'Passwords do not match';
+        break;
+      case 'role':
+        if (!value) error = 'Please select an account role';
         break;
       default: 
       break;
@@ -258,19 +276,6 @@ const Accounts = () => {
       finalValue = cleaned;
     }
 
-    if (name === 'contact') {
-      // 1. Remove everything that is not a number
-      let digits = value.replace(/\D/g, '');
-      
-      // 2. Ensure it always starts with 09
-      if (!digits.startsWith('09')) {
-        digits = '09' + digits;
-      }
-
-      // 3. Limit to exactly 11 digits
-      finalValue = digits.slice(0, 11);
-    }
-
     setFormData(prev => ({ ...prev, [name]: finalValue }));
     setTouched(prev => ({ ...prev, [name]: true }));
     setErrors(prev => ({ ...prev, [name]: validateField(name, finalValue) }));
@@ -314,35 +319,33 @@ const Accounts = () => {
     
     // 1. Validate all fields locally first
     const newErrors = {};
-      ['first_name', 'last_name', 'email', 'password', 'confirmPassword', 'contact', 'role'].forEach(f => {
+      ['first_name', 'last_name', 'middle_name', 'email', 'role'].forEach(f => {
       const err = validateField(f, formData[f]);
       if (err) newErrors[f] = err;
-    });
-
-    if (!formData.role) {
-      alert('Please select an account role.');
-      return;
-    }
+      });
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setTouched({ 
         first_name: true, last_name: true, email: true, 
-        password: true, confirmPassword: true,
-        middle_name: true, contact: true 
+        middle_name: true, role: true 
       });
       return;
     }
 
-    if (!window.confirm('Are you sure you want to create this employee account?')) {
-  return;
-}
+    // Show confirmation modal instead of window.confirm
+    setPendingCreateData({ ...formData });
+    setShowCreateConfirmModal(true);
+};
 
-try {
-  setLoading(true);
+const handleConfirmCreate = async () => {
+  if (!pendingCreateData) return;
+
+  try {
+    setLoading(true);
 
       // 2. Gmail Normalization Check (Prevents duplicate accounts with different dots)
-      let checkEmail = formData.email.trim().toLowerCase();
+      let checkEmail = pendingCreateData.email.trim().toLowerCase();
       if (checkEmail.endsWith('@gmail.com')) {
         const [user, dom] = checkEmail.split('@');
         const { data: existingUser } = await supabase
@@ -358,10 +361,31 @@ try {
         }
       }
 
-      // 3. Create Auth Account using the validated password
+      // Generate a default password automatically
+      const generateDefaultPassword = () => {
+        const length = 12;
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+        let generated = "";
+        
+        // Ensure requirements are met
+        generated += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Letter
+        generated += "0123456789"[Math.floor(Math.random() * 10)]; // Number
+        generated += "!@#$%^&*()"[Math.floor(Math.random() * 10)]; // Special Char
+        
+        for (let i = 0; i < length - 3; ++i) {
+          generated += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        
+        // Shuffle
+        return generated.split('').sort(() => 0.5 - Math.random()).join('');
+      };
+
+      const defaultPassword = generateDefaultPassword();
+
+      // 3. Create Auth Account using the generated password
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        password: formData.confirmPassword, // Using confirmPassword as the source
+        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
+        password: defaultPassword,
       });
 
       if (authError) throw authError;
@@ -369,24 +393,26 @@ try {
       // 4. Insert into 'users' table (mapping password to pass_hash)
       const { error: dbError } = await supabase.from('users').insert([{
         auth_id: authData.user.id,
-        email: formData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        role: formData.role,
-        first_name: formData.first_name.trim(),
-        last_name: formData.last_name.trim(),
-        middle_name: formData.middle_name?.trim() || '',
-        contact: formData.contact?.trim() || null,
+        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
+        role: pendingCreateData.role,
+        first_name: pendingCreateData.first_name.trim(),
+        last_name: pendingCreateData.last_name.trim(),
+        middle_name: pendingCreateData.middle_name?.trim() || '',
+        contact: null,
         status: 'ACTIVE',
-        pass_hash: formData.confirmPassword // Storing the password in your required column
+        pass_hash: defaultPassword // Storing the generated password in your required column
       }]);
 
       if (dbError) throw dbError;
       
       // 5. Success UI cleanup
       setShowAddModal(false);
+      setShowCreateConfirmModal(false);
+      setPendingCreateData(null);
       setFormData({ 
-        email: '', password: '', confirmPassword: '', 
+        email: '', 
         role: 'COLLECTOR', first_name: '', last_name: '', 
-        middle_name: '', contact: '09' 
+        middle_name: ''
       });
       setErrors({});
       setTouched({});
@@ -397,7 +423,12 @@ try {
     } finally {
       setLoading(false);
     }
-  };
+};
+
+const handleCancelCreate = () => {
+  setShowCreateConfirmModal(false);
+  setPendingCreateData(null);
+};
 
   const handleUpdateEmployee = async (e) => {
   e.preventDefault();
@@ -421,10 +452,13 @@ try {
     return;
   }
 
-  // Confirmation dialog
-  if (!window.confirm('Are you sure you want to save these changes?')) {
-    return;
-  }
+  // Show confirmation modal instead of window.confirm
+  setPendingSaveData({ ...editingUser });
+  setShowSaveConfirmModal(true);
+};
+
+const handleConfirmSave = async () => {
+  if (!pendingSaveData) return;
 
   try {
     setLoading(true);
@@ -432,19 +466,21 @@ try {
     const { error } = await supabase
       .from('users')
       .update({
-        first_name: editingUser.first_name.trim(),
-        last_name: editingUser.last_name.trim(),
-        middle_name: editingUser.middle_name?.trim() || '',
-        contact: String(editingUser.contact || '').trim(),
-        role: editingUser.role
+        first_name: pendingSaveData.first_name.trim(),
+        last_name: pendingSaveData.last_name.trim(),
+        middle_name: pendingSaveData.middle_name?.trim() || '',
+        contact: String(pendingSaveData.contact || '').trim(),
+        role: pendingSaveData.role
       })
-      .eq('auth_id', editingUser.auth_id);
+      .eq('auth_id', pendingSaveData.auth_id);
 
     if (error) throw error;
 
     setEditingUser(null);
     setEditErrors({});
     setEditTouched({});
+    setShowSaveConfirmModal(false);
+    setPendingSaveData(null);
     await fetchUsers(); // Wait for refresh
     showSuccessNotification('Employee updated successfully!');
   } catch (error) {
@@ -453,6 +489,11 @@ try {
   } finally {
     setLoading(false);
   }
+};
+
+const handleCancelSave = () => {
+  setShowSaveConfirmModal(false);
+  setPendingSaveData(null);
 };
 
   const getFullName = (user) => {
@@ -511,28 +552,6 @@ try {
     setCurrentPage(1);
   }, [searchTerm, filterRole, filterStatus]);
 
-  const generateStrongPassword = () => {
-    const length = 12;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
-    let generated = "";
-    
-    // Ensure requirements are met
-    generated += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Letter
-    generated += "0123456789"[Math.floor(Math.random() * 10)]; // Number
-    generated += "!@#$%^&*()"[Math.floor(Math.random() * 10)]; // Special Char
-    
-    for (let i = 0; i < length - 3; ++i) {
-      generated += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    
-    // Shuffle and update only the password field
-    const finalPw = generated.split('').sort(() => 0.5 - Math.random()).join('');
-    
-    setFormData(prev => ({ ...prev, password: finalPw }));
-    // Trigger validation for the new password immediately
-    setErrors(prev => ({ ...prev, password: validateField('password', finalPw) }));
-  };
-
   return (
     <div className="accounts-container">
       
@@ -567,6 +586,68 @@ try {
         </div>
       )}
       
+      {/* Save Changes Confirmation Modal */}
+      {showSaveConfirmModal && (
+        <div className="confirm-modal-overlay" onClick={handleCancelSave}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Confirm Action</h3>
+            <p className="confirm-modal-message">
+              Are you sure you want to save these changes?
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-cancel" 
+                onClick={handleCancelSave}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleConfirmSave}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Create Account Confirmation Modal */}
+      {showCreateConfirmModal && (
+        <div className="confirm-modal-overlay" onClick={handleCancelCreate}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Confirm Action</h3>
+            <p className="confirm-modal-message">
+              Are you sure you want to create this employee account?
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-cancel" 
+                onClick={handleCancelCreate}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleConfirmCreate}
+                disabled={loading}
+              >
+                {loading ? 'Creating...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Success Notification Toast */}
       {showNotification && (
         <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
@@ -580,7 +661,7 @@ try {
       )}
 
       {/* --- ADD MODAL --- */}
-      {showAddModal && (
+      {showAddModal && !showCreateConfirmModal && (
         <div className="modal-overlay">
           <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -611,7 +692,7 @@ try {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name *</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -621,94 +702,26 @@ try {
                   />
                   {errors.middle_name && <span className="error-message">{errors.middle_name}</span>}
                 </div>
-                <div className={`form-group ${errors.contact ? 'has-error' : ''}`}>
-                  <label>Contact Number</label>
-                  <input 
-                    type="text" 
-                    name="contact" 
-                    value={formData.contact} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur} 
-                    placeholder="09XXXXXXXXX"
-                    onKeyDown={(e) => {
-                      // Prevent backspacing the "09"
-                      if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
-                        e.preventDefault();
-                      }
-                    }}
-                  />
-                  {errors.contact && <span className="error-message">{errors.contact}</span>}
-                </div>
                 <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
                   <label>Email Address *</label>
                   <input 
-                    type="email" 
+                    type="text" 
                     name="email" 
                     value={formData.email} 
                     onChange={handleInputChange} 
-                    onBlur={handleBlur} 
+                    onBlur={handleBlur}
                   />
                   {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
-                <div className="form-group">
-                  <label>Account Role</label>
-                  <select name="role" value={formData.role} onChange={handleInputChange}>
+                <div className={`form-group ${errors.role ? 'has-error' : ''}`}>
+                  <label>Account Role *</label>
+                  <select name="role" value={formData.role} onChange={handleInputChange} onBlur={handleBlur}>
                     <option value="" disabled>Select Role</option>
                     <option value="COLLECTOR">Collector</option>
                     <option value="ADMIN">Admin</option>
-                    <option value="SUPERVISOR">Supervisor</option>
                   </select>
+                  {errors.role && <span className="error-message">{errors.role}</span>}
                 </div>
-                <div className="password-container" style={{ gridColumn: '1 / -1' }}>
-                <div className="form-grid">
-                  {/* Password Field */}
-                  <div className={`form-group ${errors.password ? 'has-error' : ''}`}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <label>Password *</label>
-                      <span 
-                        onClick={generateStrongPassword} 
-                        style={{ color: '#007bff', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                      >
-                        Generate Password
-                      </span>
-                    </div>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      name="password" 
-                      value={formData.password} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                    />
-                    {errors.password && <span className="error-message">{errors.password}</span>}
-                  </div>
-
-                  {/* Confirm Password Field */}
-                  <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`}>
-                    <label>Confirm Password *</label>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      name="confirmPassword" 
-                      value={formData.confirmPassword} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                    />
-                    {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
-                  </div>
-                </div>
-
-                {/* Show Password Toggle */}
-                <div className="show-password-toggle">
-                  <input 
-                    type="checkbox" 
-                    id="togglePassword" 
-                    checked={showPassword} 
-                    onChange={() => setShowPassword(!showPassword)} 
-                  />
-                  <label htmlFor="togglePassword">
-                    Show Password
-                  </label>
-                </div>
-              </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
@@ -722,8 +735,15 @@ try {
       )}
 
       {/* --- EDIT MODAL --- */}
-      {editingUser && (
-        <div className="modal-overlay">
+      {editingUser && !showSaveConfirmModal && (
+        <div className="modal-overlay" onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (e.target === e.currentTarget) {
+            // Only prevent if clicking directly on overlay, not modal content
+            return;
+          }
+        }}>
           <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Edit Employee Account</h2>
@@ -785,13 +805,12 @@ try {
                   <label>Role</label>
                   <select
                     name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
+                    value={editingUser.role || ''}
+                    onChange={handleEditInputChange}
                     required
                   >
                     <option value="COLLECTOR">Collector</option>
                     <option value="ADMIN">Admin</option>
-                    <option value="SUPERVISOR">Supervisor</option>
                   </select>
                 </div>
               </div>
@@ -824,7 +843,6 @@ try {
           <option value="all">All Roles</option>
           <option value="ADMIN">Admin</option>
           <option value="COLLECTOR">Collector</option>
-          <option value="SUPERVISOR">Supervisor</option>
         </select>
         <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="all">All Status</option>

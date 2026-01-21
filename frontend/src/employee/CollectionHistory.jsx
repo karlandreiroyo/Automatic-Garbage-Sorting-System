@@ -240,15 +240,6 @@ const CollectionHistory = () => {
         ))}
       </div>
 
-      {/* Active Filters Info */}
-      {safeFilter !== 'All' && hasFilteredResults && (
-        <div className="active-filters-info">
-          <span>
-            Showing {filteredList.length} of {historyData.length} collection{filteredList.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
-
       {/* Content Area */}
       {!hasData ? (
         // No data state
@@ -342,11 +333,6 @@ const CollectionHistory = () => {
               </button>
             </div>
           )}
-
-          {/* Page Info */}
-          <div className="page-info">
-            Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredList.length)} of {filteredList.length} collections
-          </div>
         </>
       )}
     </div>

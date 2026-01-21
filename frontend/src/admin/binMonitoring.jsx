@@ -291,6 +291,9 @@ const BinMonitoring = () => {
   assigned_collector_id: ''
 });
   const [loading, setLoading] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [isNotificationHiding, setIsNotificationHiding] = useState(false);
   
 const fetchCollectors = async () => {
   try {
@@ -311,6 +314,28 @@ const fetchCollectors = async () => {
   // State for list view bins, each with its own independent category bins
 const [bins, setBins] = useState([]);
 const [collectors, setCollectors] = useState([]);
+
+  const showSuccessNotification = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setIsNotificationHiding(false);
+
+    setTimeout(() => {
+      setIsNotificationHiding(true);
+      setTimeout(() => {
+        setShowNotification(false);
+        setIsNotificationHiding(false);
+      }, 300);
+    }, 3000);
+  };
+
+  const closeNotification = () => {
+    setIsNotificationHiding(true);
+    setTimeout(() => {
+      setShowNotification(false);
+      setIsNotificationHiding(false);
+    }, 300);
+  };
 
   // Fetch bin data on component mount and set up real-time updates
   useEffect(() => {
@@ -924,7 +949,7 @@ const handleAddBin = async (e) => {
 
     // Close modal
     setShowAddBinModal(false);
-    alert(`${newBinName} created successfully at ${newBinData.location}!`);
+    showSuccessNotification(`${newBinName} created successfully at ${newBinData.location}!`);
   } catch (error) {
     console.error('Error adding bin:', error);
     alert('Error adding bin: ' + error.message);
@@ -936,6 +961,18 @@ const handleAddBin = async (e) => {
   // Render list view (default) - Shows main bins (Bin 1, Bin 2, etc.)
   return (
     <div className="bin-monitoring-container">
+      {/* Success Notification Toast */}
+      {showNotification && (
+        <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
+          <div className="notification-icon">✓</div>
+          <div className="notification-content">
+            <p className="notification-title">Success!</p>
+            <p className="notification-message">{notificationMessage}</p>
+          </div>
+          <button className="notification-close" onClick={closeNotification}>×</button>
+        </div>
+      )}
+      
       {/* Add Bin Modal */}
       {showAddBinModal && (
         <div className="modal-overlay">
