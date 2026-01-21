@@ -1,0 +1,675 @@
+/* General container */
+.app-container {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Left panel - 2/3 width */
+.left-panel {
+  flex: 2;
+  background-color: #f0fdf4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 4rem;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.left-panel-content {
+  text-align: center;
+  max-width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.system-title {
+  font-size: 3.5rem;
+  line-height: 4rem;
+  margin: 0;
+  margin-bottom: 2rem;
+  font-weight: 800;
+  color: #047857;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.illustration-container {
+  margin-top: 2rem;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* Decorative green translucent shapes */
+.decorative-shapes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  opacity: 0.15;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.shape-1 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  top: -100px;
+  left: -100px;
+  transform: rotate(-20deg);
+}
+
+.shape-2 {
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(45deg, #047857 0%, #065f46 100%);
+  bottom: -80px;
+  right: -80px;
+  transform: rotate(30deg);
+}
+
+.illustration-container svg,
+.illustration-container .system-logo {
+  display: block;
+  margin: 0 auto;
+}
+
+.system-logo {
+  width: 350px;
+  height: auto;
+  max-width: 90%;
+  object-fit: contain;
+}
+
+/* Right panel - 1/3 width */
+.right-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: white;
+  padding: 2rem;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.form-container {
+  width: 90%;
+  max-width: 400px;
+  background-color: #f8faf9;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 2px solid #000000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-container h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #047857;
+}
+
+/* Mobile logo section - hidden on desktop */
+.mobile-logo-section {
+  display: none;
+}
+
+.mobile-logo {
+  display: none;
+}
+
+.mobile-title {
+  display: none;
+}
+
+/* Mobile flower decorations - hidden on desktop */
+.mobile-flower-left,
+.mobile-flower-right {
+  display: none;
+}
+
+/* Input groups */
+.input-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reduce spacing after password field - target the input-group containing password-wrapper */
+.input-group .password-wrapper {
+  margin-bottom: 0;
+}
+
+.input-group:has(.password-wrapper),
+.input-group:nth-of-type(2) {
+  margin-bottom: 0.5rem;
+}
+
+.input-group label {
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.input-group input {
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #047857;
+}
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  flex: 1;
+  padding-right: 40px; /* space for eye icon */
+}
+
+.eye-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Options row */
+.options-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.forgot-password {
+  text-decoration: none;
+  color: #047857;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.remember-me input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #047857;
+}
+
+/* Login button */
+.login-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #047857;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+  transition: background-color 0.3s;
+}
+
+.login-btn:hover:not(:disabled) {
+  background-color: #065f46;
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9ca3af;
+}
+
+/* Lockout message */
+.lockout-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.lockout-message p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Role selection cards - Hidden on desktop/website view */
+.role-selection {
+  display: none !important;
+}
+
+.role-card {
+  display: none !important;
+}
+
+.role-card span {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.role-employee {
+  border-color: #60a5fa;
+}
+
+.role-employee:hover {
+  background-color: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.role-admin {
+  border-color: #047857;
+}
+
+.role-admin:hover {
+  background-color: #f0fdf4;
+  border-color: #065f46;
+}
+
+.role-supervisor {
+  border-color: #fbbf24;
+}
+
+.role-supervisor:hover {
+  background-color: #fffbeb;
+  border-color: #f59e0b;
+}
+
+.role-card img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .left-panel {
+    flex: 1;
+    min-height: 50vh;
+    padding: 2rem 1.5rem;
+    background-color: white;
+    justify-content: center;
+    display: flex;
+    overflow: visible;
+  }
+  
+  .left-panel-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-title {
+    font-size: 2.5rem;
+    line-height: 3rem;
+    color: #047857;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    display: block;
+  }
+  
+  .illustration-container {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-logo {
+    width: 280px;
+    max-width: 85%;
+    height: auto;
+    display: block;
+  }
+  
+  .right-panel {
+    flex: 1;
+    padding: 1.5rem;
+    min-height: 50vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .left-panel {
+    padding: 1.5rem 1rem;
+    min-height: 45vh;
+    background-color: white;
+    justify-content: center;
+    display: flex;
+    overflow: visible;
+  }
+  
+  .left-panel-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-title {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    color: #047857;
+    text-align: center;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  
+  .illustration-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-logo {
+    width: 250px;
+    max-width: 80%;
+    height: auto;
+    display: block;
+  }
+  
+  .form-container {
+    width: 95%;
+    padding: 1.25rem;
+    max-width: 100%;
+  }
+  
+  .role-selection {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .role-card {
+    width: auto;
+    flex: 1;
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .role-card span {
+    font-size: 0.75rem;
+  }
+  
+  .role-card img {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* iPhone SE and similar small devices (375px) */
+@media (max-width: 480px) {
+  .app-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    background-color: white;
+    padding: 1rem;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Background decorative shapes - leaf-like */
+  .app-container::before,
+  .app-container::after {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    opacity: 0.2;
+    filter: blur(60px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .app-container::before {
+    top: -100px;
+    left: -100px;
+    background: radial-gradient(circle, #047857 0%, transparent 70%);
+    border-radius: 50% 40% 60% 30%;
+    transform: rotate(-20deg);
+  }
+  
+  .app-container::after {
+    bottom: -100px;
+    right: -100px;
+    background: radial-gradient(circle, #065f46 0%, transparent 70%);
+    border-radius: 40% 50% 30% 60%;
+    transform: rotate(30deg);
+  }
+  
+  /* Mobile Flower Decorations - Show on mobile */
+  .mobile-flower-left {
+    position: fixed;
+    top: 10px;
+    left: 5px;
+    width: 140px;
+    height: 140px;
+    background-image: url('/DesignCorner.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 2;
+    pointer-events: none;
+    display: block !important;
+    opacity: 0.7;
+  }
+  
+  .mobile-flower-right {
+    position: fixed;
+    bottom: 10px;
+    right: 5px;
+    width: 140px;
+    height: 140px;
+    background-image: url('/DesignCorner.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 2;
+    pointer-events: none;
+    display: block !important;
+    opacity: 0.7;
+    transform: rotate(180deg);
+  }
+  
+  .left-panel {
+    display: none !important;
+  }
+  
+  .decorative-shapes {
+    display: none !important;
+  }
+  
+  .right-panel {
+    padding: 0;
+    flex: 1;
+    min-height: auto;
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .form-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+    margin: 0;
+    background-color: white;
+    border: 2px solid #000000;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Mobile logo section - show only on mobile */
+  .mobile-logo-section {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  
+  .mobile-logo {
+    width: 120px !important;
+    height: auto !important;
+    margin-bottom: 0.75rem;
+    display: block !important;
+  }
+  
+  .mobile-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #047857;
+    margin: 0;
+    line-height: 1.3;
+    display: block !important;
+  }
+  
+  .form-container h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  
+  .form-container h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .input-group {
+    margin-bottom: 1rem;
+  }
+  
+  .input-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .input-group input {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+  }
+  
+  /* Reduce spacing after password field on mobile */
+  .input-group:nth-of-type(2) {
+    margin-bottom: 0.5rem;
+  }
+  
+  .options-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+  }
+  
+  .forgot-password {
+    font-size: 0.85rem;
+  }
+  
+  .remember-me {
+    font-size: 0.85rem;
+  }
+  
+  .login-btn {
+    padding: 0.7rem;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  
+  .role-selection {
+    display: none !important;
+  }
+  
+  .role-card {
+    display: none !important;
+  }
+}
+
+/* Very small devices (320px and below) */
+@media (max-width: 320px) {
+  .system-title {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+  
+  .system-logo {
+    width: 180px;
+    max-width: 70%;
+  }
+  
+  .role-card span {
+    font-size: 0.65rem;
+  }
+}

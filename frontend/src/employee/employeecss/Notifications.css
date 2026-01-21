@@ -1,0 +1,689 @@
+/* =========================================
+   1. VARIABLES & PALETTE
+   ========================================= */
+:root {
+  /* Core Colors */
+  --red-bg: #FFF1F2;   --red-text: #E11D48;
+  --yellow-bg: #FFFBEB; --yellow-text: #D97706;
+  --blue-bg: #EFF6FF;   --blue-text: #2563EB;
+  --green-bg: #ECFDF5;  --green-text: #059669;
+  
+  /* Text & Layout */
+  --text-primary: #1F2937; 
+  --text-secondary: #6B7280;
+  --bg-page: #F3F4F6;
+}
+
+/* =========================================
+   2. MAIN CONTAINER
+   ========================================= */
+.notifications-page-container {
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-page);
+  min-height: 100vh;
+  box-sizing: border-box;
+=======
+  padding: 1rem 1.5rem; 
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+  background: #fff; 
+  min-height: 100vh;
+  max-width: 100%;
+  margin: 0;
+  position: relative;
+  width: 100%;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+
+/* =========================================
+   3. SUCCESS TOAST
+   ========================================= */
+.success-toast {
+  position: fixed; top: 20px; right: 20px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-text);
+  color: var(--green-text);
+  padding: 16px 24px; border-radius: 12px;
+  display: flex; align-items: center; gap: 12px;
+  font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+  z-index: 2000;
+}
+
+@keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(100px); } }
+
+/* =========================================
+   4. HEADER
+   ========================================= */
+.page-header { 
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  display: flex; flex-direction: column; gap: 16px;
+  margin-bottom: 20px;
+=======
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 1rem; 
+  flex-wrap: wrap;
+  gap: 0.5rem;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+
+.header-text h1 { 
+  font-size: 1.5rem;
+  font-weight: 700; color: var(--text-primary); margin: 0 0 6px 0; 
+}
+.subtitle { 
+  font-size: 0.9rem; color: var(--text-secondary); margin: 0; 
+}
+
+.header-actions { display: flex; gap: 12px; align-items: center; width: 100%; }
+
+.mark-all-btn, .clear-all-btn {
+  flex: 1;
+  padding: 12px; border-radius: 8px; font-weight: 600; font-size: 0.9rem;
+  cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center;
+}
+
+.mark-all-btn { 
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%); 
+  border: none; color: white;
+}
+.mark-all-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+.mark-all-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.clear-all-btn {
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  background: white; border: 1px solid #E5E7EB; color: var(--text-primary);
+=======
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.clear-all-btn:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.clear-all-btn:hover { background: #FEE2E2; border-color: #EF4444; color: #DC2626; }
+.clear-all-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* =========================================
+   5. STATS GRID
+   ========================================= */
+.stats-grid { 
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 8px; margin-bottom: 16px; 
+}
+
+.stat-card { 
+  background: white; padding: 12px 8px; border-radius: 8px; 
+  display: flex; flex-direction: column; align-items: center; gap: 8px; 
+  text-align: center;
+  border: none;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+  cursor: pointer; transition: all 0.2s;
+=======
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+  gap:0.75rem; 
+  margin-bottom:1rem; 
+}
+
+.stat-card { 
+  background:white; 
+  padding:0.75rem 1rem; 
+  border-radius:8px; 
+  display:flex; 
+  align-items:center; 
+  gap:0.75rem; 
+  box-shadow:0 2px 4px rgba(0,0,0,0.05); 
+  border:1px solid #000000; 
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.stat-card:hover:not(.disabled) { 
+  transform: translateY(-4px); 
+  box-shadow:0 8px 16px rgba(0,0,0,0.1); 
+}
+.stat-card.active {
+  border-color: #10B981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+.stat-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+
+.stat-card:hover:not(.disabled) { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+.stat-card.active { box-shadow: 0 0 0 2px #10B981; background-color: #ECFDF5; }
+.stat-card.disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+
+.icon-box { 
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  width: 36px; height: 36px; border-radius: 8px; 
+  display: flex; align-items: center; justify-content: center; 
+=======
+  width:40px; 
+  height:40px; 
+  border-radius:8px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  flex-shrink: 0;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.icon-box svg { width: 20px; height: 20px; }
+
+.icon-box.critical { background: var(--red-bg); color: var(--red-text); }
+.icon-box.warning { background: var(--yellow-bg); color: var(--yellow-text); }
+.icon-box.info { background: var(--blue-bg); color: var(--blue-text); }
+.icon-box.success { background: var(--green-bg); color: var(--green-text); }
+
+.stat-info { display:flex; flex-direction:column; gap: 4px; }
+.stat-label { font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2; font-weight: 600; }
+.stat-count { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+
+.active-filter-badge {
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--blue-bg); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 16px;
+  font-weight: 600; color: var(--blue-text); font-size: 0.85rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+=======
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--blue-bg);
+  border: 1px solid var(--blue-text);
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--blue-text);
+  font-size: 0.9rem;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.clear-filter-btn {
+  display: flex; align-items: center; gap: 6px; background: white;
+  border: 1px solid var(--blue-text); color: var(--blue-text);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
+}
+
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+/* =========================================
+   6. NOTIFICATION LIST
+   ========================================= */
+.notification-list { display: flex; flex-direction: column; gap: 12px; }
+
+.notif-card { 
+  display: flex; flex-direction: column;
+  padding: 16px; border-radius: 12px; 
+  position: relative; transition: all 0.3s; 
+  gap: 12px;
+  border: none; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+=======
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 16px;
+  margin-top: 2rem;
+}
+
+.empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: var(--blue-bg);
+  color: var(--blue-text);
+  border-radius: 50%;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0 0 1.5rem 0;
+}
+
+.reset-filter-btn {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.reset-filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Notification List */
+.notification-list { display:flex; flex-direction:column; gap:0.75rem; }
+
+.notif-card { 
+  display:flex; 
+  align-items:flex-start; 
+  padding:1rem 1.25rem; 
+  border-radius:8px; 
+  position:relative; 
+  transition: all 0.3s; 
+  border:1px solid #000000; 
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+  min-height: auto; 
+}
+
+.notif-card.critical { background: var(--red-bg); } 
+.notif-card.warning { background: var(--yellow-bg); } 
+.notif-card.info { background: var(--blue-bg); } 
+.notif-card.success { background: var(--green-bg); }
+
+.notif-icon-box { 
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  width: 36px; height: 36px; border-radius: 8px; 
+  display: flex; align-items: center; justify-content: center; 
+  background: white; flex-shrink: 0; align-self: flex-start;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.notif-icon-box svg { width: 20px; height: 20px; }
+.notif-icon-box.critical { color: var(--red-text); }
+.notif-icon-box.warning { color: var(--yellow-text); }
+.notif-icon-box.info { color: var(--blue-text); }
+.notif-icon-box.success { color: var(--green-text); }
+=======
+  width:40px; 
+  height:40px; 
+  border-radius:8px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  margin-right:1rem; 
+  flex-shrink:0; 
+  background:white; 
+}
+
+/* Bin Monitoring Color Matching - Higher Specificity */
+.notif-icon-box.bin-biodegradable,
+.notif-icon-box.bin-biodegradable.critical,
+.notif-icon-box.bin-biodegradable.warning,
+.notif-icon-box.bin-biodegradable.info,
+.notif-icon-box.bin-biodegradable.success { 
+  color: #10b981 !important; /* Biodegradable - Green */
+}
+
+.notif-icon-box.bin-non-biodegradable,
+.notif-icon-box.bin-non-biodegradable.critical,
+.notif-icon-box.bin-non-biodegradable.warning,
+.notif-icon-box.bin-non-biodegradable.info,
+.notif-icon-box.bin-non-biodegradable.success { 
+  color: #ef4444 !important; /* Non-Biodegradable - Red */
+}
+
+.notif-icon-box.bin-recyclable,
+.notif-icon-box.bin-recyclable.critical,
+.notif-icon-box.bin-recyclable.warning,
+.notif-icon-box.bin-recyclable.info,
+.notif-icon-box.bin-recyclable.success { 
+  color: #f97316 !important; /* Recyclable - Orange */
+}
+
+.notif-icon-box.bin-unsorted,
+.notif-icon-box.bin-unsorted.critical,
+.notif-icon-box.bin-unsorted.warning,
+.notif-icon-box.bin-unsorted.info,
+.notif-icon-box.bin-unsorted.success { 
+  color: #6b7280 !important; /* Unsorted - Gray */
+}
+
+/* Fallback to notification type colors if no bin type specified */
+.notif-icon-box.critical:not(.bin-biodegradable):not(.bin-non-biodegradable):not(.bin-recyclable):not(.bin-unsorted) { 
+  color: var(--red-text); 
+}
+.notif-icon-box.warning:not(.bin-biodegradable):not(.bin-non-biodegradable):not(.bin-recyclable):not(.bin-unsorted) { 
+  color: var(--yellow-text); 
+}
+.notif-icon-box.info:not(.bin-biodegradable):not(.bin-non-biodegradable):not(.bin-recyclable):not(.bin-unsorted) { 
+  color: var(--blue-text); 
+}
+.notif-icon-box.success:not(.bin-biodegradable):not(.bin-non-biodegradable):not(.bin-recyclable):not(.bin-unsorted) { 
+  color: var(--green-text); 
+}
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+
+.notif-content { flex: 1; }
+.notif-header h3 { 
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  margin: 0 0 4px 0; font-size: 1rem; color: var(--text-primary); 
+  display: flex; align-items: center; gap: 8px; font-weight: 700; 
+=======
+  margin:0 0 0.4rem 0; 
+  font-size:1rem; 
+  color: var(--text-primary); 
+  display:flex; 
+  align-items:center; 
+  gap:6px; 
+  font-weight:600; 
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.red-dot { 
+  width: 8px; height: 8px; background: var(--red-text); 
+  border-radius: 50%; display: inline-block; animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+.notif-message { margin: 0 0 8px 0; color: #4B5563; font-size: 0.9rem; line-height: 1.4; }
+.notif-meta { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+
+.notif-actions { 
+  display: flex; justify-content: space-between; align-items: center; 
+  width: 100%; border-top: 1px solid rgba(0,0,0,0.05); 
+  padding-top: 12px; margin-top: 4px;
+=======
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.notif-message { 
+  margin:0 0 0.75rem 0; 
+  color:#4B5563; 
+  font-size:0.9rem; 
+  line-height:1.4; 
+}
+.notif-meta { 
+  display:flex; 
+  flex-direction: column;
+  gap:0.75rem;
+}
+
+.notif-meta-row {
+  display:flex; 
+  align-items:center; 
+  gap:8px; 
+  font-size:0.9rem; 
+  color: var(--text-secondary); 
+  font-weight:500; 
+  flex-wrap: wrap;
+}
+
+.trash-icon { 
+  display:flex; 
+  align-items:center; 
+}
+
+.location-icon {
+  display:flex; 
+  align-items:center; 
+}
+
+.meta-separator {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.notif-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.notif-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.notif-detail-item svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.notif-detail-item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.notif-actions { 
+  display:flex; 
+  flex-direction:column; 
+  align-items:flex-end; 
+  gap:0.5rem; 
+  min-width:140px; 
+}
+.time-text { 
+  font-size:0.9rem; 
+  color: var(--text-secondary); 
+  font-weight:500; 
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.time-text { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
+.action-buttons { display: flex; gap: 12px; align-items: center; }
+
+.mark-read-btn { 
+  background: none; border: none; color: #10B981; font-weight: 700; cursor: pointer; 
+  font-size: 0.9rem; padding: 6px 12px; border-radius: 6px; transition: all 0.2s; 
+}
+.mark-read-btn:hover { background: rgba(16, 185, 129, 0.1); }
+
+.delete-btn {
+  background: none; border: none; color: var(--text-secondary); 
+  cursor: pointer; padding: 6px; border-radius: 6px; 
+  display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.delete-btn:hover { background: rgba(239, 68, 68, 0.1); color: #DC2626; }
+
+/* Empty State */
+.empty-state {
+  text-align: center; padding: 3rem 1rem; background: #f9fafb;
+  border: 2px dashed #d1d5db; border-radius: 12px; margin-top: 1rem;
+}
+.empty-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px; background: var(--blue-bg); color: var(--blue-text);
+  border-radius: 50%; margin-bottom: 1rem;
+}
+.reset-filter-btn {
+  background: var(--blue-text); color: white; padding: 10px 20px; 
+  border-radius: 8px; border: none; cursor: pointer; font-weight: 600; margin-top: 10px;
+}
+
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+/* =========================================
+   7. MODAL
+   ========================================= */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: center; z-index: 9999;
+=======
+/* Delete Confirmation */
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ef4444;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+}
+.modal-box {
+  background: white; width: 90%; max-width: 400px; padding: 30px;
+  border-radius: 20px; text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: scaleUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-icon { margin: 0 auto 20px auto; display: flex; justify-content: center; color: var(--blue-text); }
+.modal-box h2 { margin: 0 0 10px 0; color: var(--text-primary); font-size: 1.5rem; font-weight: 700; }
+.modal-box p { color: var(--text-secondary); margin: 0 0 25px 0; line-height: 1.5; }
+.modal-actions { display: flex; gap: 15px; }
+.modal-actions button {
+  flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 600; font-size: 1rem; cursor: pointer;
+}
+.btn-cancel { background: #F3F4F6; color: #374151; }
+.btn-confirm-red { background: #ef4444; color: white; }
+.btn-confirm-blue { background: #ef4444; color: white; }
+
+@keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* =========================================
+   8. DESKTOP MEDIA QUERY
+   ========================================= */
+@media (min-width: 769px) {
+  .notifications-page-container { padding: 24px 48px; }
+
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  .page-header { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+  .header-text h1 { font-size: 2.2rem; }
+  .header-actions { width: auto; gap: 12px; }
+  .mark-all-btn, .clear-all-btn { flex: initial; padding: 12px 24px; font-size: 0.95rem; }
+
+  .stats-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { 
+    flex-direction: row; align-items: center; text-align: left; padding: 20px; gap: 16px;
+=======
+/* Responsive */
+@media (max-width: 768px) {
+  .notifications-page-container {
+    padding: 0.75rem;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .mark-all-btn,
+  .clear-all-btn {
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .notif-card {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+  }
+  
+  .notif-icon-box {
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+  }
+  .icon-box { width: 48px; height: 48px; }
+  .icon-box svg { width: 24px; height: 24px; }
+  .stat-label { font-size: 0.9rem; }
+  .stat-count { font-size: 1.8rem; }
+
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  .notif-card { 
+    flex-direction: row; align-items: flex-start; padding: 24px 32px; gap: 24px;
+=======
+  .notif-actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f3f4f6;
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+  }
+  .notif-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+  
+  .notif-icon-box { width: 48px; height: 48px; }
+  .notif-icon-box svg { width: 24px; height: 24px; }
+  
+<<<<<<< HEAD:src/employee/employeecss/Notifications.css
+  .notif-header h3 { font-size: 1.1rem; }
+  .notif-message { font-size: 1rem; margin-bottom: 4px; }
+=======
+  .success-toast {
+    right: 10px;
+    left: 10px;
+    bottom: 20px;
+    top: auto;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+>>>>>>> b879ecb25f9981c80915fd970ef571f8a644cdb4:frontend/src/employee/employeecss/Notifications.css
+  
+  .notif-actions { 
+    flex-direction: column; width: auto; align-items: flex-end; 
+    border-top: none; padding-top: 0; margin-top: 0; gap: 12px; min-width: 140px;
+  }
+}
