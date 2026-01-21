@@ -1,21 +1,238 @@
+/* General container - matching login form */
 .forgot-container {
-  min-height: 100vh;
-  background: #1a1a1a;
   display: flex;
-  align-items: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Left panel - 2/3 width */
+.left-panel {
+  flex: 2;
+  background-color: #f0fdf4;
+  display: flex;
   justify-content: center;
-  font-family: Arial, Helvetica, sans-serif;
+  align-items: center;
+  padding: 2rem 4rem;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.left-panel-content {
+  text-align: center;
+  max-width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.system-title {
+  font-size: 3.5rem;
+  line-height: 4rem;
+  margin: 0;
+  margin-bottom: 2rem;
+  font-weight: 800;
+  color: #047857;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.illustration-container {
+  margin-top: 2rem;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* Decorative green translucent shapes */
+.decorative-shapes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  opacity: 0.15;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.shape-1 {
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  top: -100px;
+  left: -100px;
+  transform: rotate(-20deg);
+}
+
+.shape-2 {
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(45deg, #047857 0%, #065f46 100%);
+  bottom: -80px;
+  right: -80px;
+  transform: rotate(30deg);
+}
+
+.system-logo {
+  width: 350px;
+  height: auto;
+  max-width: 90%;
+  object-fit: contain;
+}
+
+/* Right panel - 1/3 width */
+.right-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: white;
+  padding: 2rem;
+  width: 100%;
+  overflow-x: hidden;
   position: relative;
 }
 
+/* Forgot box - base styles */
 .forgot-box {
-  background: #ffffff;
-  width: 100%;
+  width: 90%;
   max-width: 420px;
+  background-color: #f8faf9;
   padding: 40px;
-  border-radius: 8px;
+  border-radius: 12px;
   position: relative;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Decorative border designs for each step */
+.forgot-step {
+  border: 3px solid #047857;
+  background: linear-gradient(135deg, #f8faf9 0%, #f0fdf4 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(4, 120, 87, 0.2);
+}
+
+.forgot-step::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(4, 120, 87, 0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: 0;
+}
+
+.forgot-step::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(135deg, #047857, #065f46, #047857);
+  background-size: 200% 200%;
+  border-radius: 12px;
+  z-index: -1;
+  animation: gradientShift 3s ease infinite;
+}
+
+.confirm-step {
+  border: 3px solid #047857;
+  background: linear-gradient(135deg, #f8faf9 0%, #f0fdf4 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(4, 120, 87, 0.2);
+}
+
+.confirm-step::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(4, 120, 87, 0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.confirm-step::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(135deg, #047857, #065f46, #047857);
+  background-size: 200% 200%;
+  border-radius: 12px;
+  z-index: -1;
+  animation: gradientShift 3s ease infinite;
+  pointer-events: none;
+}
+
+.reset-step {
+  border: 3px solid #047857;
+  background: linear-gradient(135deg, #f8faf9 0%, #f0fdf4 100%);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(4, 120, 87, 0.2);
+}
+
+.reset-step::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(4, 120, 87, 0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.reset-step::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(135deg, #047857, #065f46, #047857);
+  background-size: 200% 200%;
+  border-radius: 12px;
+  z-index: -1;
+  animation: gradientShift 3s ease infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .close-btn {
@@ -26,11 +243,51 @@
   background: transparent;
   font-size: 20px;
   cursor: pointer;
+  color: #333;
+  z-index: 10;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 h2 {
   text-align: center;
   margin-bottom: 8px;
+  color: #047857;
+  font-size: 1.5rem;
+  font-weight: bold;
+  position: relative;
+  z-index: 1;
+}
+
+.error-message {
+  color: #dc2626;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 12px;
+  background-color: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 .subtitle {
@@ -38,17 +295,27 @@ h2 {
   color: #666;
   font-size: 14px;
   margin-bottom: 25px;
+  position: relative;
+  z-index: 1;
 }
 
 input {
   width: 100%;
   padding: 12px 14px;
   border-radius: 6px;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   font-size: 14px;
   margin-bottom: 16px;
   outline: none;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  background: white;
+}
+
+input:focus {
+  border-color: #047857;
+  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.1);
 }
 
 /* Password input wrapper with eye icon */
@@ -56,6 +323,7 @@ input {
   position: relative;
   width: 100%;
   margin-bottom: 16px;
+  z-index: 5;
 }
 
 .password-input-wrapper input {
@@ -74,11 +342,26 @@ input {
   padding: 0;
   display: flex;
   align-items: center;
-  color: #666;
+  justify-content: center;
+  color: #000000;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+}
+
+.password-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #000000;
+  fill: none;
 }
 
 .password-toggle-btn:hover {
-  color: #333;
+  color: #333333;
+}
+
+.password-toggle-btn:hover svg {
+  stroke: #333333;
 }
 
 .password-toggle-btn:disabled {
@@ -94,6 +377,8 @@ input {
   background: #f9fafb;
   border-radius: 6px;
   border: 1px solid #e5e7eb;
+  position: relative;
+  z-index: 1;
 }
 
 .validation-item {
@@ -126,13 +411,15 @@ input {
   cursor: pointer;
   margin-top: 8px;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .show-password-checkbox input[type="checkbox"] {
   width: auto;
   margin: 0;
   cursor: pointer;
-  accent-color: #0066ff;
+  accent-color: #047857;
 }
 
 .show-password-checkbox span {
@@ -142,6 +429,8 @@ input {
 .btn-group {
   display: flex;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .btn {
@@ -150,18 +439,46 @@ input {
   border-radius: 6px;
   cursor: pointer;
   border: none;
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
 .btn.primary {
-  background: #0066ff;
+  background: #047857;
   color: white;
   flex: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: #065f46;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(4, 120, 87, 0.3);
+}
+
+.btn.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);
+}
+
+.btn.primary:focus:not(:disabled) {
+  outline: 2px solid rgba(4, 120, 87, 0.5);
+  outline-offset: 2px;
 }
 
 .btn.cancel {
   background: #fff;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   flex: 1;
+  color: #333;
+}
+
+.btn.cancel:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #999;
 }
 
 .btn.full {
@@ -173,6 +490,32 @@ input {
   width: 100%;
   background: #fff;
   border: 1px solid #ddd;
+  color: #047857;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn.link:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #047857;
+  border-width: 2px;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.15);
+}
+
+.btn.link:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(4, 120, 87, 0.1);
+}
+
+.btn.link:focus:not(:disabled) {
+  outline: 2px solid rgba(4, 120, 87, 0.3);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .toast {
@@ -185,6 +528,265 @@ input {
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.15);
   font-size: 14px;
-  z-index: 999;
+  z-index: 9999;
   text-align: center;
+  border: 2px solid #047857;
+}
+
+/* Mobile flower decorations - hidden on desktop */
+.mobile-flower-left,
+.mobile-flower-right {
+  display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .forgot-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .left-panel {
+    flex: 1;
+    min-height: 50vh;
+    padding: 2rem 1.5rem;
+    background-color: white;
+    justify-content: center;
+    display: flex;
+    overflow: visible;
+  }
+  
+  .left-panel-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-title {
+    font-size: 2.5rem;
+    line-height: 3rem;
+    color: #047857;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    display: block;
+  }
+  
+  .illustration-container {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-logo {
+    width: 280px;
+    max-width: 85%;
+    height: auto;
+    display: block;
+  }
+  
+  .right-panel {
+    flex: 1;
+    padding: 1.5rem;
+    min-height: 50vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .forgot-container {
+    flex-direction: column;
+  }
+  
+  .left-panel {
+    padding: 1.5rem 1rem;
+    min-height: 45vh;
+    background-color: white;
+    justify-content: center;
+    display: flex;
+    overflow: visible;
+  }
+  
+  .left-panel-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-title {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    color: #047857;
+    text-align: center;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  
+  .illustration-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .system-logo {
+    width: 250px;
+    max-width: 80%;
+    height: auto;
+    display: block;
+  }
+  
+  .forgot-box {
+    width: 95%;
+    padding: 1.25rem;
+    max-width: 100%;
+  }
+}
+
+/* iPhone SE and similar small devices (375px) */
+@media (max-width: 480px) {
+  .forgot-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    background-color: white;
+    padding: 1rem;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Background decorative shapes - leaf-like */
+  .forgot-container::before,
+  .forgot-container::after {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    opacity: 0.2;
+    filter: blur(60px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  
+  .forgot-container::before {
+    top: -100px;
+    left: -100px;
+    background: radial-gradient(circle, #047857 0%, transparent 70%);
+    border-radius: 50% 40% 60% 30%;
+    transform: rotate(-20deg);
+  }
+  
+  .forgot-container::after {
+    bottom: -100px;
+    right: -100px;
+    background: radial-gradient(circle, #065f46 0%, transparent 70%);
+    border-radius: 40% 50% 30% 60%;
+    transform: rotate(30deg);
+  }
+  
+  /* Mobile Flower Decorations - Show on mobile */
+  .mobile-flower-left {
+    position: fixed;
+    top: 10px;
+    left: 5px;
+    width: 140px;
+    height: 140px;
+    background-image: url('/DesignCorner.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 2;
+    pointer-events: none;
+    display: block !important;
+    opacity: 0.7;
+  }
+  
+  .mobile-flower-right {
+    position: fixed;
+    bottom: 10px;
+    right: 5px;
+    width: 140px;
+    height: 140px;
+    background-image: url('/DesignCorner.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 2;
+    pointer-events: none;
+    display: block !important;
+    opacity: 0.7;
+    transform: rotate(180deg);
+  }
+  
+  .left-panel {
+    display: none !important;
+  }
+  
+  .decorative-shapes {
+    display: none !important;
+  }
+  
+  .right-panel {
+    padding: 0;
+    flex: 1;
+    min-height: auto;
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .forgot-box {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+    margin: 0;
+    background-color: #f8faf9;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+  }
+  
+  h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  input {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+  
+  .btn {
+    padding: 0.7rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Very small devices (320px and below) */
+@media (max-width: 320px) {
+  .system-title {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+  
+  .system-logo {
+    width: 180px;
+    max-width: 70%;
+  }
 }
