@@ -188,24 +188,71 @@
   position: relative;
   display: flex;
   align-items: center;
+  overflow: visible;
 }
 
 .password-wrapper input {
   flex: 1;
-  padding-right: 40px; /* space for eye icon */
+  padding-right: 45px; /* increased space for eye icon */
 }
 
 .eye-icon {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
   background: none;
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: auto;
+  min-width: 24px;
+  min-height: 24px;
+  overflow: visible;
+}
+
+.eye-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #333;
+  fill: none;
+  pointer-events: none;
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.eye-icon:hover svg {
+  stroke: #047857;
+}
+
+/* Show password checkbox */
+.show-password-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  user-select: none;
+}
+
+.show-password-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #047857;
+  margin: 0;
+}
+
+.show-password-checkbox span {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
 }
 
 /* Options row */

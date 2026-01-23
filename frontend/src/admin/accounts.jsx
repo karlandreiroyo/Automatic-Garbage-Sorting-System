@@ -45,6 +45,11 @@ const Accounts = () => {
   const [showCreateConfirmModal, setShowCreateConfirmModal] = useState(false);
   const [pendingCreateData, setPendingCreateData] = useState(null);
   
+  // Alert/Error modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Alert');
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -87,7 +92,9 @@ const Accounts = () => {
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error.message);
-      alert('Error fetching users: ' + error.message);
+      setAlertTitle('Error');
+      setAlertMessage('Error fetching users: ' + error.message);
+      setShowAlertModal(true);
     } finally {
       setLoading(false);
     }
@@ -129,6 +136,14 @@ const Accounts = () => {
           .eq('id', user.id);
 
         if (error) throw error;
+
+        // ADD ACTIVITY LOGGING HERE
+        const actionText = newStatus === 'INACTIVE' ? 'archived' : 'activated';
+        await supabase.from('activity_logs').insert([{
+          activity_type: newStatus === 'INACTIVE' ? 'USER_ARCHIVED' : 'USER_ACTIVATED',
+          description: `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ${user.first_name} ${user.last_name}`,
+          user_id: user.id
+        }]);
         
         setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         setShowConfirmModal(false);
@@ -136,7 +151,9 @@ const Accounts = () => {
         setConfirmAction(null);
         showSuccessNotification(`Employee ${actionLabel}d successfully!`);
       } catch (error) {
-        alert('Error: ' + error.message);
+        setAlertTitle('Error');
+        setAlertMessage('Error: ' + error.message);
+        setShowAlertModal(true);
       } finally {
         setLoading(false);
       }
@@ -315,25 +332,6 @@ const Accounts = () => {
     setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
   };
 
-  // Generate password function (for Generate button)
-  const generateDefaultPassword = () => {
-    const length = 12;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
-    let generated = "";
-    
-    // Ensure requirements are met
-    generated += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]; // Capital Letter
-    generated += "0123456789"[Math.floor(Math.random() * 10)]; // Number
-    generated += "!@#$%^&*()"[Math.floor(Math.random() * 10)]; // Special Char
-    
-    for (let i = 0; i < length - 3; ++i) {
-      generated += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    
-    // Shuffle
-    return generated.split('').sort(() => 0.5 - Math.random()).join('');
-  };
-
   const handleAddEmployee = async (e) => {
     e.preventDefault();
     
@@ -356,7 +354,12 @@ const Accounts = () => {
     // Show confirmation modal instead of window.confirm
     setPendingCreateData({ ...formData });
     setShowCreateConfirmModal(true);
-};
+  };
+
+  const handleCancelCreate = () => {
+    setShowCreateConfirmModal(false);
+    setPendingCreateData(null);
+  };
 
 const handleConfirmCreate = async () => {
   if (!pendingCreateData) return;
@@ -375,7 +378,9 @@ const handleConfirmCreate = async () => {
           .single();
 
         if (existingUser) {
-          alert('This Gmail account (or a version of it with different dots) is already registered.');
+          setAlertTitle('Account Already Exists');
+          setAlertMessage('This Gmail account (or a version of it with different dots) is already registered.');
+          setShowAlertModal(true);
           setLoading(false);
           return;
         }
@@ -404,8 +409,20 @@ const handleConfirmCreate = async () => {
       }]);
 
       if (dbError) throw dbError;
+
+      // 5. Activity Logging (from backend/lei branch)
+      try {
+        await supabase.from('activity_logs').insert([{
+          activity_type: 'USER_ADDED',
+          description: `Added ${pendingCreateData.first_name} ${pendingCreateData.last_name} as a ${pendingCreateData.role}`,
+          user_id: null
+        }]);
+      } catch (logError) {
+        // Don't fail the user creation if activity logging fails
+        console.error('Activity logging failed:', logError);
+      }
       
-      // 5. Success UI cleanup
+      // 6. Success UI cleanup
       setShowAddModal(false);
       setShowCreateConfirmModal(false);
       setPendingCreateData(null);
@@ -419,28 +436,23 @@ const handleConfirmCreate = async () => {
       fetchUsers();
       showSuccessNotification('Employee account created successfully!');
     } catch (error) {
-      alert('Error: ' + error.message);
+      setAlertTitle('Error');
+      setAlertMessage('Error: ' + error.message);
+      setShowAlertModal(true);
     } finally {
       setLoading(false);
     }
-};
+  };
 
-const handleCancelCreate = () => {
-  setShowCreateConfirmModal(false);
-  setPendingCreateData(null);
-};
-
-  const handleUpdateEmployee = async (e) => {
+const handleUpdateEmployee = async (e) => {
   e.preventDefault();
 
-  // Validate all required fields
   const newErrors = {};
   ['first_name', 'last_name'].forEach(f => {
     const err = validateEditField(f, editingUser[f]);
     if (err) newErrors[f] = err;
   });
 
-  // Also validate middle_name if it has a value
   if (editingUser.middle_name) {
     const err = validateEditField('middle_name', editingUser.middle_name);
     if (err) newErrors['middle_name'] = err;
@@ -452,7 +464,7 @@ const handleCancelCreate = () => {
     return;
   }
 
-  // Show confirmation modal instead of window.confirm
+  // Show save confirmation modal
   setPendingSaveData({ ...editingUser });
   setShowSaveConfirmModal(true);
 };
@@ -475,16 +487,25 @@ const handleConfirmSave = async () => {
 
     if (error) throw error;
 
+    // ADD ACTIVITY LOGGING HERE
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'USER_UPDATED',
+      description: `Updated ${pendingSaveData.first_name} ${pendingSaveData.last_name}'s information`,
+      user_id: pendingSaveData.id
+    }]);
+
     setEditingUser(null);
+    setPendingSaveData(null);
+    setShowSaveConfirmModal(false);
     setEditErrors({});
     setEditTouched({});
-    setShowSaveConfirmModal(false);
-    setPendingSaveData(null);
-    await fetchUsers(); // Wait for refresh
+    await fetchUsers();
     showSuccessNotification('Employee updated successfully!');
   } catch (error) {
     console.error("Supabase Error:", error.message);
-    alert('Error: ' + error.message);
+    setAlertTitle('Error');
+    setAlertMessage('Error: ' + error.message);
+    setShowAlertModal(true);
   } finally {
     setLoading(false);
   }
@@ -1046,6 +1067,29 @@ const handleCancelSave = () => {
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alert/Error Modal */}
+      {showAlertModal && (
+        <div className="confirm-modal-overlay" onClick={() => setShowAlertModal(false)}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">{alertTitle}</h3>
+            <p className="confirm-modal-message">
+              {alertMessage}
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-ok" 
+                onClick={() => setShowAlertModal(false)}
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

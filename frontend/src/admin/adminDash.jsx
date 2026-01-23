@@ -45,7 +45,7 @@ const AdminDash = () => {
   const [stats, setStats] = useState({
     totalBins: 0,
     overallItemsSorted: 0,
-    avgProcessingTime: 2.3,
+    avgProcessingTime: 0,
     collectors: 0,
     supervisor: 0,
     totalEmployees: 0
@@ -95,7 +95,7 @@ const fetchDashboardData = async () => {
     // Calculate average processing time
     const avgTime = itemsData?.length > 0
       ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
-      : 2.3;
+      : 0;
 
     // Create distribution data by category
     const categoryCounts = {
@@ -161,6 +161,42 @@ const fetchDashboardData = async () => {
 
   const maxCount = Math.max(...distribution.map(d => d.count), 1);
 
+  const calculateYAxisLabels = () => {
+  const maxValue = Math.max(...distribution.map(d => d.count), 0);
+  
+  // Round up to nearest nice number
+  let roundedMax;
+  if (maxValue === 0) {
+    roundedMax = 100; // Default minimum scale
+  } else if (maxValue <= 10) {
+    roundedMax = 10;
+  } else if (maxValue <= 50) {
+    roundedMax = 50;
+  } else if (maxValue <= 100) {
+    roundedMax = 100;
+  } else if (maxValue <= 200) {
+    roundedMax = 200;
+  } else if (maxValue <= 500) {
+    roundedMax = 500;
+  } else {
+    roundedMax = Math.ceil(maxValue / 100) * 100;
+  }
+  
+  // Create 9 labels (matching your current design)
+  const step = roundedMax / 8;
+  return [
+    roundedMax,
+    Math.round(roundedMax - step),
+    Math.round(roundedMax - (step * 2)),
+    Math.round(roundedMax - (step * 3)),
+    Math.round(roundedMax - (step * 4)),
+    Math.round(roundedMax - (step * 5)),
+    Math.round(roundedMax - (step * 6)),
+    Math.round(roundedMax - (step * 7)),
+    0
+  ];
+};
+
   return (
     <div className="admin-dash-container">
       <div className="dashboard-title-section">
@@ -220,39 +256,55 @@ const fetchDashboardData = async () => {
 
       <div className="main-charts-layout">
         <div className="chart-card-full distribution-section">
-          <h3 className="section-title">Today's Waste Distribution</h3>
-          <div className="visual-chart-area">
-            <div className="y-axis-labels">
-              <span>200</span><span>175</span><span>150</span><span>125</span><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
-            </div>
-            <div className="bars-flex-container">
-              {distribution.map((item, index) => (
-                <div key={index} className="single-bar-column">
-                  <div 
-                    className="actual-bar" 
-                    style={{ 
-                      height: `${(item.count / 200) * 100}%`,
-                      backgroundColor: '#10b981'
-                    }}
-                  ></div>
-                  <span className="bar-name">{item.name}</span>
-                </div>
-              ))}
-            </div>
+  <h3 className="section-title">Today's Waste Distribution</h3>
+  <div className="visual-chart-area">
+    <div className="y-axis-labels">
+      {calculateYAxisLabels().map((label, index) => (
+        <span key={index}>{label}</span>
+      ))}
+    </div>
+    <div className="bars-flex-container">
+      {distribution.length > 0 ? (
+        distribution.map((item, index) => (
+          <div key={index} className="single-bar-column">
+            {item.count > 0 && (
+              <div 
+                className="actual-bar" 
+                style={{ 
+                  height: `${(item.count / calculateYAxisLabels()[0]) * 100}%`,
+                  backgroundColor: '#10b981'
+                }}
+              ></div>
+            )}
+            <span className="bar-name">{item.name}</span>
           </div>
+        ))
+      ) : (
+        <div style={{ textAlign: 'center', width: '100%', padding: '20px', color: '#666' }}>
+          No data available for today
         </div>
+      )}
+    </div>
+  </div>
+</div>
 
         <div className="activity-card-full recent-activity-section">
-          <h3 className="section-title">Recent Activity</h3>
-          <div className="activity-scroll-list">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="activity-row">
-                <span className="act-text">{activity.text}</span>
-                <span className="act-timestamp">{activity.time}</span>
-              </div>
-            ))}
-          </div>
+  <h3 className="section-title">Recent Activity</h3>
+  <div className="activity-scroll-list">
+    {recentActivity.length > 0 ? (
+      recentActivity.map((activity, index) => (
+        <div key={index} className="activity-row">
+          <span className="act-text">{activity.text}</span>
+          <span className="act-timestamp">{activity.time}</span>
         </div>
+      ))
+    ) : (
+      <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+        No recent activity
+      </div>
+    )}
+  </div>
+</div>
       </div>
     </div>
   );

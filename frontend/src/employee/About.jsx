@@ -70,26 +70,21 @@ const MailIcon = () => (
 );
 
 const About = () => {
+  const [openSections, setOpenSections] = useState({
+    specs: false,
+    about: false,
+    team: false
+  });
+
+  const toggleSection = (section) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   return (
     <div className="about-container">
-      {/* WELCOME MESSAGE */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginBottom: '30px', 
-        padding: '20px',
-        backgroundColor: '#f8f9fa',
-        borderRadius: '8px'
-      }}>
-        <h2 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          color: '#065F46',
-          margin: 0
-        }}>
-          Welcome Garbage Collector Andrei!!
-        </h2>
-      </div>
 
       {/* HEADER */}
       <div className="about-header">
@@ -183,100 +178,116 @@ const About = () => {
       {/* INFO SECTIONS */}
       <div className="info-sections-grid">
         {/* SPECS */}
-        <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header purple">
+        <div className="info-card">
+          <div className="info-card-header purple" onClick={() => toggleSection('specs')}>
             <div className="info-icon-wrapper">
               <GearIcon />
             </div>
             <h3>Specs</h3>
-          </div>
-          <div className="info-card-content">
-            <div className="specs-grid">
-              <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
-              <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
-              <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
-              <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
-              <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
-              <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
-              <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
-              <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
+            <div className={`chevron ${openSections.specs ? 'open' : ''}`}>
+              <ChevronDown />
             </div>
           </div>
+          {openSections.specs && (
+            <div className="info-card-content">
+              <div className="specs-grid">
+                <div className="spec-item"><strong>Dimensions:</strong> <span>120cm x 80cm x 150cm</span></div>
+                <div className="spec-item"><strong>Weight:</strong> <span>85kg</span></div>
+                <div className="spec-item"><strong>Power:</strong> <span>220V AC, 500W</span></div>
+                <div className="spec-item"><strong>Capacity:</strong> <span>300L total (3 x 100L bins)</span></div>
+                <div className="spec-item"><strong>Sorting Speed:</strong> <span>30 items/minute</span></div>
+                <div className="spec-item"><strong>Accuracy:</strong> <span>98.2% classification rate</span></div>
+                <div className="spec-item"><strong>Sensors:</strong> <span>AI camera, ultrasonic, weight</span></div>
+                <div className="spec-item"><strong>Connectivity:</strong> <span>Wi-Fi, Bluetooth, IoT enabled</span></div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ABOUT PROJECT */}
-        <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header yellow">
+        <div className="info-card">
+          <div className="info-card-header yellow" onClick={() => toggleSection('about')}>
             <div className="info-icon-wrapper">
               <InfoIcon />
             </div>
             <h3>About Project</h3>
+            <div className={`chevron ${openSections.about ? 'open' : ''}`}>
+              <ChevronDown />
+            </div>
           </div>
-          <div className="info-card-content">
-            <p>
-              The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
-              waste management through artificial intelligence and automation. Our system uses advanced 
-              computer vision and machine learning algorithms to accurately classify waste into three 
-              categories: biodegradable, recyclable, and non-biodegradable materials.
-            </p>
-            <p>
-              By automating the sorting process, we reduce human error, increase recycling rates, and 
-              minimize contamination in waste streams. The system provides real-time monitoring and 
-              analytics, helping facilities optimize their waste management operations while contributing 
-              to environmental sustainability.
-            </p>
-          </div>
+          {openSections.about && (
+            <div className="info-card-content">
+              <p>
+                The Automatic Garbage Sorting System is an innovative solution designed to revolutionize 
+                waste management through artificial intelligence and automation. Our system uses advanced 
+                computer vision and machine learning algorithms to accurately classify waste into three 
+                categories: biodegradable, recyclable, and non-biodegradable materials.
+              </p>
+              <p>
+                By automating the sorting process, we reduce human error, increase recycling rates, and 
+                minimize contamination in waste streams. The system provides real-time monitoring and 
+                analytics, helping facilities optimize their waste management operations while contributing 
+                to environmental sustainability.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* TEAM MEMBERS */}
-        <div className="info-card" style={{ border: '2px solid #000000' }}>
-          <div className="info-card-header cyan">
+        <div className="info-card">
+          <div className="info-card-header cyan" onClick={() => toggleSection('team')}>
             <div className="info-icon-wrapper">
               <UsersIcon />
             </div>
             <h3>Team Members</h3>
+            <div className={`chevron ${openSections.team ? 'open' : ''}`}>
+              <ChevronDown />
+            </div>
           </div>
-          <div className="info-card-content">
-            <div className="team-list">
-              <div className="team-member">
-                <div className="member-avatar">KR</div>
-                <div className="member-info">
-                  <strong>Karl Andrei Royo</strong>
-                  <span>Project Manager, Hardware, Backend</span>
+          {openSections.team && (
+            <div className="info-card-content">
+              <div className="team-list">
+                <div className="team-member">
+                  <div className="member-avatar">KR</div>
+                  <div className="member-info">
+                    <strong>Karl Andrei Royo</strong>
+                    <span>Project Manager, Hardware, Backend</span>
+                  </div>
                 </div>
-              </div>
-              <div className="team-member">
-                <div className="member-avatar">KA</div>
-                <div className="member-info">
-                  <strong>Khyl Arcilla</strong>
-                  <span>Lead Hardware</span>
+                <div className="team-member">
+                  <div className="member-avatar">KA</div>
+                  <div className="member-info">
+                    <strong>Khyl Arcilla</strong>
+                    <span>Lead Hardware</span>
+                  </div>
                 </div>
-              </div>
-              <div className="team-member">
-                <div className="member-avatar">LB</div>
-                <div className="member-info">
-                  <strong>Lei Barcelona</strong>
-                  <span>Backend and Database</span>
+                <div className="team-member">
+                  <div className="member-avatar">LB</div>
+                  <div className="member-info">
+                    <strong>Lei Barcelona</strong>
+                    <span>Backend and Database</span>
+                  </div>
                 </div>
-              </div>
-              <div className="team-member">
-                <div className="member-avatar">EG</div>
-                <div className="member-info">
-                  <strong>Eugene Gamotia</strong>
-                  <span>Frontend</span>
+                <div className="team-member">
+                  <div className="member-avatar">EG</div>
+                  <div className="member-info">
+                    <strong>Eugene Gamotia</strong>
+                    <span>Frontend</span>
+                  </div>
                 </div>
-              </div>
-              <div className="team-member">
-                <div className="member-avatar">JS</div>
-                <div className="member-info">
-                  <strong>John Ivan Santos</strong>
-                  <span>Frontend</span>              
+                <div className="team-member">
+                  <div className="member-avatar">JS</div>
+                  <div className="member-info">
+                    <strong>John Ivan Santos</strong>
+                    <span>Frontend</span>              
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      </div>
+
+      </div> {/* end of info-sections-grid */}
 
       {/* FOOTER */}
       <footer className="footer-container">
@@ -284,17 +295,7 @@ const About = () => {
           <div className="footer-item">
             <MailIcon />
             <div className="footer-text">
-              <strong>Email</strong>
-              <a href="mailto:info@sortingsystem.com">info@sortingsystem.com</a>
-            </div>
-          </div>
-          <div className="footer-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            </svg>
-            <div className="footer-text">
-              <strong>Phone</strong>
-              <span>+1 (555) 123-4567</span>
+              <a href="mailto:info@sortingsystem.com">karlandreiroyo86@gmail.com</a>
             </div>
           </div>
           <div className="footer-item">
@@ -303,7 +304,6 @@ const About = () => {
               <circle cx="12" cy="10" r="3"></circle>
             </svg>
             <div className="footer-text">
-              <strong>Address</strong>
               <span>Brgy. 176, Bagong Silang, Caloocan City, 1428</span>
             </div>
           </div>
@@ -313,7 +313,6 @@ const About = () => {
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
             <div className="footer-text">
-              <strong>Business Hours</strong>
               <span>Mon–Fri: 9AM–6PM<br />Sat: 9AM–1PM<br />Sun: Closed</span>
             </div>
           </div>

@@ -295,6 +295,11 @@ const BinMonitoring = () => {
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isNotificationHiding, setIsNotificationHiding] = useState(false);
   
+  // Alert modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Alert');
+  
 const fetchCollectors = async () => {
   try {
     const { data, error } = await supabase
@@ -608,6 +613,12 @@ const updateBinFillLevels = () => {
         )
       );
     }
+    // After updating local state, add:
+await supabase.from('activity_logs').insert([{
+  activity_type: 'BIN_DRAINED',
+  description: `Drained ${bins.find(b => b.id === binId)?.name || 'Bin'}`,
+  bin_id: binId
+}]);
   };
 
   /**
@@ -685,6 +696,15 @@ const updateBinFillLevels = () => {
       // Close the modal even if there's an error
       setShowDrainAllModal(false);
     }
+
+      // After closing the modal, add:
+      const selectedBin = bins.find(b => b.id === selectedBinId);
+        await supabase.from('activity_logs').insert([{
+          activity_type: 'BIN_DRAINED_ALL',
+          description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
+          bin_id: selectedBinId
+      }]);
+
   };
 
   /**
@@ -826,12 +846,16 @@ const handleAddBin = async (e) => {
   e.preventDefault();
   
   if (!binFormData.assigned_collector_id) {
-    alert('Please select a collector to assign to this bin.');
+    setAlertTitle('Validation Error');
+    setAlertMessage('Please select a collector to assign to this bin.');
+    setShowAlertModal(true);
     return;
   }
 
   if (!binFormData.location || !binFormData.location.trim()) {
-    alert('Please enter the bin location.');
+    setAlertTitle('Validation Error');
+    setAlertMessage('Please enter the bin location.');
+    setShowAlertModal(true);
     return;
   }
   
@@ -952,7 +976,9 @@ const handleAddBin = async (e) => {
     showSuccessNotification(`${newBinName} created successfully at ${newBinData.location}!`);
   } catch (error) {
     console.error('Error adding bin:', error);
-    alert('Error adding bin: ' + error.message);
+    setAlertTitle('Error');
+    setAlertMessage('Error adding bin: ' + error.message);
+    setShowAlertModal(true);
   } finally {
     setLoading(false);
   }
@@ -1080,6 +1106,56 @@ const handleAddBin = async (e) => {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlertModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowAlertModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+        >
+          <div 
+            className="modal-card" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <div className="modal-icon-wrapper">
+              <AlertIcon />
+            </div>
+            <h2 style={{ textAlign: 'center', marginBottom: '10px', color: '#1f2937' }}>{alertTitle}</h2>
+            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
+              {alertMessage}
+            </p>
+            <div className="modal-btn-group">
+              <button 
+                className="btn-confirm" 
+                onClick={() => setShowAlertModal(false)}
+                style={{ width: '100%' }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

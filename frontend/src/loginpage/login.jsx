@@ -30,6 +30,14 @@ const EyeIcon = ({ visible }) => (
   )
 );
 
+const AlertIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+);
+
 function Login({ setIsLoggedIn, setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,6 +47,12 @@ function Login({ setIsLoggedIn, setUserRole }) {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutTimeRemaining, setLockoutTimeRemaining] = useState(0);
+  
+  // Alert modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Alert');
+  
   const navigate = useNavigate();
 
   // Backend API base URL
@@ -102,7 +116,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
     
     // Prevent login if locked out
     if (isLockedOut) {
-      alert(`Login is temporarily disabled. Please wait ${formatTimeRemaining(lockoutTimeRemaining)} before trying again.`);
+      setAlertTitle('Login Disabled');
+      setAlertMessage(`Login is temporarily disabled. Please wait ${formatTimeRemaining(lockoutTimeRemaining)} before trying again.`);
+      setShowAlertModal(true);
       return;
     }
 
@@ -150,9 +166,13 @@ function Login({ setIsLoggedIn, setUserRole }) {
             // Don't block the user flow if alert fails
           }
 
-          alert('Too many failed login attempts. Login is disabled for 3 minutes. A security alert has been sent to your email.');
+          setAlertTitle('Too Many Failed Attempts');
+          setAlertMessage('Too many failed login attempts. Login is disabled for 3 minutes. A security alert has been sent to your email.');
+          setShowAlertModal(true);
         } else {
-          alert(`Invalid email or password! ${3 - newAttempts} attempt(s) remaining.`);
+          setAlertTitle('Invalid Credentials');
+          setAlertMessage(`Invalid email or password! ${3 - newAttempts} attempt(s) remaining.`);
+          setShowAlertModal(true);
         }
         setLoading(false);
         return;
@@ -171,7 +191,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
         .single();
 
       if (userError || !userData) {
-        alert('User data not found!');
+        setAlertTitle('Error');
+        setAlertMessage('User data not found!');
+        setShowAlertModal(true);
         setLoading(false);
         return;
       }
@@ -180,7 +202,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
       if (userData.status === 'INACTIVE') {
         // Sign out immediately so they don't keep an active auth session
         await supabase.auth.signOut(); 
-        alert('Your account is inactive. Please contact the administrator to regain access.');
+        setAlertTitle('Account Inactive');
+        setAlertMessage('Your account is inactive. Please contact the administrator to regain access.');
+        setShowAlertModal(true);
         setLoading(false);
         return;
       }
@@ -194,7 +218,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
       } else if (userData.role === 'SUPERVISOR') {
         reactRole = 'supervisor';
       } else {
-        alert('Invalid user role!');
+        setAlertTitle('Error');
+        setAlertMessage('Invalid user role!');
+        setShowAlertModal(true);
         setLoading(false);
         return;
       }
@@ -212,7 +238,9 @@ function Login({ setIsLoggedIn, setUserRole }) {
       try {
         const accessToken = authData?.session?.access_token;
         if (!accessToken) {
-          alert('Login session not found. Please try again.');
+          setAlertTitle('Error');
+          setAlertMessage('Login session not found. Please try again.');
+          setShowAlertModal(true);
           return;
         }
 
@@ -232,16 +260,22 @@ function Login({ setIsLoggedIn, setUserRole }) {
           sessionStorage.setItem('pendingLoginAccessToken', accessToken);
           navigate('/verify-login');
         } else {
-          alert(data.message || 'Failed to send verification code');
+          setAlertTitle('Error');
+          setAlertMessage(data.message || 'Failed to send verification code');
+          setShowAlertModal(true);
         }
       } catch (error) {
         console.error('Send verification error:', error);
-        alert('Failed to send verification code. Please try again.');
+        setAlertTitle('Error');
+        setAlertMessage('Failed to send verification code. Please try again.');
+        setShowAlertModal(true);
       }
 
     } catch (error) {
       console.error('Login error:', error);
-      alert('An error occurred during login. Please try again.');
+      setAlertTitle('Error');
+      setAlertMessage('An error occurred during login. Please try again.');
+      setShowAlertModal(true);
     } finally {
       setLoading(false);
     }
@@ -360,6 +394,66 @@ function Login({ setIsLoggedIn, setUserRole }) {
           </div>
         </div>
       </div>
+
+      {/* Alert Modal */}
+      {showAlertModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowAlertModal(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+        >
+          <div 
+            className="modal-box" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}
+          >
+            <div style={{ marginBottom: '20px' }}>
+              <AlertIcon />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', marginBottom: '10px' }}>
+              {alertTitle}
+            </h3>
+            <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem', whiteSpace: 'pre-line' }}>
+              {alertMessage}
+            </p>
+            <button 
+              onClick={() => setShowAlertModal(false)}
+              style={{
+                padding: '10px 24px',
+                border: 'none',
+                borderRadius: '8px',
+                background: '#047857',
+                color: 'white',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.95rem',
+                width: '100%'
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

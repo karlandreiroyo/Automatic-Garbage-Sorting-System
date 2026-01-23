@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../utils/supabase');
 const { generateVerificationCode, verificationCodes } = require('../utils/verification');
 const { getSmtpConfig, sendResetPasswordVerificationEmail } = require('../utils/mailer');
+const { isValidPhilippineNumber, formatPhilippineNumber, normalizePhilippineNumber } = require('../utils/phoneValidation');
 
 // Route: Send password reset code
 router.post('/send-code', async (req, res) => {
@@ -87,10 +88,86 @@ router.post('/send-code', async (req, res) => {
       
       user = userData;
     } else {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please use email address for password reset' 
-      });
+      // Check if it's a valid Philippine phone number
+      const phoneInput = emailOrMobile.trim();
+      
+      if (!isValidPhilippineNumber(phoneInput)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Please use a valid email address or Philippine phone number (e.g., +639123456789, 09123456789, or 9123456789)' 
+        });
+      }
+      
+      // Format phone number to standard format
+      const formattedPhone = formatPhilippineNumber(phoneInput);
+      if (!formattedPhone) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid phone number format. Please use Philippine phone number format.' 
+        });
+      }
+      
+      console.log('Searching for user with phone:', formattedPhone);
+      
+      // Find user by phone number
+      // Try different possible field names: phone, phone_number, mobile
+      let userData = null;
+      let userError = null;
+      
+      // Method 1: Try 'phone' field
+      let result = await supabase
+        .from('users')
+        .select('id, email, auth_id, status, phone, phone_number, mobile')
+        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
+        .maybeSingle();
+      
+      if (result.data) {
+        userData = result.data;
+        console.log('User found with phone:', userData);
+      } else {
+        // Method 2: Try case-insensitive search if phone field exists
+        const allUsers = await supabase
+          .from('users')
+          .select('id, email, auth_id, status, phone, phone_number, mobile')
+          .limit(100);
+        
+        // Search in memory for matching phone
+        if (allUsers.data) {
+          userData = allUsers.data.find(u => {
+            const userPhone = u.phone || u.phone_number || u.mobile;
+            if (!userPhone) return false;
+            const normalizedUserPhone = normalizePhilippineNumber(userPhone);
+            return normalizedUserPhone === formattedPhone || 
+                   normalizePhilippineNumber(userPhone) === normalizePhilippineNumber(phoneInput);
+          });
+        }
+        
+        if (!userData) {
+          userError = result.error || 'User not found';
+        }
+      }
+      
+      if (!userData) {
+        console.error('User lookup failed for phone:', formattedPhone);
+        console.error('Error details:', userError);
+        
+        return res.status(404).json({ 
+          success: false, 
+          message: `User not found with phone number: ${formattedPhone}. Please make sure the account was created with this phone number.` 
+        });
+      }
+      
+      // Get email from user data
+      if (!userData.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'User account does not have an email address. Please contact administrator.' 
+        });
+      }
+      
+      email = userData.email.toLowerCase();
+      user = userData;
+      console.log('User found via phone number. Email:', email);
     }
 
     // Check if user is active
@@ -239,13 +316,45 @@ router.post('/verify-code', async (req, res) => {
     }
 
     const isEmail = emailOrMobile.includes('@');
-    const email = isEmail ? emailOrMobile.trim().toLowerCase() : null;
-
-    if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please use email address' 
-      });
+    let email = null;
+    
+    if (isEmail) {
+      email = emailOrMobile.trim().toLowerCase();
+    } else {
+      // Check if it's a valid Philippine phone number
+      const phoneInput = emailOrMobile.trim();
+      
+      if (!isValidPhilippineNumber(phoneInput)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Please use a valid email address or Philippine phone number' 
+        });
+      }
+      
+      // Format phone number
+      const formattedPhone = formatPhilippineNumber(phoneInput);
+      if (!formattedPhone) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid phone number format' 
+        });
+      }
+      
+      // Find user by phone number to get their email
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, email, auth_id, status, phone, phone_number, mobile')
+        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
+        .maybeSingle();
+      
+      if (userError || !userData || !userData.email) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found with this phone number' 
+        });
+      }
+      
+      email = userData.email.toLowerCase();
     }
 
     // Get stored verification code
@@ -417,10 +526,52 @@ router.post('/resend-code', async (req, res) => {
 
       user = userData;
     } else {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please use email address for password reset' 
-      });
+      // Check if it's a valid Philippine phone number
+      const phoneInput = emailOrMobile.trim();
+      
+      if (!isValidPhilippineNumber(phoneInput)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Please use a valid email address or Philippine phone number (e.g., +639123456789, 09123456789, or 9123456789)' 
+        });
+      }
+      
+      // Format phone number to standard format
+      const formattedPhone = formatPhilippineNumber(phoneInput);
+      if (!formattedPhone) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid phone number format. Please use Philippine phone number format.' 
+        });
+      }
+      
+      console.log('Searching for user with phone:', formattedPhone);
+      
+      // Find user by phone number
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, email, auth_id, status, phone, phone_number, mobile')
+        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
+        .maybeSingle();
+      
+      if (userError || !userData) {
+        return res.status(404).json({ 
+          success: false, 
+          message: `User not found with phone number: ${formattedPhone}` 
+        });
+      }
+      
+      // Get email from user data
+      if (!userData.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'User account does not have an email address. Please contact administrator.' 
+        });
+      }
+      
+      email = userData.email.toLowerCase();
+      user = userData;
+      console.log('User found via phone number. Email:', email);
     }
 
     if (user.status === 'INACTIVE') {

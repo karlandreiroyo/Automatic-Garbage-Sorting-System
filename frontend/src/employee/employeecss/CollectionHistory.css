@@ -101,7 +101,7 @@
 /* Stats Row - Compact 3 Column */
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
@@ -148,6 +148,11 @@
 .bg-purple-light {
   background-color: #f3e5f5;
   color: #9c27b0;
+}
+
+.bg-orange-light {
+  background-color: #fff3e0;
+  color: #f57c00;
 }
 
 .stats-content {
