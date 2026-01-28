@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/accounts.css';
+import AddressDropdowns from '../components/AddressDropdowns';
 
 // --- Icons ---
 const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
@@ -10,9 +11,9 @@ const SaveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="non
 const ArchiveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>;
 const ActivateIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
 const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
-const EyeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
-const EyeOffIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
 const AlertIcon = () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
@@ -22,8 +23,6 @@ const Accounts = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [editErrors, setEditErrors] = useState({});
@@ -31,6 +30,11 @@ const Accounts = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isNotificationHiding, setIsNotificationHiding] = useState(false);
+  
+  // Verify state for Add Employee (email verification)
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState(null); // Store password generated during verification
   
   // Confirmation modal states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -50,27 +54,47 @@ const Accounts = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
   
+  // Credentials-sent modal (after Create Account)
+  const [showCredentialsSentModal, setShowCredentialsSentModal] = useState(false);
+  const [lastCreatedEmail, setLastCreatedEmail] = useState('');
+  const [credentialsSentToEmail, setCredentialsSentToEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [resendingEmail, setResendingEmail] = useState(false);
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
   const [formData, setFormData] = useState({
     email: '',
+    second_email: '',
     role: '',
     first_name: '',
     last_name: '',
     middle_name: '',
-    password: '',
-    confirmPassword: '',
+    address: {
+      region: '',
+      province: '',
+      city_municipality: '',
+      barangay: '',
+      street_address: ''
+    }
   });
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    if (showAddModal) {
+      setEmailVerified(false);
+      setGeneratedPassword(null);
+    }
+  }, [showAddModal]);
+
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal) {
+    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal || showCredentialsSentModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -78,7 +102,7 @@ const Accounts = () => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal]);
+  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal, showCredentialsSentModal]);
 
   const fetchUsers = async () => {
     try {
@@ -193,21 +217,33 @@ const Accounts = () => {
         else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middle_name':
-        if (!value.trim()) error = 'Middle name is required';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
-        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
-        break;
-      case 'contact':
-        const contactStr = String(value || '');
-        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
-        if (!contactStr.trim()) {
-          error = 'Contact number is required';
-        } else if (digitsOnly.length < 11) {
-          error = `Remaining ${11 - digitsOnly.length} digits required`;
-        } else if (!digitsOnly.startsWith('09')) {
-          error = 'Contact number must start with 09';
+        // Middle name is optional, but if provided, must be valid
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
+      case 'second_email': {
+        // Second email is optional, but if provided, must be valid email format
+        if (value && value.trim()) {
+          const emailVal = value.trim();
+          const atCount = (emailVal.match(/@/g) || []).length;
+          const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+          if (atCount === 0) {
+            error = 'You need to put @';
+          } else if (atCount > 1) {
+            error = 'Email must contain exactly one @ symbol';
+          } else if (atCount === 1) {
+            if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+              error = 'Email cannot end with @ or a period';
+            } else if (!emailRegex.test(emailVal)) {
+              error = 'Invalid domain format (e.g., .com, .ph)';
+            }
+          }
+        }
+        break;
+      }
       case 'email': {
         const emailVal = value.trim();
         const atCount = (emailVal.match(/@/g) || []).length;
@@ -229,24 +265,43 @@ const Accounts = () => {
         }
         break;
       }
-      case 'password':
-        if (!value) error = 'Password is required';
-        else if (value.length < 8) error = 'Minimum 8 characters required';
-        else if (!/[A-Z]/.test(value)) error = 'Must include at least 1 capital letter';
-        else if (!/[0-9]/.test(value)) error = 'Must include at least 1 number';
-        else if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) error = 'Must include at least 1 special character';
-        break;
-      case 'confirmPassword':
-        if (!value) error = 'Please confirm your password';
-        else if (value !== formData.password) error = 'Passwords do not match';
-        break;
       case 'role':
         if (!value) error = 'Please select an account role';
+        break;
+      case 'region':
+        if (!value) error = 'Region is required';
+        break;
+      case 'province':
+        if (!value) error = 'Province is required';
+        break;
+      case 'city_municipality':
+        if (!value) error = 'City/Municipality is required';
+        break;
+      case 'barangay':
+        if (!value) error = 'Barangay is required';
         break;
       default: 
       break;
     }
     return error;
+  };
+
+  // Validate address fields
+  const validateAddress = () => {
+    const addressErrors = {};
+    if (!formData.address.region) {
+      addressErrors.region = 'Region is required';
+    }
+    if (!formData.address.province) {
+      addressErrors.province = 'Province is required';
+    }
+    if (!formData.address.city_municipality) {
+      addressErrors.city_municipality = 'City/Municipality is required';
+    }
+    if (!formData.address.barangay) {
+      addressErrors.barangay = 'Barangay is required';
+    }
+    return addressErrors;
   };
 
   const validateEditField = (name, value) => {
@@ -268,6 +323,15 @@ const Accounts = () => {
           else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
+      case 'contact': {
+        const contactStr = String(value || '');
+        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
+        if (digitsOnly.length > 0) {
+          if (digitsOnly.length < 11) error = `Remaining ${11 - digitsOnly.length} digits required`;
+          else if (!digitsOnly.startsWith('09')) error = 'Contact number must start with 09';
+        }
+        break;
+      }
       default: break;
     }
     return error;
@@ -279,7 +343,18 @@ const Accounts = () => {
 
     if (['first_name', 'last_name', 'middle_name'].includes(name)) {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
-    } 
+    }
+
+    // Second email: normalize email format
+    if (name === 'second_email') {
+      let cleaned = value.trim().toLowerCase();
+      // Remove multiple @ symbols (keep only first one)
+      const parts = cleaned.split('@');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '@' + parts.slice(1).join('');
+      }
+      finalValue = cleaned;
+    }
     
     // Email Real-time cleaning
     if (name === 'email') {
@@ -297,6 +372,14 @@ const Accounts = () => {
     setFormData(prev => ({ ...prev, [name]: finalValue }));
     setTouched(prev => ({ ...prev, [name]: true }));
     setErrors(prev => ({ ...prev, [name]: validateField(name, finalValue) }));
+    if (name === 'email') {
+      setEmailVerified(false);
+      setGeneratedPassword(null); // Clear password if email changes
+    }
+    if (['first_name', 'last_name'].includes(name)) {
+      setGeneratedPassword(null); // Clear password if name changes (password is based on name)
+      setEmailVerified(false); // Re-verify email to send new password
+    }
   };
 
   const handleBlur = (e) => {
@@ -314,10 +397,13 @@ const Accounts = () => {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
     }
 
-    // Keep Contact logic for "09"
+    // Contact: digits only, must start with 09, max 11 digits
     if (name === 'contact') {
       let digits = value.replace(/\D/g, '');
-      if (!digits.startsWith('09')) digits = '09' + digits;
+      if (digits.length && !digits.startsWith('09')) {
+        if (digits.startsWith('9')) digits = '0' + digits;
+        else digits = '09' + digits;
+      }
       finalValue = digits.slice(0, 11);
     }
 
@@ -332,26 +418,87 @@ const Accounts = () => {
     setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
   };
 
-  const handleAddEmployee = async (e) => {
-    e.preventDefault();
-    
-    // 1. Validate all fields locally first
-    const newErrors = {};
-      ['first_name', 'last_name', 'middle_name', 'email', 'role', 'password', 'confirmPassword'].forEach(f => {
-      const err = validateField(f, formData[f]);
-      if (err) newErrors[f] = err;
-      });
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setTouched({ 
-        first_name: true, last_name: true, email: true, 
-        middle_name: true, role: true, password: true, confirmPassword: true
-      });
+  const handleVerifyEmail = async () => {
+    const emailErr = validateField('email', formData.email);
+    if (emailErr) {
+      setErrors(prev => ({ ...prev, email: emailErr }));
+      setTouched(prev => ({ ...prev, email: true }));
       return;
     }
+    
+    // Check if first_name and last_name are filled (needed to generate password)
+    if (!formData.first_name || !formData.last_name) {
+      setAlertTitle('Name Required');
+      setAlertMessage('Please fill in First Name and Last Name before verifying email. These are needed to generate the password.');
+      setShowAlertModal(true);
+      return;
+    }
+    
+    setVerifyingEmail(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/verify-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: formData.email.trim(),
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          middle_name: formData.middle_name
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setEmailVerified(true);
+        if (data.password) {
+          setGeneratedPassword(data.password);
+        }
+        const msg = data.emailSent 
+          ? 'Email verified and credentials sent! Check the employee\'s email inbox.'
+          : data.message || 'Email verified successfully.';
+        showSuccessNotification(msg);
+        if (data.emailError) {
+          setAlertTitle('Email Sent with Warning');
+          setAlertMessage(`Email verified, but sending credentials failed: ${data.emailError}`);
+          setShowAlertModal(true);
+        }
+      } else {
+        setAlertTitle('Email Verification Failed');
+        setAlertMessage(data.message || 'Could not verify email. Please check and try again.');
+        setShowAlertModal(true);
+      }
+    } catch (err) {
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Email verification failed. Please try again.');
+      setShowAlertModal(true);
+    } finally {
+      setVerifyingEmail(false);
+    }
+  };
 
-    // Show confirmation modal instead of window.confirm
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    if (!emailVerified) {
+      setAlertTitle('Verification Required');
+      setAlertMessage('Please verify the email address before creating the account.');
+      setShowAlertModal(true);
+      return;
+    }
+    const newErrors = {};
+    ['first_name', 'last_name', 'email', 'role'].forEach(f => {
+      const err = validateField(f, formData[f]);
+      if (err) newErrors[f] = err;
+    });
+    // Validate second email if provided (optional)
+    if (formData.second_email && formData.second_email.trim()) {
+      const secondEmailErr = validateField('email', formData.second_email);
+      if (secondEmailErr) newErrors.second_email = secondEmailErr;
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({ first_name: true, last_name: true, email: true, middle_name: true, role: true });
+      return;
+    }
     setPendingCreateData({ ...formData });
     setShowCreateConfirmModal(true);
   };
@@ -363,86 +510,102 @@ const Accounts = () => {
 
 const handleConfirmCreate = async () => {
   if (!pendingCreateData) return;
-
   try {
     setLoading(true);
-
-      // 2. Gmail Normalization Check (Prevents duplicate accounts with different dots)
-      let checkEmail = pendingCreateData.email.trim().toLowerCase();
-      if (checkEmail.endsWith('@gmail.com')) {
-        const [user, dom] = checkEmail.split('@');
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('email')
-          .or(`email.eq.${checkEmail},email.ilike.${user.replace(/\./g, '%')}@${dom}`)
-          .single();
-
-        if (existingUser) {
-          setAlertTitle('Account Already Exists');
-          setAlertMessage('This Gmail account (or a version of it with different dots) is already registered.');
-          setShowAlertModal(true);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Create Auth Account using the password from form
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        password: pendingCreateData.password,
-      });
-
-      if (authError) throw authError;
-
-      // 4. Insert into 'users' table (mapping password to pass_hash)
-      // Note: contact is set to null - employee will update it in their profile
-      const { error: dbError } = await supabase.from('users').insert([{
-        auth_id: authData.user.id,
-        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
+    const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: pendingCreateData.first_name,
+        last_name: pendingCreateData.last_name,
+        middle_name: pendingCreateData.middle_name || '',
+        email: pendingCreateData.email,
+        second_email: pendingCreateData.second_email || '',
         role: pendingCreateData.role,
-        first_name: pendingCreateData.first_name.trim(),
-        last_name: pendingCreateData.last_name.trim(),
-        middle_name: pendingCreateData.middle_name?.trim() || '',
-        contact: null, // NULL allowed - employee will add their contact in profile
-        status: 'ACTIVE',
-        pass_hash: pendingCreateData.password // Storing the password in your required column
-      }]);
-
-      if (dbError) throw dbError;
-
-      // 5. Activity Logging (from backend/lei branch)
-      try {
-        await supabase.from('activity_logs').insert([{
-          activity_type: 'USER_ADDED',
-          description: `Added ${pendingCreateData.first_name} ${pendingCreateData.last_name} as a ${pendingCreateData.role}`,
-          user_id: null
-        }]);
-      } catch (logError) {
-        // Don't fail the user creation if activity logging fails
-        console.error('Activity logging failed:', logError);
-      }
-      
-      // 6. Success UI cleanup
-      setShowAddModal(false);
-      setShowCreateConfirmModal(false);
-      setPendingCreateData(null);
-      setFormData({ 
-        email: '', 
-        role: 'COLLECTOR', first_name: '', last_name: '', 
-        middle_name: '', password: '', confirmPassword: ''
-      });
-      setErrors({});
-      setTouched({});
-      fetchUsers();
-      showSuccessNotification('Employee account created successfully!');
-    } catch (error) {
+        password: generatedPassword, // Use password from verification
+        region: pendingCreateData.address?.region || '',
+        province: pendingCreateData.address?.province || '',
+        city_municipality: pendingCreateData.address?.city_municipality || '',
+        barangay: pendingCreateData.address?.barangay || '',
+        street_address: pendingCreateData.address?.street_address || ''
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
       setAlertTitle('Error');
-      setAlertMessage('Error: ' + error.message);
+      setAlertMessage(data.message || 'Failed to create employee. Please try again.');
       setShowAlertModal(true);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+    setLastCreatedEmail(pendingCreateData.email.trim().toLowerCase());
+    setCredentialsSentToEmail(Boolean(data.sentToEmail));
+    setEmailError(data.emailError || '');
+    setShowAddModal(false);
+    setShowCreateConfirmModal(false);
+    setPendingCreateData(null);
+    setFormData({ 
+      email: '', 
+      second_email: '', 
+      role: 'COLLECTOR', 
+      first_name: '', 
+      last_name: '', 
+      middle_name: '',
+      address: {
+        region: '',
+        province: '',
+        city_municipality: '',
+        barangay: '',
+        street_address: ''
+      }
+    });
+    setErrors({});
+    setTouched({});
+    setEmailVerified(false);
+    setGeneratedPassword(null);
+    fetchUsers();
+    setShowCredentialsSentModal(true);
+  } catch (error) {
+    setAlertTitle('Error');
+    setAlertMessage(error.message || 'Failed to create employee. Please try again.');
+    setShowAlertModal(true);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleCloseCredentialsSent = () => {
+  setShowCredentialsSentModal(false);
+  setLastCreatedEmail('');
+  setCredentialsSentToEmail(false);
+  setEmailError('');
+};
+
+const handleVerifyEmailSent = async () => {
+  if (!lastCreatedEmail) return;
+  setResendingEmail(true);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/accounts/resend-credentials-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: lastCreatedEmail }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.success) {
+      showSuccessNotification('Credentials resent to email.');
+    } else {
+      setAlertTitle('Resend Failed');
+      setAlertMessage(data.message || 'Could not resend to email.');
+      setShowAlertModal(true);
+    }
+  } catch (err) {
+    setAlertTitle('Error');
+    setAlertMessage(err.message || 'Resend failed.');
+    setShowAlertModal(true);
+  } finally {
+    setResendingEmail(false);
+  }
+};
+
 
 const handleUpdateEmployee = async (e) => {
   e.preventDefault();
@@ -458,9 +621,14 @@ const handleUpdateEmployee = async (e) => {
     if (err) newErrors['middle_name'] = err;
   }
 
+  if (editingUser.contact != null && String(editingUser.contact).replace(/\D/g, '').length > 0) {
+    const err = validateEditField('contact', editingUser.contact);
+    if (err) newErrors['contact'] = err;
+  }
+
   if (Object.keys(newErrors).length > 0) {
     setEditErrors(newErrors);
-    setEditTouched({ first_name: true, last_name: true, middle_name: true });
+    setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
     return;
   }
 
@@ -475,12 +643,20 @@ const handleConfirmSave = async () => {
   try {
     setLoading(true);
 
+    let contactValue = (pendingSaveData.contact ?? '').toString().replace(/\D/g, '');
+    if (contactValue.length && !contactValue.startsWith('09')) {
+      if (contactValue.startsWith('9')) contactValue = '0' + contactValue;
+      else contactValue = '09' + contactValue;
+    }
+    contactValue = contactValue.slice(0, 11) || null;
+
     const { error } = await supabase
       .from('users')
       .update({
         first_name: pendingSaveData.first_name.trim(),
         last_name: pendingSaveData.last_name.trim(),
         middle_name: pendingSaveData.middle_name?.trim() || '',
+        contact: contactValue,
         role: pendingSaveData.role
       })
       .eq('auth_id', pendingSaveData.auth_id);
@@ -668,6 +844,38 @@ const handleCancelSave = () => {
         </div>
       )}
       
+      {/* Credentials Sent Modal (after Create Account) */}
+      {showCredentialsSentModal && (
+        <div className="confirm-modal-overlay" onClick={handleCloseCredentialsSent}>
+          <div className="credentials-sent-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="credentials-sent-title">Account Created</h3>
+            <p className="credentials-sent-message">
+              {credentialsSentToEmail && 'Credentials sent to email. Also check the terminal for username and password.'}
+              {!credentialsSentToEmail && 'Account created. Email sending failed; check SMTP config. Check the terminal for username and password.'}
+            </p>
+            {emailError && (
+              <div className="credentials-error-box">
+                <strong>Email Error:</strong> {emailError}
+              </div>
+            )}
+            <p className="credentials-sent-sub">Resend credentials if needed:</p>
+            <div className="credentials-sent-buttons">
+              <button
+                type="button"
+                className="credentials-verify-btn email"
+                onClick={handleVerifyEmailSent}
+                disabled={resendingEmail}
+              >
+                {resendingEmail ? 'Sending...' : 'Resend Email'}
+              </button>
+            </div>
+            <button type="button" className="credentials-sent-close" onClick={handleCloseCredentialsSent}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Success Notification Toast */}
       {showNotification && (
         <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
@@ -712,7 +920,7 @@ const handleCancelSave = () => {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name *</label>
+                  <label>Middle Name</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -724,14 +932,43 @@ const handleCancelSave = () => {
                 </div>
                 <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
                   <label>Email Address *</label>
+                  <div className="input-with-verify">
+                    <input 
+                      type="text" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                    />
+                    <button
+                      type="button"
+                      className={`verify-btn-inline email ${emailVerified ? 'verified' : ''}`}
+                      onClick={handleVerifyEmail}
+                      disabled={verifyingEmail || !formData.email.trim() || emailVerified}
+                      title={emailVerified ? 'Email already verified' : 'Verify email'}
+                    >
+                      {verifyingEmail ? 'Verifying...' : emailVerified ? 'Verified ✓' : 'Verify'}
+                    </button>
+                    {emailVerified && <span className="verified-badge-inline">✓</span>}
+                  </div>
+                  {errors.email && <span className="error-message">{errors.email}</span>}
+                </div>
+                <div className={`form-group ${errors.second_email ? 'has-error' : ''}`}>
+                  <label>Second Email Account (Optional)</label>
                   <input 
                     type="text" 
-                    name="email" 
-                    value={formData.email} 
+                    name="second_email" 
+                    value={formData.second_email} 
                     onChange={handleInputChange} 
                     onBlur={handleBlur}
+                    placeholder="Optional: Use this email if you forget your primary email"
                   />
-                  {errors.email && <span className="error-message">{errors.email}</span>}
+                  {errors.second_email && <span className="error-message">{errors.second_email}</span>}
+                  {!errors.second_email && formData.second_email && (
+                    <span className="help-text" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                      This email can be used for login if you forget your primary email
+                    </span>
+                  )}
                 </div>
                 <div className={`form-group ${errors.role ? 'has-error' : ''}`}>
                   <label>Account Role *</label>
@@ -742,110 +979,22 @@ const handleCancelSave = () => {
                   </select>
                   {errors.role && <span className="error-message">{errors.role}</span>}
                 </div>
-                <div className={`form-group ${errors.password ? 'has-error' : ''}`} style={{ position: 'relative' }}>
-                  <label>Password *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type={showPassword ? 'text' : 'password'} 
-                      name="password" 
-                      value={formData.password} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                      placeholder="8+ characters, 1 capital, 1 number, 1 special"
-                      style={{ paddingRight: '80px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '45px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '5px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const generated = generateDefaultPassword();
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          password: generated, 
-                          confirmPassword: generated 
-                        }));
-                        setTouched(prev => ({ ...prev, password: true, confirmPassword: true }));
-                        setErrors(prev => ({ 
-                          ...prev, 
-                          password: validateField('password', generated),
-                          confirmPassword: validateField('confirmPassword', generated)
-                        }));
-                      }}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: '#047857',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Generate
-                    </button>
-                  </div>
-                  {errors.password && <span className="error-message">{errors.password}</span>}
-                </div>
-                <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`} style={{ position: 'relative' }}>
-                  <label>Confirm Password *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type={showConfirmPassword ? 'text' : 'password'} 
-                      name="confirmPassword" 
-                      value={formData.confirmPassword} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                      placeholder="Confirm your password"
-                      style={{ paddingRight: '45px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '5px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+                {/* Address Section */}
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ marginBottom: '1.25rem', marginTop: '0.5rem', color: '#374151', fontSize: '1rem', fontWeight: '600' }}>Address Information</h4>
+                  <AddressDropdowns
+                    value={formData.address}
+                    onChange={(newAddress) => setFormData({ ...formData, address: newAddress })}
+                    disabled={false}
+                    errors={errors}
+                    touched={touched}
+                  />
                 </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Account'}
+                <button type="submit" className="btn-primary" disabled={loading || !emailVerified}>
+                  {loading ? 'Creating...' : emailVerified ? 'Create Account' : 'Verify email first'}
                 </button>
               </div>
             </form>
@@ -901,6 +1050,18 @@ const handleCancelSave = () => {
                     onBlur={handleEditBlur}
                   />
                   {editErrors.middle_name && <span className="error-message">{editErrors.middle_name}</span>}
+                </div>
+                <div className={`form-group ${editErrors.contact ? 'has-error' : ''}`}>
+                  <label>Contact Number</label>
+                  <input 
+                    type="text" 
+                    name="contact"
+                    value={editingUser.contact || ''} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                    placeholder="09XXXXXXXXX"
+                  />
+                  {editErrors.contact && <span className="error-message">{editErrors.contact}</span>}
                 </div>
                 <div className="form-group">
                   <label>Role</label>

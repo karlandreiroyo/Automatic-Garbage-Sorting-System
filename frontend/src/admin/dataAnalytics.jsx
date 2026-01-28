@@ -86,11 +86,13 @@ const [wasteDistribution, setWasteDistribution] = useState([
   { name: 'Unsorted', percentage: 0, count: 0, color: '#6b7280' }
 ]);
   const [dailyTrend, setDailyTrend] = useState([]);
+  const [selectedBar, setSelectedBar] = useState(null);
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchAnalyticsData();
+    setSelectedBar(null); // Clear selection when filter changes
   }, [timeFilter]);
 
 const fetchAnalyticsData = async () => {
@@ -446,6 +448,18 @@ const calculateYAxisLabels = () => {
 {/* Daily Sorting Trend Bar Chart */}
 <div className="chart-card">
   <h3 className="chart-title">Daily Sorting Trend</h3>
+  {selectedBar && (
+    <div className="bar-selection-info">
+      <p><strong>{selectedBar.day}:</strong> {selectedBar.value} items sorted</p>
+      <button 
+        className="close-selection-btn"
+        onClick={() => setSelectedBar(null)}
+        aria-label="Close selection"
+      >
+        ×
+      </button>
+    </div>
+  )}
   <div className="bar-chart-container">
     <div className="bar-chart-y-axis">
       {calculateYAxisLabels().map((label, index) => (
@@ -457,11 +471,27 @@ const calculateYAxisLabels = () => {
         <div key={index} className="bar-chart-item">
           {item.value > 0 && (
             <div
-              className="bar"
-              style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
+              className={`bar ${selectedBar?.day === item.day ? 'bar-selected' : ''}`}
+              style={{ 
+                height: `${(item.value / calculateYAxisLabels()[0]) * 100}%`,
+                cursor: 'pointer'
+              }}
+              onClick={() => setSelectedBar(item)}
+              title={`Click to view details: ${item.day} - ${item.value} items`}
             >
               <span className="bar-value">{item.value}</span>
             </div>
+          )}
+          {item.value === 0 && (
+            <div
+              className="bar bar-empty"
+              style={{ 
+                height: '2px',
+                cursor: 'default',
+                opacity: 0.3
+              }}
+              title={`${item.day}: No items`}
+            />
           )}
           <span className="bar-label">{item.day}</span>
         </div>

@@ -216,6 +216,7 @@ body.modal-open {
 .form-group select {
   width: 100%;
   padding: 12px 16px;
+  box-sizing: border-box;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.95rem;
@@ -257,6 +258,161 @@ body.modal-open {
 .form-group.has-error select:focus {
   border-color: #ef4444;
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+/* Verify buttons inline with inputs */
+.input-with-verify {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.input-with-verify input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.verify-btn-inline {
+  background: #047857;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.verify-btn-inline.email {
+  background: #047857;
+}
+.verify-btn-inline.email:hover:not(:disabled) {
+  background: #065f46;
+}
+.verify-btn-inline.phone {
+  background: #0ea5e9;
+}
+.verify-btn-inline.phone:hover:not(:disabled) {
+  background: #0284c7;
+}
+.verify-btn-inline:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.verify-btn-inline.verified {
+  background-color: #10b981 !important;
+  color: white;
+  cursor: default;
+}
+.verify-btn-inline.verified:hover:not(:disabled) {
+  background-color: #059669 !important;
+}
+.verified-badge-inline {
+  color: #047857;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* Credentials Sent Modal */
+.credentials-sent-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+.credentials-sent-title {
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.credentials-sent-message {
+  margin: 0 0 16px 0;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.5;
+}
+.credentials-sent-sub {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+.credentials-error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #991b1b;
+}
+.credentials-error-box strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #dc2626;
+}
+.credentials-sent-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.credentials-verify-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s;
+}
+.credentials-verify-btn.email {
+  background: #047857;
+  color: white;
+}
+.credentials-verify-btn.email:hover:not(:disabled) {
+  background: #065f46;
+}
+.credentials-verify-btn.phone {
+  background: #0ea5e9;
+  color: white;
+}
+.credentials-verify-btn.phone:hover:not(:disabled) {
+  background: #0284c7;
+}
+.credentials-verify-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.credentials-sent-close {
+  display: block;
+  width: 100%;
+  padding: 10px 20px;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.credentials-sent-close:hover {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 /* Show Password Toggle */

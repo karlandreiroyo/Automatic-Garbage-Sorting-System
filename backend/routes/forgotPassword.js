@@ -3,7 +3,9 @@ const router = express.Router();
 const supabase = require('../utils/supabase');
 const { generateVerificationCode, verificationCodes } = require('../utils/verification');
 const { getSmtpConfig, sendResetPasswordVerificationEmail } = require('../utils/mailer');
-const { isValidPhilippineNumber, formatPhilippineNumber, normalizePhilippineNumber } = require('../utils/phoneValidation');
+// SMS and phone-based reset removed - email-only flow
+
+// Phone lookup functions removed - email-only password reset
 
 // Route: Send password reset code
 router.post('/send-code', async (req, res) => {
@@ -13,11 +15,11 @@ router.post('/send-code', async (req, res) => {
     if (!emailOrMobile || !emailOrMobile.trim()) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Email or mobile number is required' 
+        message: 'Email is required' 
       });
     }
 
-    // Check if input is email or mobile
+    // Email-only password reset (phone support removed)
     const isEmail = emailOrMobile.includes('@');
     let email = null;
     let user = null;
@@ -88,86 +90,11 @@ router.post('/send-code', async (req, res) => {
       
       user = userData;
     } else {
-      // Check if it's a valid Philippine phone number
-      const phoneInput = emailOrMobile.trim();
-      
-      if (!isValidPhilippineNumber(phoneInput)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please use a valid email address or Philippine phone number (e.g., +639123456789, 09123456789, or 9123456789)' 
-        });
-      }
-      
-      // Format phone number to standard format
-      const formattedPhone = formatPhilippineNumber(phoneInput);
-      if (!formattedPhone) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid phone number format. Please use Philippine phone number format.' 
-        });
-      }
-      
-      console.log('Searching for user with phone:', formattedPhone);
-      
-      // Find user by phone number
-      // Try different possible field names: phone, phone_number, mobile
-      let userData = null;
-      let userError = null;
-      
-      // Method 1: Try 'phone' field
-      let result = await supabase
-        .from('users')
-        .select('id, email, auth_id, status, phone, phone_number, mobile')
-        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
-        .maybeSingle();
-      
-      if (result.data) {
-        userData = result.data;
-        console.log('User found with phone:', userData);
-      } else {
-        // Method 2: Try case-insensitive search if phone field exists
-        const allUsers = await supabase
-          .from('users')
-          .select('id, email, auth_id, status, phone, phone_number, mobile')
-          .limit(100);
-        
-        // Search in memory for matching phone
-        if (allUsers.data) {
-          userData = allUsers.data.find(u => {
-            const userPhone = u.phone || u.phone_number || u.mobile;
-            if (!userPhone) return false;
-            const normalizedUserPhone = normalizePhilippineNumber(userPhone);
-            return normalizedUserPhone === formattedPhone || 
-                   normalizePhilippineNumber(userPhone) === normalizePhilippineNumber(phoneInput);
-          });
-        }
-        
-        if (!userData) {
-          userError = result.error || 'User not found';
-        }
-      }
-      
-      if (!userData) {
-        console.error('User lookup failed for phone:', formattedPhone);
-        console.error('Error details:', userError);
-        
-        return res.status(404).json({ 
-          success: false, 
-          message: `User not found with phone number: ${formattedPhone}. Please make sure the account was created with this phone number.` 
-        });
-      }
-      
-      // Get email from user data
-      if (!userData.email) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'User account does not have an email address. Please contact administrator.' 
-        });
-      }
-      
-      email = userData.email.toLowerCase();
-      user = userData;
-      console.log('User found via phone number. Email:', email);
+      // Phone-based password reset has been removed
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password reset by phone is no longer supported. Please use your email address.' 
+      });
     }
 
     // Check if user is active
@@ -190,107 +117,41 @@ router.post('/send-code', async (req, res) => {
       email: email
     });
 
-    // Send verification email to the user's email address
-    // Subject: "Reset Password Verification"
-    // Note: For forgot password, user is not logged in, so we use the email from the request
     const userEmail = email.toLowerCase();
-    const smtpCfg = getSmtpConfig();
-    const verificationType = 'RESET PASSWORD VERIFICATION';
-    const emailSubject = 'Reset Password Verification';
-    let emailResult = null;
 
-    if (smtpCfg.enabled) {
-      try {
-        emailResult = await sendResetPasswordVerificationEmail({ to: userEmail, code, expiresMinutes: 10 });
-      } catch (err) {
-        console.error('SMTP email sending failed:', err);
-        emailResult = { ok: false, reason: err.message, subject: emailSubject, to: userEmail };
-      }
-    } else {
-      emailResult = { ok: false, reason: 'SMTP not configured', subject: emailSubject, to: userEmail };
-      console.warn('⚠️ SMTP not configured. Verification code is logged to terminal only.');
-      console.warn('⚠️ To receive emails with "Reset Password Verification" subject, configure SMTP in backend/.env');
-    }
+    if (isEmail) {
+      // Send verification via EMAIL
+      const emailSubject = 'Reset Password Verification';
+      const smtpCfg = getSmtpConfig();
+      let emailResult = null;
 
-    // Enhanced terminal logging with all verification details
-    const actionPerformed = 'RESET_PASSWORD';
-    console.log('\n' + '═'.repeat(75));
-    console.log('📧 EMAIL VERIFICATION - PASSWORD RESET');
-    console.log('═'.repeat(75));
-    console.log(`👤 User: ${userEmail}`);
-    console.log(`📨 Subject: ${emailSubject}`);
-    console.log(`📬 Sent to: ${userEmail}`);
-    
-    if (emailResult.ok) {
-      console.log('✅ Status: Email sent successfully!');
-      console.log('\n' + '─'.repeat(75));
-      console.log('📧 EMAIL CONTENT (as sent to user):');
-      console.log('─'.repeat(75));
-      console.log(`From: Automatic Garbage Sorting System <${userEmail}>`);
-      console.log(`To: ${userEmail}`);
-      console.log(`Subject: ${emailSubject}`);
-      console.log('');
-      console.log('Action Performed: RESET_PASSWORD');
-      console.log('');
-      console.log('You have requested to reset your password.');
-      console.log('Use the code below to reset your password:');
-      console.log('');
-      console.log('   ╔═══════════════════════════════╗');
-      console.log(`   ║      ${code}      ║`);
-      console.log('   ╚═══════════════════════════════╝');
-      console.log('');
-      console.log('This code expires in 10 minutes.');
-      console.log('');
-      console.log('If you did not request to reset your password, you can ignore this email.');
-      console.log('─'.repeat(75));
-      console.log(`🔑 Verification Code: ${code}`);
-      console.log(`⏰ Expires in: 10 minutes`);
-      console.log('💡 The user should check their email inbox for the verification code.');
-    } else {
-      console.log('❌ Status: Email sending failed');
-      console.log('\n' + '─'.repeat(75));
-      // Handle multi-line error messages with better formatting
-      const reasonLines = emailResult.reason.split('\n');
-      reasonLines.forEach(line => {
-        if (line.trim()) {
-          console.log('   ' + line);
+      if (smtpCfg.enabled) {
+        try {
+          emailResult = await sendResetPasswordVerificationEmail({ to: userEmail, code, expiresMinutes: 10 });
+        } catch (err) {
+          console.error('SMTP email sending failed:', err);
+          emailResult = { ok: false, reason: err.message };
         }
-      });
-      console.log('─'.repeat(75));
-      console.log('\n📧 EMAIL CONTENT (would be sent if SMTP was configured):');
-      console.log('─'.repeat(75));
-      console.log(`From: Automatic Garbage Sorting System <${userEmail}>`);
-      console.log(`To: ${userEmail}`);
-      console.log(`Subject: ${emailSubject}`);
-      console.log('');
-      console.log('Action Performed: RESET_PASSWORD');
-      console.log('');
-      console.log('You have requested to reset your password.');
-      console.log('Use the code below to reset your password:');
-      console.log('');
-      console.log('   ╔═══════════════════════════════╗');
-      console.log(`   ║      ${code}      ║`);
-      console.log('   ╚═══════════════════════════════╝');
-      console.log('');
-      console.log('This code expires in 10 minutes.');
-      console.log('─'.repeat(75));
-      console.log(`🔑 Verification Code: ${code} (available for testing)`);
-      console.log(`⏰ Expires in: 10 minutes`);
-      console.log('💡 Tip: User can still use the code above while you fix the email configuration.\n');
-    }
-    console.log('═'.repeat(75) + '\n');
+      } else {
+        emailResult = { ok: false, reason: 'SMTP not configured' };
+        console.warn('⚠️ SMTP not configured. Configure SMTP in backend/.env to receive reset codes via email.');
+      }
 
-    if (emailResult.ok) {
-      return res.status(200).json({ 
-        success: true, 
-        message: `Verification code sent to ${userEmail}. Check your email for "Reset Password Verification". Code is also logged in terminal.`,
-        code: code
-      });
-    } else {
-      return res.status(200).json({ 
-        success: true, 
-        message: `Verification code generated. Check terminal for code. ${emailResult.reason === 'SMTP not configured' ? 'Configure SMTP in backend/.env to receive emails with "Reset Password Verification" subject.' : 'Email sending failed - check terminal for details.'}`,
-        code: code
+      console.log('\n' + '═'.repeat(75));
+      console.log('📧 PASSWORD RESET - EMAIL VERIFICATION');
+      console.log('═'.repeat(75));
+      console.log(`👤 User: ${userEmail} | 📬 Sent to: ${userEmail}`);
+      console.log(emailResult.ok ? '✅ Email sent.' : '❌ Email failed: ' + emailResult.reason);
+      console.log(`🔑 Code: ${code} (expires 10 min)`);
+      console.log('═'.repeat(75) + '\n');
+
+      if (emailResult.ok) {
+        return res.status(200).json({ success: true, message: `Verification code sent to ${userEmail}. Check your email.`, code });
+      }
+      return res.status(200).json({
+        success: true,
+        message: `Code generated. ${emailResult.reason === 'SMTP not configured' ? 'Configure SMTP in backend/.env for email delivery.' : 'Email failed - check terminal for code.'}`,
+        code
       });
     }
 
@@ -321,40 +182,11 @@ router.post('/verify-code', async (req, res) => {
     if (isEmail) {
       email = emailOrMobile.trim().toLowerCase();
     } else {
-      // Check if it's a valid Philippine phone number
-      const phoneInput = emailOrMobile.trim();
-      
-      if (!isValidPhilippineNumber(phoneInput)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please use a valid email address or Philippine phone number' 
-        });
-      }
-      
-      // Format phone number
-      const formattedPhone = formatPhilippineNumber(phoneInput);
-      if (!formattedPhone) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid phone number format' 
-        });
-      }
-      
-      // Find user by phone number to get their email
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, auth_id, status, phone, phone_number, mobile')
-        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
-        .maybeSingle();
-      
-      if (userError || !userData || !userData.email) {
-        return res.status(404).json({ 
-          success: false, 
-          message: 'User not found with this phone number' 
-        });
-      }
-      
-      email = userData.email.toLowerCase();
+      // Phone-based verification has been removed
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Verification code can only be checked using the email address.' 
+      });
     }
 
     // Get stored verification code
@@ -526,52 +358,11 @@ router.post('/resend-code', async (req, res) => {
 
       user = userData;
     } else {
-      // Check if it's a valid Philippine phone number
-      const phoneInput = emailOrMobile.trim();
-      
-      if (!isValidPhilippineNumber(phoneInput)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please use a valid email address or Philippine phone number (e.g., +639123456789, 09123456789, or 9123456789)' 
-        });
-      }
-      
-      // Format phone number to standard format
-      const formattedPhone = formatPhilippineNumber(phoneInput);
-      if (!formattedPhone) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Invalid phone number format. Please use Philippine phone number format.' 
-        });
-      }
-      
-      console.log('Searching for user with phone:', formattedPhone);
-      
-      // Find user by phone number
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, auth_id, status, phone, phone_number, mobile')
-        .or(`phone.eq.${formattedPhone},phone.eq.${phoneInput},phone_number.eq.${formattedPhone},phone_number.eq.${phoneInput},mobile.eq.${formattedPhone},mobile.eq.${phoneInput}`)
-        .maybeSingle();
-      
-      if (userError || !userData) {
-        return res.status(404).json({ 
-          success: false, 
-          message: `User not found with phone number: ${formattedPhone}` 
-        });
-      }
-      
-      // Get email from user data
-      if (!userData.email) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'User account does not have an email address. Please contact administrator.' 
-        });
-      }
-      
-      email = userData.email.toLowerCase();
-      user = userData;
-      console.log('User found via phone number. Email:', email);
+      // Phone-based resend has been removed
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Resending codes by phone is no longer supported. Please use your email address.' 
+      });
     }
 
     if (user.status === 'INACTIVE') {
@@ -590,104 +381,29 @@ router.post('/resend-code', async (req, res) => {
       userId: user.auth_id
     });
 
-    // Send verification email to the user's email address
-    // Subject: "Reset Password Verification"
     const userEmail = email.toLowerCase();
-    const smtpCfg = getSmtpConfig();
-    const verificationType = 'RESET PASSWORD VERIFICATION (RESEND)';
-    const emailSubject = 'Reset Password Verification';
-    let emailResult = null;
 
-    if (smtpCfg.enabled) {
-      try {
-        emailResult = await sendResetPasswordVerificationEmail({ to: userEmail, code, expiresMinutes: 10 });
-      } catch (err) {
-        console.error('SMTP email sending failed:', err);
-        emailResult = { ok: false, reason: err.message, subject: emailSubject, to: userEmail };
-      }
-    } else {
-      emailResult = { ok: false, reason: 'SMTP not configured', subject: emailSubject, to: userEmail };
-    }
-
-    // Enhanced terminal logging with all verification details
-    const actionPerformed = 'RESET_PASSWORD';
-    console.log('\n' + '═'.repeat(75));
-    console.log('📧 EMAIL VERIFICATION - PASSWORD RESET');
-    console.log('═'.repeat(75));
-    console.log(`👤 User: ${userEmail}`);
-    console.log(`📨 Subject: ${emailSubject}`);
-    console.log(`📬 Sent to: ${userEmail}`);
-    
-    if (emailResult.ok) {
-      console.log('✅ Status: Email sent successfully!');
-      console.log('\n' + '─'.repeat(75));
-      console.log('📧 EMAIL CONTENT (as sent to user):');
-      console.log('─'.repeat(75));
-      console.log(`From: Automatic Garbage Sorting System <${userEmail}>`);
-      console.log(`To: ${userEmail}`);
-      console.log(`Subject: ${emailSubject}`);
-      console.log('');
-      console.log('Action Performed: RESET_PASSWORD');
-      console.log('');
-      console.log('You have requested to reset your password.');
-      console.log('Use the code below to reset your password:');
-      console.log('');
-      console.log('   ╔═══════════════════════════════╗');
-      console.log(`   ║      ${code}      ║`);
-      console.log('   ╚═══════════════════════════════╝');
-      console.log('');
-      console.log('This code expires in 10 minutes.');
-      console.log('');
-      console.log('If you did not request to reset your password, you can ignore this email.');
-      console.log('─'.repeat(75));
-      console.log(`🔑 Verification Code: ${code}`);
-      console.log(`⏰ Expires in: 10 minutes`);
-      console.log('💡 The user should check their email inbox for the verification code.');
-    } else {
-      console.log('❌ Status: Email sending failed');
-      console.log('\n' + '─'.repeat(75));
-      // Handle multi-line error messages with better formatting
-      const reasonLines = emailResult.reason.split('\n');
-      reasonLines.forEach(line => {
-        if (line.trim()) {
-          console.log('   ' + line);
+    if (isEmail) {
+      const smtpCfg = getSmtpConfig();
+      let emailResult = null;
+      if (smtpCfg.enabled) {
+        try {
+          emailResult = await sendResetPasswordVerificationEmail({ to: userEmail, code, expiresMinutes: 10 });
+        } catch (err) {
+          console.error('SMTP resend failed:', err);
+          emailResult = { ok: false, reason: err.message };
         }
-      });
-      console.log('─'.repeat(75));
-      console.log('\n📧 EMAIL CONTENT (would be sent if SMTP was configured):');
-      console.log('─'.repeat(75));
-      console.log(`From: Automatic Garbage Sorting System <${userEmail}>`);
-      console.log(`To: ${userEmail}`);
-      console.log(`Subject: ${emailSubject}`);
-      console.log('');
-      console.log('Action Performed: RESET_PASSWORD');
-      console.log('');
-      console.log('You have requested to reset your password.');
-      console.log('Use the code below to reset your password:');
-      console.log('');
-      console.log('   ╔═══════════════════════════════╗');
-      console.log(`   ║      ${code}      ║`);
-      console.log('   ╚═══════════════════════════════╝');
-      console.log('');
-      console.log('This code expires in 10 minutes.');
-      console.log('─'.repeat(75));
-      console.log(`🔑 Verification Code: ${code} (available for testing)`);
-      console.log(`⏰ Expires in: 10 minutes`);
-      console.log('💡 Tip: User can still use the code above while you fix the email configuration.\n');
-    }
-    console.log('═'.repeat(75) + '\n');
-
-    if (emailResult.ok) {
-      return res.status(200).json({ 
-        success: true, 
-        message: `Verification code resent to ${email}. Check your email for "Reset Password Verification". Code is also logged in terminal.`,
-        code: code
-      });
-    } else {
-      return res.status(200).json({ 
-        success: true, 
-        message: `Verification code regenerated. Check terminal for code. ${emailResult.reason === 'SMTP not configured' ? 'Configure SMTP in backend/.env to receive emails with "Reset Password Verification" subject.' : 'Email sending failed - check terminal for details.'}`,
-        code: code
+      } else {
+        emailResult = { ok: false, reason: 'SMTP not configured' };
+      }
+      console.log(`📧 RESEND: ${emailResult.ok ? 'Email sent' : 'Email failed'} to ${userEmail} | Code: ${code}`);
+      if (emailResult.ok) {
+        return res.status(200).json({ success: true, message: `Verification code resent to ${userEmail}. Check your email.`, code });
+      }
+      return res.status(200).json({
+        success: true,
+        message: `Code regenerated. ${emailResult.reason === 'SMTP not configured' ? 'Configure SMTP in backend/.env for email.' : 'Email failed - check terminal.'}`,
+        code
       });
     }
 
