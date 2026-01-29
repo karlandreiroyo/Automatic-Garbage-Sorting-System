@@ -379,7 +379,11 @@ function Login({ setIsLoggedIn, setUserRole }) {
             <button 
               type="button" 
               className="superadmin-btn" 
-              onClick={() => navigate('/superadmin')}
+              onClick={() => {
+                setIsLoggedIn(true);
+                setUserRole('superadmin');
+                navigate('/superadmin');
+              }}
               disabled={loading || isLockedOut}
             >
               Super Admin

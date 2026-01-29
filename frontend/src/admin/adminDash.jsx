@@ -240,7 +240,7 @@ const fetchDashboardData = async () => {
         <div className="stat-card">
           <div className="stat-icon-bg"><Icons.Supervisor /></div>
           <div className="stat-info">
-            <span className="stat-label">Supervisor</span>
+            <span className="stat-label">Superadmin</span>
             <h2 className="stat-value">{stats.supervisor}</h2>
           </div>
         </div>

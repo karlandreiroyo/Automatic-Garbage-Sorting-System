@@ -18,7 +18,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -68,7 +67,8 @@ const Accounts = () => {
   const [formData, setFormData] = useState({
     email: '',
     second_email: '',
-    role: '',
+    backup_email: '',
+    role: 'COLLECTOR',
     first_name: '',
     last_name: '',
     middle_name: '',
@@ -223,8 +223,9 @@ const Accounts = () => {
           else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
-      case 'second_email': {
-        // Second email is optional, but if provided, must be valid email format
+      case 'second_email':
+      case 'backup_email': {
+        // Optional email; if provided, must be valid email format
         if (value && value.trim()) {
           const emailVal = value.trim();
           const atCount = (emailVal.match(/@/g) || []).length;
@@ -365,8 +366,8 @@ const Accounts = () => {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
     }
 
-    // Second email: normalize email format
-    if (name === 'second_email') {
+    // Second email / Back up email: normalize email format
+    if (name === 'second_email' || name === 'backup_email') {
       let cleaned = value.trim().toLowerCase();
       // Remove multiple @ symbols (keep only first one)
       const parts = cleaned.split('@');
@@ -541,7 +542,8 @@ const handleConfirmCreate = async () => {
         middle_name: pendingCreateData.middle_name || '',
         email: pendingCreateData.email,
         second_email: pendingCreateData.second_email || '',
-        role: pendingCreateData.role,
+        backup_email: pendingCreateData.backup_email || '',
+        role: 'COLLECTOR',
         password: generatedPassword, // Use password from verification
         region: pendingCreateData.address?.region || '',
         province: pendingCreateData.address?.province || '',
@@ -566,6 +568,7 @@ const handleConfirmCreate = async () => {
     setFormData({ 
       email: '', 
       second_email: '', 
+      backup_email: '',
       role: 'COLLECTOR', 
       first_name: '', 
       last_name: '', 
@@ -720,9 +723,8 @@ const handleCancelSave = () => {
   const filteredUsers = users.filter(user => {
     const fullName = getFullName(user).toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   // Pagination calculations
@@ -766,7 +768,7 @@ const handleCancelSave = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterRole, filterStatus]);
+  }, [searchTerm, filterStatus]);
 
   return (
     <div className="accounts-container">
@@ -913,7 +915,7 @@ const handleCancelSave = () => {
         <div className="modal-overlay">
           <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add New Employee</h2>
+              <h2>Add New Collector</h2>
             </div>
             <form onSubmit={handleAddEmployee} className="employee-form">
               <div className="form-grid">
@@ -973,31 +975,31 @@ const handleCancelSave = () => {
                   </div>
                   {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
-                <div className={`form-group ${errors.second_email ? 'has-error' : ''}`}>
-                  <label>Second Email Account (Optional)</label>
+                <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
+                  <label>Back up Email</label>
                   <input 
                     type="text" 
-                    name="second_email" 
-                    value={formData.second_email} 
+                    name="backup_email" 
+                    value={formData.backup_email} 
                     onChange={handleInputChange} 
                     onBlur={handleBlur}
-                    placeholder="Optional: Use this email if you forget your primary email"
+                    placeholder="Optional backup email address"
                   />
-                  {errors.second_email && <span className="error-message">{errors.second_email}</span>}
-                  {!errors.second_email && formData.second_email && (
-                    <span className="help-text" style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '4px', display: 'block' }}>
-                      This email can be used for login if you forget your primary email
-                    </span>
-                  )}
+                  {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
                 </div>
-                <div className={`form-group ${errors.role ? 'has-error' : ''}`}>
-                  <label>Account Role *</label>
-                  <select name="role" value={formData.role} onChange={handleInputChange} onBlur={handleBlur}>
-                    <option value="" disabled>Select Role</option>
-                    <option value="COLLECTOR">Collector</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                  {errors.role && <span className="error-message">{errors.role}</span>}
+                <div className="form-group">
+                  <label>Account Role</label>
+                  <input 
+                    type="text" 
+                    value="Collector" 
+                    disabled
+                    style={{ 
+                      background: '#f3f4f6', 
+                      cursor: 'not-allowed',
+                      color: '#6b7280'
+                    }}
+                  />
+                  <input type="hidden" name="role" value="COLLECTOR" />
                 </div>
                 {/* Address Section */}
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
@@ -1114,29 +1116,25 @@ const handleCancelSave = () => {
           <p>Collectors and Supervisors Accounts</p>
         </div>
         <button className="add-employee-btn" onClick={() => setShowAddModal(true)}>
-          <AddIcon /> Add Employee
+          <AddIcon /> Add Collector
         </button>
       </div>
 
       {/* --- FILTERS --- */}
       <div className="filters-row">
         <input type="text" placeholder="Search by name..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <select className="filter-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-          <option value="all">All Roles</option>
-          <option value="ADMIN">Admin</option>
-          <option value="COLLECTOR">Collector</option>
-        </select>
         <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="all">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
+          <option value="PENDING">Pending</option>
         </select>
       </div>
 
       {/* --- TABLE (Desktop) --- */}
       <div className="accounts-table">
         <div className="table-header">
-          <div>Employee Name</div>
+          <div>Collector Name</div>
           <div>Email</div>
           <div>Role</div>
           <div>Status</div>
