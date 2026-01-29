@@ -535,6 +535,137 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
 }
 
 /**
+ * Send 2FA verification email (resend verification code)
+ * @param {string} to - Recipient email address
+ * @param {string} code - 6-digit verification code
+ * @param {number} expiresMinutes - Code expiration time in minutes
+ * 
+ * Note: This function is used for resending 2FA verification codes.
+ * SMTP_USER in .env is the SENDER account (one account sends emails to all users).
+ */
+async function sendSecondEmailVerification({ to, code, expiresMinutes = 10 }) {
+  const cfg = getSmtpConfig();
+  
+  if (cfg.hasPlaceholders) {
+    return { 
+      ok: false, 
+      reason: 'SMTP configuration contains placeholder values. Please update backend/.env with actual SMTP credentials.', 
+      subject: '2FA Verification Code' 
+    };
+  }
+
+  if (!cfg.userEmailValid) {
+    return {
+      ok: false,
+      reason: `SMTP_USER is not a valid email address: "${cfg.user}". Please check your backend/.env file.`,
+      subject: '2FA Verification Code'
+    };
+  }
+
+  if (cfg.validationErrors && cfg.validationErrors.length > 0) {
+    return {
+      ok: false,
+      reason: `SMTP configuration errors:\n${cfg.validationErrors.map(e => `  - ${e}`).join('\n')}`,
+      subject: '2FA Verification Code'
+    };
+  }
+  
+  const transporter = createTransport();
+
+  if (!transporter) {
+    return { ok: false, reason: 'SMTP not configured', subject: '2FA Verification Code' };
+  }
+
+  const subject = '2FA Verification Code';
+  const text =
+    `2FA Verification Code\n\n` +
+    `Your two-factor authentication verification code is: ${code}\n\n` +
+    `This code expires in ${expiresMinutes} minutes.\n\n` +
+    `If you did not request this code, please ignore this email and secure your account.`;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">2FA Verification Code</h1>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">You have requested a two-factor authentication code.</p>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">Use the code below to complete your verification:</p>
+      <div style="font-size: 36px; letter-spacing: 4px; font-weight: 700; padding: 24px; text-align: center; background: #f3f4f6; border: 2px solid #d1d5db; border-radius: 8px; margin: 24px 0; font-family: 'Courier New', monospace; color: #111;">
+        ${code}
+      </div>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">If you did not request this code, please ignore this email and secure your account.</p>
+    </div>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: cfg.from,
+      to,
+      subject,
+      text,
+      html,
+    });
+    return { ok: true, subject, to };
+  } catch (error) {
+    // Provide user-friendly error messages for common Gmail issues
+    let reason = error.message;
+    const cfg = getSmtpConfig();
+    
+    if (error.message && error.message.includes('535')) {
+      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+      const isWrongLength = passLength !== 16;
+      
+      reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
+               `Current Settings:\n` +
+               `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
+               `  Password Length: ${passLength} characters\n\n`;
+      
+      if (isWrongLength) {
+        reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
+                 `   You are using your regular Gmail password instead of an App Password.\n\n` +
+                 `✅ Solution: Generate a 16-character App Password:\n` +
+                 `   1. Go to: https://myaccount.google.com/apppasswords\n` +
+                 `   2. Make sure 2-Step Verification is enabled first\n` +
+                 `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
+                 `   4. Click "Generate" and copy the 16-character password\n` +
+                 `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
+                 `   6. Restart backend server\n\n`;
+      } else {
+        reason += 'How to Fix:\n' +
+                 '1. Go to https://myaccount.google.com/apppasswords\n' +
+                 '2. Make sure 2-Step Verification is enabled on your Google account\n' +
+                 '3. Click "Select app" → Choose "Mail"\n' +
+                 '4. Click "Select device" → Choose "Other (Custom name)"\n' +
+                 '5. Type "Backend Server" and click "Generate"\n' +
+                 '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
+                 '7. Open backend/.env and update SMTP_PASS with the new password\n' +
+                 '8. Restart the backend server\n\n';
+      }
+      
+      reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
+               '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
+    } else if (error.message && error.message.includes('Invalid login')) {
+      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+      reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
+               'For Gmail accounts:\n' +
+               '  • Use your full Gmail address for SMTP_USER\n' +
+               '  • Use a 16-character App Password (not your regular password)\n' +
+               '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
+               '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
+               `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+    } else if (error.message && error.message.includes('ENOTFOUND')) {
+      reason = `SMTP server not found: ${cfg.host}\n` +
+               'Check SMTP_HOST in backend/.env is correct.\n' +
+               'For Gmail, use: SMTP_HOST=smtp.gmail.com';
+    } else if (error.message && error.message.includes('ECONNREFUSED')) {
+      reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}\n` +
+               'Check SMTP_HOST and SMTP_PORT in backend/.env.\n' +
+               'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
+    }
+    
+    return { ok: false, reason, subject, to, originalError: error.message };
+  }
+}
+/**
  * Send security alert email to notify user of suspicious login attempts
  * @param {string} to - Recipient email address
  * @param {number} failedAttempts - Number of failed login attempts
@@ -737,4 +868,3 @@ module.exports = {
   sendNewEmployeeCredentialsEmail,
   sendSecondEmailVerification,
 };
-
