@@ -1,6 +1,16 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom"; 
+import { supabase } from "../supabaseClient";
 import "../employee/employeecss/BinMonitoring.css";
+
+/**
+ * Rounds fill level to nearest 10
+ * @param {number} level - Fill level percentage
+ * @returns {number} Rounded fill level (0, 10, 20, ..., 100)
+ */
+const roundToTen = (level) => {
+  return Math.round(level / 10) * 10;
+};
 
 // --- ICONS ---
 const LeafIcon = () => ( <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg> );
@@ -24,17 +34,8 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
-        <div className="bin-checkbox-wrapper" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
-          <input 
-            type="checkbox" 
-            className="bin-checkbox" 
-            checked={isSelected} 
-            onChange={() => {}} // Controlled by wrapper click
-          />
-        </div>
         <div className="icon-circle"><Icon /></div>
         <h3>{title}</h3>
-        {!isEmpty && status && <span className="bin-status">{status}</span>}
       </div>
 
       <div className="bin-body">
@@ -46,7 +47,6 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
            <div className="progress-fill" style={{ width: `${fillLevel}%`, backgroundColor: getFillLevelColor(fillLevel) }}></div>
          </div>
         <div className="meta-info">
-          <div className="meta-row"><span className="meta-label">Capacity</span><strong className="meta-val">{capacity}</strong></div>
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
         </div>
       </div>
@@ -67,15 +67,170 @@ const ModalPortal = ({ children }) => {
 // --- MAIN COMPONENT ---
 const BinMonitoring = () => {
   const [bins, setBins] = useState([
-    { id: 'Biodegradable', title: 'Biodegradable', capacity: '100 L', fillLevel: 80, lastCollection: '2h ago', colorClass: 'green', status: 'Almost Full', icon: LeafIcon },
-    { id: 'Non Biodegradable', title: 'Non-Bio', capacity: '100 L', fillLevel: 100, lastCollection: '4h ago', colorClass: 'red', status: 'Full', icon: TrashIcon },
-    { id: 'Recyclable', title: 'Recyclable', capacity: '100 L', fillLevel: 86, lastCollection: '1h ago', colorClass: 'blue', status: 'Almost Full', icon: RecycleIcon },
-    { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 83, lastCollection: '1h ago', colorClass: 'lime', status: 'Almost Full', icon: GearIcon },
+    { id: 'Biodegradable', title: 'Biodegradable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'green', status: 'Empty', icon: LeafIcon },
+    { id: 'Non Biodegradable', title: 'Non-Bio', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'red', status: 'Empty', icon: TrashIcon },
+    { id: 'Recyclable', title: 'Recyclable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'blue', status: 'Empty', icon: RecycleIcon },
+    { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'lime', status: 'Empty', icon: GearIcon },
   ]);
 
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
+
+  // Fetch bin data from database and aggregate category bins
+  useEffect(() => {
+    fetchBinData();
+    
+    // Set up interval to update fill levels
+    const interval = setInterval(() => {
+      updateBinFillLevels();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /**
+   * Fetches bin data from Supabase and aggregates category bins
+   */
+  const fetchBinData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bins')
+        .select('*')
+        .eq('status', 'ACTIVE')
+        .order('id', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Aggregate category bins from all bins
+        // For employee view, we show aggregated fill levels across all bins for each category
+        const categoryBinsMap = {
+          'Biodegradable': { fillLevel: 0, lastCollection: 'Just now' },
+          'Non Biodegradable': { fillLevel: 0, lastCollection: 'Just now' },
+          'Recyclable': { fillLevel: 0, lastCollection: 'Just now' },
+          'Unsorted': { fillLevel: 0, lastCollection: 'Just now' }
+        };
+
+        // Process each bin's category bins (simulated from bin data)
+        data.forEach(bin => {
+          // For now, we'll use a simple approach: distribute fill_level across categories
+          // In a real system, you'd have separate category bin tables
+          // This is a simplified aggregation
+          const baseFillLevel = bin.fill_level || 0;
+          
+          // Distribute fill level across categories (example logic)
+          // In production, you'd fetch from category_bins table
+          categoryBinsMap['Biodegradable'].fillLevel = Math.max(
+            categoryBinsMap['Biodegradable'].fillLevel,
+            roundToTen(baseFillLevel * 0.3)
+          );
+          categoryBinsMap['Non Biodegradable'].fillLevel = Math.max(
+            categoryBinsMap['Non Biodegradable'].fillLevel,
+            roundToTen(baseFillLevel * 0.3)
+          );
+          categoryBinsMap['Recyclable'].fillLevel = Math.max(
+            categoryBinsMap['Recyclable'].fillLevel,
+            roundToTen(baseFillLevel * 0.2)
+          );
+          categoryBinsMap['Unsorted'].fillLevel = Math.max(
+            categoryBinsMap['Unsorted'].fillLevel,
+            roundToTen(baseFillLevel * 0.2)
+          );
+
+          if (bin.last_update) {
+            const updateDate = new Date(bin.last_update);
+            const now = new Date();
+            const diffMinutes = Math.floor((now - updateDate) / (1000 * 60));
+            
+            let timeAgo = 'Just now';
+            if (diffMinutes > 0) {
+              if (diffMinutes === 1) timeAgo = '1 minute ago';
+              else if (diffMinutes < 60) timeAgo = `${diffMinutes} minutes ago`;
+              else {
+                const diffHours = Math.floor(diffMinutes / 60);
+                timeAgo = diffHours === 1 ? '1h ago' : `${diffHours}h ago`;
+              }
+            }
+
+            // Update last collection for the category with most recent update
+            Object.keys(categoryBinsMap).forEach(cat => {
+              if (!categoryBinsMap[cat].lastCollection || timeAgo < categoryBinsMap[cat].lastCollection) {
+                categoryBinsMap[cat].lastCollection = timeAgo;
+              }
+            });
+          }
+        });
+
+        // Update bins state with aggregated data
+        setBins([
+          { 
+            id: 'Biodegradable', 
+            title: 'Biodegradable', 
+            capacity: '100 L', 
+            fillLevel: categoryBinsMap['Biodegradable'].fillLevel, 
+            lastCollection: categoryBinsMap['Biodegradable'].lastCollection, 
+            colorClass: 'green', 
+            status: categoryBinsMap['Biodegradable'].fillLevel >= 90 ? 'Full' : categoryBinsMap['Biodegradable'].fillLevel >= 75 ? 'Almost Full' : 'Normal', 
+            icon: LeafIcon 
+          },
+          { 
+            id: 'Non Biodegradable', 
+            title: 'Non-Bio', 
+            capacity: '100 L', 
+            fillLevel: categoryBinsMap['Non Biodegradable'].fillLevel, 
+            lastCollection: categoryBinsMap['Non Biodegradable'].lastCollection, 
+            colorClass: 'red', 
+            status: categoryBinsMap['Non Biodegradable'].fillLevel >= 90 ? 'Full' : categoryBinsMap['Non Biodegradable'].fillLevel >= 75 ? 'Almost Full' : 'Normal', 
+            icon: TrashIcon 
+          },
+          { 
+            id: 'Recyclable', 
+            title: 'Recyclable', 
+            capacity: '100 L', 
+            fillLevel: categoryBinsMap['Recyclable'].fillLevel, 
+            lastCollection: categoryBinsMap['Recyclable'].lastCollection, 
+            colorClass: 'blue', 
+            status: categoryBinsMap['Recyclable'].fillLevel >= 90 ? 'Full' : categoryBinsMap['Recyclable'].fillLevel >= 75 ? 'Almost Full' : 'Normal', 
+            icon: RecycleIcon 
+          },
+          { 
+            id: 'Unsorted', 
+            title: 'Unsorted', 
+            capacity: '100 L', 
+            fillLevel: categoryBinsMap['Unsorted'].fillLevel, 
+            lastCollection: categoryBinsMap['Unsorted'].lastCollection, 
+            colorClass: 'lime', 
+            status: categoryBinsMap['Unsorted'].fillLevel >= 90 ? 'Full' : categoryBinsMap['Unsorted'].fillLevel >= 75 ? 'Almost Full' : 'Normal', 
+            icon: GearIcon 
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching bin data:', error);
+    }
+  };
+
+  /**
+   * Updates bin fill levels in real-time
+   * Simulates gradual decrease and rounds to nearest 10
+   */
+  const updateBinFillLevels = () => {
+    setBins(prevBins =>
+      prevBins.map(bin => {
+        if (bin.fillLevel > 0) {
+          const decreaseAmount = 0.1 + (Math.random() * 0.2);
+          const newFillLevel = Math.max(0, bin.fillLevel - decreaseAmount);
+          return {
+            ...bin,
+            fillLevel: roundToTen(newFillLevel),
+            status: roundToTen(newFillLevel) >= 90 ? 'Full' : roundToTen(newFillLevel) >= 75 ? 'Almost Full' : roundToTen(newFillLevel) >= 50 ? 'Normal' : 'Empty'
+          };
+        }
+        return bin;
+      })
+    );
+  };
 
   // --- STATE OF THE ART VALIDATION LOGIC ---
   
@@ -128,12 +283,21 @@ const BinMonitoring = () => {
     }
   };
 
-  const performDrain = () => {
+  const performDrain = async () => {
     const idsToDrain = confirmModal.binsToDrain.map(b => b.id);
+    
+    // Update database (if you have category_bins table)
+    try {
+      // In a real system, you'd update the category_bins table
+      // For now, we'll just update local state
+      // await supabase.from('category_bins').update({ fill_level: 0 }).in('category', idsToDrain);
+    } catch (error) {
+      console.error('Error updating database:', error);
+    }
     
     setBins(prevBins => prevBins.map(bin => {
       if (idsToDrain.includes(bin.id)) {
-        return { ...bin, fillLevel: 0, status: '', lastCollection: 'Just now' };
+        return { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' };
       }
       return bin;
     }));
@@ -148,19 +312,9 @@ const BinMonitoring = () => {
     <div className="bin-monitoring-container">
       <div className="header-section">
         <div className="header-titles">
-          <h1>Real-Time Bin Monitoring</h1>
-          <p>Monitor bin fill levels in real-time</p>
+          <h1>Bin Monitoring</h1>
+          <p>Monitor bin fill levels</p>
         </div>
-        
-        {/* SMART BUTTON */}
-        <button 
-          className={`primary-action-btn ${selectedBins.length > 0 ? 'btn-blue' : 'btn-green'}`} 
-          onClick={handleMainButtonAction}
-          disabled={isButtonDisabled} 
-        >
-          <DrainAllIcon />
-          {getButtonText()}
-        </button>
       </div>
 
       {/* --- SMART NOTIFICATIONS (No blocking errors) --- */}
@@ -173,22 +327,7 @@ const BinMonitoring = () => {
          </div>
       )}
 
-      {/* System Notice: Everything is empty */}
-      {filledBins.length === 0 && (
-        <div className="notification-banner success">
-           <span>✓</span>
-           <p><strong>System Optimized:</strong> All bins are currently empty. No actions needed.</p>
-        </div>
-      )}
-
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
-      
-      {urgentBinsCount > 0 && filledBins.length > 0 && !notification && (
-        <div className="notification-banner warning">
-          <span>⚠️</span> 
-          <div><strong>Action Required:</strong> {urgentBinsCount} bin{urgentBinsCount > 1 ? 's' : ''} almost full or full</div>
-        </div>
-      )}
 
       <div className="bin-grid-layout">
         {bins.map((bin) => (

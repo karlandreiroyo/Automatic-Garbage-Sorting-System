@@ -321,6 +321,20 @@
 
 .bar:hover {
   opacity: 0.8;
+  transform: scaleY(1.05);
+  box-shadow: 0 4px 8px rgba(4, 120, 87, 0.3);
+}
+
+.bar-selected {
+  background-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.3), 0 4px 12px rgba(4, 120, 87, 0.4) !important;
+  transform: scaleY(1.08);
+  z-index: 10;
+}
+
+.bar-empty {
+  background-color: #d1d5db;
+  min-height: 2px;
 }
 
 .bar-value {
@@ -339,6 +353,64 @@
   font-weight: 500;
   margin-top: 8px;
   text-align: center;
+}
+
+.bar-selection-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border: 2px solid #047857;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bar-selection-info p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #047857;
+  font-weight: 500;
+}
+
+.bar-selection-info strong {
+  color: #065f46;
+  font-weight: 700;
+}
+
+.close-selection-btn {
+  background: #047857;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.close-selection-btn:hover {
+  background: #065f46;
+  transform: scale(1.1);
 }
 
 /* Tablet */
@@ -480,6 +552,21 @@
     font-size: 0.7rem;
   }
   
+  .bar-selection-info {
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  
+  .bar-selection-info p {
+    font-size: 0.85rem;
+  }
+  
+  .close-selection-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 16px;
+  }
+  
   .donut-chart-container {
     min-height: 200px;
   }
@@ -615,6 +702,25 @@
   .bar-label {
     font-size: 0.65rem;
     margin-top: 6px;
+  }
+  
+  .bar-selection-info {
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .bar-selection-info p {
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .close-selection-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
   }
   
   .donut-chart-container {

@@ -31,9 +31,9 @@
    ```env
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
-   SMTP_USER=karlandreiroyo86@gmail.com
+   SMTP_USER=automaticgarbagesortingsystem1@gmail.com
    SMTP_PASS=your_16_char_app_password_here
-   SMTP_FROM="Automatic Garbage Sorting System <karlandreiroyo86@gmail.com>"
+   SMTP_FROM="Automatic Garbage Sorting System <automaticgarbagesortingsystem1@gmail.com>"
    ```
 
 5. **Save the file** (Ctrl+S)

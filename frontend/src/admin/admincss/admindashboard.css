@@ -621,6 +621,7 @@ html::-webkit-scrollbar {
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(4px);
+  pointer-events: none;
 }
 
 .modal-box {
@@ -630,6 +631,7 @@ html::-webkit-scrollbar {
   text-align: center;
   width: 350px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
 }
 
 .modal-icon-wrapper {

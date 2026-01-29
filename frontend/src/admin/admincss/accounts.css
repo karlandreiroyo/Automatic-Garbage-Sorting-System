@@ -28,7 +28,19 @@
   z-index: 9999;
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+  height: 100%;
 }
 
 /* Modal Content Box */
@@ -46,6 +58,10 @@
   display: flex;
   flex-direction: column;
   margin: auto;
+  pointer-events: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 @keyframes modalSlideDown {
@@ -109,11 +125,19 @@
     padding: 10px;
     align-items: flex-start;
     padding-top: 20px;
+    pointer-events: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-content.maximized {
     max-height: 95vh;
     margin: 0;
+    pointer-events: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
   
   .employee-form {
@@ -192,6 +216,7 @@
 .form-group select {
   width: 100%;
   padding: 12px 16px;
+  box-sizing: border-box;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.95rem;
@@ -235,6 +260,161 @@
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
 }
 
+/* Verify buttons inline with inputs */
+.input-with-verify {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.input-with-verify input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.verify-btn-inline {
+  background: #047857;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.verify-btn-inline.email {
+  background: #047857;
+}
+.verify-btn-inline.email:hover:not(:disabled) {
+  background: #065f46;
+}
+.verify-btn-inline.phone {
+  background: #0ea5e9;
+}
+.verify-btn-inline.phone:hover:not(:disabled) {
+  background: #0284c7;
+}
+.verify-btn-inline:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.verify-btn-inline.verified {
+  background-color: #10b981 !important;
+  color: white;
+  cursor: default;
+}
+.verify-btn-inline.verified:hover:not(:disabled) {
+  background-color: #059669 !important;
+}
+.verified-badge-inline {
+  color: #047857;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* Credentials Sent Modal */
+.credentials-sent-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+.credentials-sent-title {
+  margin: 0 0 12px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.credentials-sent-message {
+  margin: 0 0 16px 0;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.5;
+}
+.credentials-sent-sub {
+  margin: 0 0 16px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+}
+.credentials-error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #991b1b;
+}
+.credentials-error-box strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #dc2626;
+}
+.credentials-sent-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.credentials-verify-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: 0.2s;
+}
+.credentials-verify-btn.email {
+  background: #047857;
+  color: white;
+}
+.credentials-verify-btn.email:hover:not(:disabled) {
+  background: #065f46;
+}
+.credentials-verify-btn.phone {
+  background: #0ea5e9;
+  color: white;
+}
+.credentials-verify-btn.phone:hover:not(:disabled) {
+  background: #0284c7;
+}
+.credentials-verify-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.credentials-sent-close {
+  display: block;
+  width: 100%;
+  padding: 10px 20px;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.credentials-sent-close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 /* Show Password Toggle */
 .show-password-toggle {
   display: flex;
@@ -276,6 +456,9 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .btn-primary {
@@ -287,6 +470,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -294,10 +480,15 @@
   transform: translateY(-1px);
 }
 
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn-primary:disabled {
   background: #9ca3af;
   cursor: not-allowed;
   opacity: 0.6;
+  pointer-events: none;
 }
 
 .btn-secondary {
@@ -402,6 +593,8 @@
   border-radius: 10px;
   font-size: 0.95rem;
   transition: 0.2s;
+  height: 44px;
+  box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -411,13 +604,15 @@
 }
 
 .filter-select {
-  padding: 12px;
+  padding: 12px 16px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   min-width: 150px;
   font-size: 0.95rem;
   cursor: pointer;
   transition: 0.2s;
+  height: 44px;
+  box-sizing: border-box;
 }
 
 .filter-select:focus {
@@ -789,12 +984,12 @@
 }
 
 .archive-btn {
-  background: #ef4444;
+  background: #14b8a6;
   color: white;
 }
 
 .archive-btn:hover {
-  background: #dc2626;
+  background: #0d9488;
   transform: translateY(-1px);
 }
 
@@ -1036,6 +1231,8 @@
   .filter-select {
     padding: 11px 14px;
     font-size: 0.9rem;
+    height: 42px;
+    box-sizing: border-box;
   }
 }
 
@@ -1176,6 +1373,8 @@
   .filter-select {
     width: 100%;
     padding: 10px 14px;
+    height: 40px;
+    box-sizing: border-box;
   }
 
   .accounts-card-grid {
@@ -1278,6 +1477,11 @@
     padding: 10px;
     align-items: flex-start;
     padding-top: 20px;
+    pointer-events: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-content.maximized {
@@ -1285,6 +1489,9 @@
     max-height: 95vh;
     border-radius: 16px;
     margin: 0;
+    pointer-events: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-header {
@@ -1406,6 +1613,11 @@
     padding: 5px;
     align-items: flex-start;
     padding-top: 10px;
+    pointer-events: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-content.maximized {
@@ -1413,6 +1625,9 @@
     max-height: 98vh;
     border-radius: 12px;
     margin: 0;
+    pointer-events: auto;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
   
   .modal-header {

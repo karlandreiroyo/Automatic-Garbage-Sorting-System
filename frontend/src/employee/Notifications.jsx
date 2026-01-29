@@ -36,6 +36,7 @@ const Notifications = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   // Filter logic: 
   // - When no filter is active: show only unread notifications (main view)
@@ -147,12 +148,15 @@ const Notifications = () => {
       return;
     }
 
-    if (window.confirm(`Are you sure you want to delete all ${notifications.length} notification${notifications.length > 1 ? 's' : ''}?`)) {
-      setDeletedNotifications([...deletedNotifications, ...notifications]);
-      setNotifications([]);
-      setActiveFilter(null);
-      showSuccess('All notifications cleared');
-    }
+    setShowClearAllConfirm(true);
+  };
+
+  const handleConfirmClearAll = () => {
+    setDeletedNotifications([...deletedNotifications, ...notifications]);
+    setNotifications([]);
+    setActiveFilter(null);
+    setShowClearAllConfirm(false);
+    showSuccess('All notifications cleared');
   };
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
@@ -312,6 +316,88 @@ const Notifications = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Clear All Confirmation Modal */}
+      {showClearAllConfirm && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setShowClearAllConfirm(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+        >
+          <div 
+            className="confirm-modal-box" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ 
+                width: '48px', 
+                height: '48px', 
+                margin: '0 auto 15px',
+                color: '#ef4444'
+              }}>
+                {Icons.critical}
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1f2937', marginBottom: '10px' }}>
+                Confirm Delete
+              </h3>
+              <p style={{ color: '#6b7280', fontSize: '0.95rem' }}>
+                Are you sure you want to delete all {notifications.length} notification{notifications.length > 1 ? 's' : ''}?
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setShowClearAllConfirm(false)}
+                style={{
+                  padding: '10px 24px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  background: '#f9fafb',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.95rem'
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmClearAll}
+                style={{
+                  padding: '10px 24px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#ef4444',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.95rem'
+                }}
+              >
+                Delete All
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

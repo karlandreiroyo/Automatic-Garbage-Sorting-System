@@ -39,7 +39,7 @@ To send verification emails with proper subjects (Login Verification, Change Pas
 **Example:** If you configure `SMTP_USER=admin@company.com`, this ONE account will send verification emails to:
 - `user1@example.com` (when user1 logs in)
 - `user2@example.com` (when user2 logs in)
-- `karlandreiroyo86@gmail.com` (when that user logs in)
+- `automaticgarbagesortingsystem1@gmail.com` (when that user logs in)
 - And so on for ALL users in your system
 
 ### For Gmail:

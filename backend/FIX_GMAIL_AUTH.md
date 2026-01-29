@@ -30,7 +30,7 @@ You're using a **25-character regular Gmail password** instead of a **16-charact
    - Example: `SMTP_PASS=abcdefghijklmnop`
 4. **Important**: Make sure `SMTP_USER` matches the email that generated the App Password:
    ```env
-   SMTP_USER=karlandreiroyo86@gmail.com
+   SMTP_USER=automaticgarbagesortingsystem1@gmail.com
    SMTP_PASS=abcdefghijklmnop
    ```
 5. Save the file
@@ -92,9 +92,9 @@ If you still get errors after following these steps:
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=karlandreiroyo86@gmail.com
+SMTP_USER=automaticgarbagesortingsystem1@gmail.com
 SMTP_PASS=abcdefghijklmnop
-SMTP_FROM="Automatic Garbage Sorting System <karlandreiroyo86@gmail.com>"
+SMTP_FROM="Automatic Garbage Sorting System <automaticgarbagesortingsystem1@gmail.com>"
 ```
 
 **Note:** Replace `abcdefghijklmnop` with your actual 16-character App Password.

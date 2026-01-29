@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../employee/employeecss/Profile.css';
 import { supabase } from '../supabaseClient.jsx';
+import AddressDropdowns from '../components/AddressDropdowns';
 
 // --- ICONS ---
 const CameraIcon = () => (
@@ -17,12 +18,6 @@ const LockIcon = () => (
   </svg>
 );
 
-const BellIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-  </svg>
-);
 
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -51,17 +46,32 @@ const EyeOffIcon = () => (
   </svg>
 );
 
+const AlertIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+);
+
 const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [formData, setFormData] = useState({ 
-    firstName: 'Employee',
-    middleName: 'User',
-    lastName: 'User',
-    email: 'employee@ecosort.com',
-    phone: 'employee@ecosort.com'
-  });
+  firstName: 'Employee',
+  middleName: 'User',
+  lastName: 'User',
+  email: 'employee@ecosort.com',
+  phone: 'employee@ecosort.com',
+  address: {
+    region: '',
+    province: '',
+    city_municipality: '',
+    barangay: '',
+    street_address: ''
+  }
+});
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -91,41 +101,59 @@ const Profile = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  
+  // Alert modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Alert');
+  
+  // Toast notification states
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success'); // 'success' or 'error'
 
-  // Fetch profile from Supabase
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.error("No user logged in");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('first_name, last_name, middle_name, email, contact')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setFormData({
-          firstName: data.first_name || 'Employee',
-          middleName: data.middle_name || 'User',
-          lastName: data.last_name || 'User',
-          email: data.email || 'employee@ecosort.com',
-          phone: String(data.contact || 'employee@ecosort.com')
-        });
-      }
-    } catch (err) {
-      console.error("Fetch Error:", err.message);
-    } finally {
-      setLoading(false);
+// Fetch profile from Supabase
+const fetchProfile = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error("No user logged in");
+      return;
     }
-  };
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('first_name, last_name, middle_name, email, contact, region, province, city_municipality, barangay, street_address')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (error) throw error;
+
+    if (data) {
+      setFormData({
+        firstName: data.first_name || 'Employee',
+        middleName: data.middle_name || 'User',
+        lastName: data.last_name || 'User',
+        email: data.email || 'employee@ecosort.com',
+        phone: String(data.contact || 'employee@ecosort.com'),
+        address: {
+          region: data.region || '',
+          province: data.province || '',
+          city_municipality: data.city_municipality || '',
+          barangay: data.barangay || '',
+          street_address: data.street_address || ''
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Fetch Error:", err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchProfile();
@@ -143,10 +171,119 @@ const Profile = () => {
     return nameParts.join(' ').trim() || 'Employee';
   };
 
+  // Validation function
+  const validateField = (field, value) => {
+    let error = '';
+    switch(field) {
+      case 'firstName':
+        if (!value.trim()) error = 'First name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'lastName':
+        if (!value.trim()) error = 'Last name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'middleName':
+        if (!value.trim()) error = 'Middle name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'email': {
+        const emailVal = value.trim();
+        const atCount = (emailVal.match(/@/g) || []).length;
+        const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailVal) {
+          error = 'Email is required';
+        } else if (atCount === 0) {
+          error = 'You need to put @';
+        } else if (atCount > 1) {
+          error = 'Email must contain exactly one @ symbol';
+        } else if (atCount === 1) {
+          if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+            error = 'Email cannot end with @ or a period';
+          } else if (!emailRegex.test(emailVal)) {
+            error = 'Invalid domain format (e.g., .com, .ph)';
+          }
+        }
+        break;
+      }
+      case 'phone':
+        const contactStr = String(value || '');
+        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
+        if (!contactStr.trim()) {
+          error = 'Contact number is required';
+        } else if (digitsOnly.length < 11) {
+          error = `Remaining ${11 - digitsOnly.length} digits required`;
+        } else if (!digitsOnly.startsWith('09')) {
+          error = 'Contact number must start with 09';
+        }
+        break;
+      default:
+        break;
+    }
+    return error;
+  };
+
   // Handle input change
   const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    let finalValue = value;
+
+    // Format names to uppercase and letters only
+    if (['firstName', 'lastName', 'middleName'].includes(field)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    }
+
+    // Format email to lowercase and remove invalid characters
+    if (field === 'email') {
+      let cleaned = value.replace(/[^a-zA-Z0-9@.]/g, '').toLowerCase();
+      const parts = cleaned.split('@');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '@' + parts.slice(1).join('');
+      }
+      finalValue = cleaned;
+    }
+
+    // Format contact number - ensure it starts with "09" and is 11 digits
+    if (field === 'phone') {
+      let digits = value.replace(/\D/g, '');
+      if (!digits.startsWith('09')) {
+        digits = '09' + digits;
+      }
+      finalValue = digits.slice(0, 11);
+    }
+
+    setFormData({ ...formData, [field]: finalValue });
+    setTouched({ ...touched, [field]: true });
+    setErrors({ ...errors, [field]: validateField(field, finalValue) });
   };
+
+  // Handle blur
+  const handleBlur = (field) => {
+    setTouched({ ...touched, [field]: true });
+    setErrors({ ...errors, [field]: validateField(field, formData[field]) });
+  };
+  
+  // Validate address fields
+const validateAddress = () => {
+  const addressErrors = {};
+  
+  if (!formData.address.region) {
+    addressErrors.region = 'Region is required';
+  }
+  if (!formData.address.province) {
+    addressErrors.province = 'Province is required';
+  }
+  if (!formData.address.city_municipality) {
+    addressErrors.city_municipality = 'City/Municipality is required';
+  }
+  if (!formData.address.barangay) {
+    addressErrors.barangay = 'Barangay is required';
+  }
+  
+  return addressErrors;
+};
 
   // Password validation
   const validatePassword = (password) => {
@@ -246,11 +383,6 @@ const Profile = () => {
     }
   };
 
-  // Handle preference toggle
-  const handlePreferenceToggle = (pref) => {
-    setPreferences({ ...preferences, [pref]: !preferences[pref] });
-  };
-
   // Handle save
   const handleSave = async () => {
     if (!isEditing) {
@@ -258,45 +390,115 @@ const Profile = () => {
       return;
     }
 
+    // Validate all fields before showing terms modal
+    const newErrors = {};
+    ['firstName', 'lastName', 'middleName', 'email', 'phone'].forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) newErrors[field] = error;
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched({
+        firstName: true,
+        lastName: true,
+        middleName: true,
+        email: true,
+        phone: true
+      });
+      setAlertTitle('Validation Error');
+      setAlertMessage('Please fix all validation errors before saving.');
+      setShowAlertModal(true);
+      return;
+    }
+
     // Show Terms and Conditions modal before saving
+    setHasScrolledToBottom(false); // Reset scroll state when modal opens
     setShowTermsModal(true);
   };
 
-  // Handle accept terms and save
-  const handleAcceptTermsAndSave = async () => {
+  // Check if content is already at bottom when modal opens
+  useEffect(() => {
+    if (showTermsModal) {
+      // Small delay to ensure DOM is rendered
+      setTimeout(() => {
+        const modalBody = document.querySelector('.terms-modal-body');
+        if (modalBody) {
+          const isAtBottom = modalBody.scrollHeight - modalBody.scrollTop <= modalBody.clientHeight + 10;
+          setHasScrolledToBottom(isAtBottom);
+        }
+      }, 100);
+    }
+  }, [showTermsModal]);
+
+// Handle accept terms and save
+const handleAcceptTermsAndSave = async () => {
+  if (!hasScrolledToBottom) {
+    return;
+  }
+
+  // Validate address fields first
+  const addressErrors = validateAddress();
+  
+  if (Object.keys(addressErrors).length > 0) {
+    setErrors({ ...errors, ...addressErrors });
+    setTouched({ 
+      ...touched, 
+      region: true, 
+      province: true, 
+      city_municipality: true, 
+      barangay: true 
+    });
     setShowTermsModal(false);
+    setAlertTitle('Validation Error');
+    setAlertMessage('Please fill in all required address fields');
+    setShowAlertModal(true);
+    return;
+  }
+
+    setShowTermsModal(false);
+    setHasScrolledToBottom(false); // Reset for next time
+  
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
     
-    try {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        alert("Not logged in");
-        return;
-      }
+    if (!user) {
+      setAlertTitle('Error');
+      setAlertMessage("Not logged in");
+      setShowAlertModal(true);
+      return;
+    }
 
-      const { error } = await supabase
-        .from('users')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          middle_name: formData.middleName,
-          contact: formData.phone
-        })
-        .eq('auth_id', user.id);
+    const { error } = await supabase
+      .from('users')
+      .update({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        middle_name: formData.middleName,
+        contact: formData.phone,
+        region: formData.address.region,
+        province: formData.address.province,
+        city_municipality: formData.address.city_municipality,
+        barangay: formData.address.barangay,
+        street_address: formData.address.street_address
+      })
+      .eq('auth_id', user.id);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setSaveSuccess(true);
-      setIsEditing(false);
-      setTimeout(() => setSaveSuccess(false), 3000);
+    setSaveSuccess(true);
+    setIsEditing(false);
+    setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       console.error("Update error:", err);
-      alert("Update failed: " + err.message);
+      setAlertTitle('Error');
+      setAlertMessage("Update failed: " + err.message);
+      setShowAlertModal(true);
     } finally {
-      setLoading(false);
-    }
-  };
+    setLoading(false);
+  }
+};
 
   // Backend API base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -304,7 +506,9 @@ const Profile = () => {
   // Send OTP for password change
   const handleSendOTP = async () => {
     if (!formData.email) {
-      alert("Email is required to send OTP");
+      setAlertTitle('Validation Error');
+      setAlertMessage("Email is required to send OTP");
+      setShowAlertModal(true);
       return;
     }
 
@@ -315,7 +519,9 @@ const Profile = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
-        alert('Session expired. Please login again.');
+        setAlertTitle('Session Expired');
+        setAlertMessage('Session expired. Please login again.');
+        setShowAlertModal(true);
         return;
       }
 
@@ -334,16 +540,26 @@ const Profile = () => {
         setOtpSent(true);
         setOtpVerified(false);
         setOtpMessage(data.message || 'OTP sent to your email. Check terminal for code.');
-        // Show OTP in alert if available
+        // Show OTP in toast notification if available
         if (data.otp) {
-          alert(`OTP Code: ${data.otp}\n\nThis code is also visible in the terminal and sent to your email.`);
+          setToastMessage('Verification Code Sent to your email');
+          setToastType('success');
+          setShowToast(true);
+          // Auto-hide toast after 5 seconds
+          setTimeout(() => {
+            setShowToast(false);
+          }, 5000);
         }
       } else {
-        alert(data.message || 'Failed to send OTP');
+        setAlertTitle('Error');
+        setAlertMessage(data.message || 'Failed to send OTP');
+        setShowAlertModal(true);
       }
     } catch (error) {
       console.error("Send OTP error:", error);
-      alert("Failed to connect to server. Please try again.");
+      setAlertTitle('Error');
+      setAlertMessage("Failed to connect to server. Please try again.");
+      setShowAlertModal(true);
     } finally {
       setLoading(false);
     }
@@ -408,12 +624,16 @@ const Profile = () => {
   const handleChangePassword = async () => {
     // Validate all fields
     if (!otpVerified) {
-      alert("Please verify OTP first");
+      setAlertTitle('Validation Error');
+      setAlertMessage("Please verify OTP first");
+      setShowAlertModal(true);
       return;
     }
 
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
-      alert("Please fill in new password and confirm password");
+      setAlertTitle('Validation Error');
+      setAlertMessage("Please fill in new password and confirm password");
+      setShowAlertModal(true);
       return;
     }
 
@@ -426,7 +646,9 @@ const Profile = () => {
         confirmPassword: passwordData.newPassword !== passwordData.confirmPassword ? 'Passwords do not match' : '',
         otp: ''
       });
-      alert("Please fix password validation errors");
+      setAlertTitle('Validation Error');
+      setAlertMessage("Please fix password validation errors");
+      setShowAlertModal(true);
       return;
     }
 
@@ -438,7 +660,9 @@ const Profile = () => {
         confirmPassword: 'Passwords do not match',
         otp: ''
       });
-      alert("Passwords do not match");
+      setAlertTitle('Validation Error');
+      setAlertMessage("Passwords do not match");
+      setShowAlertModal(true);
       return;
     }
 
@@ -448,7 +672,9 @@ const Profile = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
-        alert('Session expired. Please login again.');
+        setAlertTitle('Session Expired');
+        setAlertMessage('Session expired. Please login again.');
+        setShowAlertModal(true);
         return;
       }
 
@@ -467,7 +693,9 @@ const Profile = () => {
       const data = await response.json();
 
       if (data.success) {
-        alert("Password changed successfully!");
+        setAlertTitle('Success');
+        setAlertMessage("Password changed successfully!");
+        setShowAlertModal(true);
         // Reset all password-related state
         setPasswordData({ newPassword: '', confirmPassword: '', otp: '' });
         setPasswordErrors({ newPassword: '', confirmPassword: '', otp: '' });
@@ -477,11 +705,15 @@ const Profile = () => {
         setChangeToken('');
         setOtpMessage('');
       } else {
-        alert(data.message || 'Failed to change password');
+        setAlertTitle('Error');
+        setAlertMessage(data.message || 'Failed to change password');
+        setShowAlertModal(true);
       }
     } catch (error) {
       console.error("Password change error:", error);
-      alert("Failed to connect to server. Please try again.");
+      setAlertTitle('Error');
+      setAlertMessage("Failed to connect to server. Please try again.");
+      setShowAlertModal(true);
     } finally {
       setLoading(false);
     }
@@ -499,31 +731,27 @@ const Profile = () => {
       </div>
 
       <div className="profile-content">
-        {/* Profile Summary Card - At Top */}
-        <div className="profile-summary-card">
-          <div className="profile-top-section">
-            <div className="avatar-container">
-              <div className="avatar-circle">
-                {getInitials()}
-              </div>
-              <button className="camera-button">
-                <CameraIcon />
-              </button>
-            </div>
-            <div className="profile-info-middle">
-              <h2 className="user-name">{getFullName()}</h2>
-              <p className="user-email">{formData.email}</p>
-              <div className="role-badge">
-                <ShieldIcon />
-                <span>Employee</span>
-              </div>
-              <p className="joined-date">Joined {joinedDate}</p>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content - Scrollable */}
         <div className="profile-main-content">
+          {/* Profile Summary Card - At Top */}
+          <div className="profile-summary-card">
+            <div className="profile-top-section">
+              <div className="avatar-container">
+                <div className="avatar-circle">
+                  {getInitials()}
+                </div>
+              </div>
+              <div className="profile-info-middle">
+                <h2 className="user-name">{getFullName()}</h2>
+                <p className="user-email">{formData.email}</p>
+                <div className="role-badge">
+                  <ShieldIcon />
+                  <span>Employee</span>
+                </div>
+                <p className="joined-date">Joined {joinedDate}</p>
+              </div>
+            </div>
+          </div>
           {/* Personal Information Section */}
           <div className="info-section">
             <div className="section-header-row">
@@ -536,39 +764,63 @@ const Profile = () => {
             </div>
 
             <div className="personal-info-grid">
-              <div className="form-group">
-                <label>First Name</label>
+              <div className={`form-group ${touched.firstName && errors.firstName ? 'has-error' : ''}`}>
+                <label>First Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.firstName && errors.firstName ? 'error' : ''}`}
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  onBlur={() => handleBlur('firstName')}
                   disabled={!isEditing}
                   placeholder="First Name"
                 />
+                {touched.firstName && errors.firstName && (
+                  <span className="error-message">{errors.firstName}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Middle Name</label>
+              <div className={`form-group ${touched.middleName && errors.middleName ? 'has-error' : ''}`}>
+                <label>Middle Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.middleName && errors.middleName ? 'error' : ''}`}
                   value={formData.middleName}
                   onChange={(e) => handleInputChange('middleName', e.target.value)}
+                  onBlur={() => handleBlur('middleName')}
                   disabled={!isEditing}
                   placeholder="Middle Name"
                 />
+                {touched.middleName && errors.middleName && (
+                  <span className="error-message">{errors.middleName}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Last Name</label>
+              <div className={`form-group ${touched.lastName && errors.lastName ? 'has-error' : ''}`}>
+                <label>Last Name *</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input ${touched.lastName && errors.lastName ? 'error' : ''}`}
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  onBlur={() => handleBlur('lastName')}
                   disabled={!isEditing}
                   placeholder="Last Name"
+                />
+                {touched.lastName && errors.lastName && (
+                  <span className="error-message">{errors.lastName}</span>
+                )}
+              </div>
+
+              {/* Address Section */}
+              <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
+                <h4 style={{ marginBottom: '1.25rem', marginTop: '0.5rem', color: '#374151', fontSize: '1rem', fontWeight: '600' }}>Address Information</h4>
+                <AddressDropdowns
+                  value={formData.address}
+                  onChange={(newAddress) => setFormData({ ...formData, address: newAddress })}
+                  disabled={!isEditing}
+                  errors={errors}
+                  touched={touched}
                 />
               </div>
 
@@ -576,24 +828,38 @@ const Profile = () => {
                 <label>Email Address</label>
                 <input
                   type="email"
-                  className="form-input"
+                  className={`form-input ${touched.email && errors.email ? 'error' : ''}`}
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
+                  onBlur={() => handleBlur('email')}
                   disabled={!isEditing}
                   placeholder="Email Address"
                 />
+                {touched.email && errors.email && (
+                  <span className="error-message">{errors.email}</span>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Phone Number</label>
+              <div className={`form-group ${touched.phone && errors.phone ? 'has-error' : ''}`}>
+                <label>Contact Number *</label>
                 <input
                   type="tel"
-                  className="form-input"
+                  className={`form-input ${touched.phone && errors.phone ? 'error' : ''}`}
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
+                  onBlur={() => handleBlur('phone')}
                   disabled={!isEditing}
-                  placeholder="Phone Number"
+                  placeholder="09XXXXXXXXX"
+                  onKeyDown={(e) => {
+                    // Prevent backspacing the "09" prefix
+                    if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
+                {touched.phone && errors.phone && (
+                  <span className="error-message">{errors.phone}</span>
+                )}
               </div>
             </div>
 
@@ -826,45 +1092,6 @@ const Profile = () => {
               )}
             </div>
           </div>
-
-          {/* Preferences Section */}
-          <div className="preferences-section">
-            <h3>Preferences</h3>
-            <div className="preference-item">
-              <div className="preference-info">
-                <BellIcon />
-                <div>
-                  <div className="preference-title">Email Notifications</div>
-                  <div className="preference-desc">Receive alerts via email</div>
-                </div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={preferences.emailNotifications}
-                  onChange={() => handlePreferenceToggle('emailNotifications')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-            <div className="preference-item">
-              <div className="preference-info">
-                <BellIcon />
-                <div>
-                  <div className="preference-title">Push Notifications</div>
-                  <div className="preference-desc">Receive alerts in browser</div>
-                </div>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={preferences.pushNotifications}
-                  onChange={() => handlePreferenceToggle('pushNotifications')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
         </div>
         </div>
       </div>
@@ -878,14 +1105,21 @@ const Profile = () => {
               <button className="terms-close-btn" onClick={() => setShowTermsModal(false)}>×</button>
             </div>
             
-            <div className="terms-modal-body">
+            <div 
+              className="terms-modal-body"
+              onScroll={(e) => {
+                const element = e.target;
+                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10; // 10px threshold
+                setHasScrolledToBottom(isAtBottom);
+              }}
+            >
               {/* Terms and Conditions Card */}
               <div className="terms-card">
                 <h3 className="terms-card-title">Terms and Conditions</h3>
                 <div className="terms-card-content">
                   <div className="terms-section">
                     <h4>1. Acceptance of Terms</h4>
-                    <p>By creating an account and using SoilScan services, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.</p>
+                    <p>By creating an account and using Automatic Garbage Sorting System services, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.</p>
                   </div>
                   
                   <div className="terms-section">
@@ -915,7 +1149,7 @@ const Profile = () => {
                   
                   <div className="terms-section">
                     <h4>6. Warranty and Liability</h4>
-                    <p>Hardware comes with manufacturer warranty as specified in your package. We are not liable for crop losses or damages resulting from sensor malfunction, incorrect data interpretation, or force majeure events.</p>
+                    <p>Hardware comes with manufacturer warranty as specified in your package. We are not liable for Bin damages resulting from sensor malfunction, incorrect data interpretation, or force majeure events.</p>
                   </div>
                   
                   <div className="terms-section">
@@ -924,18 +1158,8 @@ const Profile = () => {
                   </div>
                   
                   <div className="terms-section">
-                    <h4>8. Termination</h4>
-                    <p>We reserve the right to suspend or terminate accounts that violate these terms. Upon termination, your access to services will be revoked, though your data will be available for download for 90 days.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>9. Changes to Terms</h4>
+                    <h4>8. Changes to Terms</h4>
                     <p>We may update these terms from time to time. Continued use of our services after changes constitutes acceptance of the modified terms.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>10. Contact Information</h4>
-                    <p>For questions about these terms, please contact us at support@soilscan.com or through our contact form.</p>
                   </div>
                 </div>
               </div>
@@ -946,7 +1170,7 @@ const Profile = () => {
                 <div className="terms-card-content">
                   <div className="terms-section">
                     <h4>1. Information We Collect</h4>
-                    <p>We collect information you provide directly to us, including your name, email address, phone number, farm location, and farm size. We also collect sensor data from your IoT devices, including soil NPK levels, timestamps, and device identifiers.</p>
+                    <p>We collect information you provide directly to us, including your first name, middle name, last name, email address, phone number, and complete address (region, province, city/municipality, barangay, and street address). We also collect data related to your role, account status, and activities within the Automatic Garbage Sorting System.</p>
                   </div>
                   
                   <div className="terms-section">
@@ -954,10 +1178,6 @@ const Profile = () => {
                     <p>We use the information we collect to:</p>
                     <ul>
                       <li>Provide, maintain, and improve our services</li>
-                      <li>Process your orders and payments</li>
-                      <li>Send you technical notices and support messages</li>
-                      <li>Provide AI-powered recommendations based on your soil data</li>
-                      <li>Communicate with you about products, services, and promotional offers</li>
                       <li>Monitor and analyze trends, usage, and activities</li>
                     </ul>
                   </div>
@@ -974,7 +1194,7 @@ const Profile = () => {
                   
                   <div className="terms-section">
                     <h4>4. Data Security</h4>
-                    <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. Your sensor data is encrypted both in transit and at rest using industry-standard encryption protocols.</p>
+                    <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
                   </div>
                   
                   <div className="terms-section">
@@ -988,9 +1208,6 @@ const Profile = () => {
                     <ul>
                       <li>Access and receive a copy of your personal information</li>
                       <li>Correct inaccurate or incomplete information</li>
-                      <li>Request deletion of your information</li>
-                      <li>Object to or restrict certain processing activities</li>
-                      <li>Export your data in a portable format</li>
                     </ul>
                   </div>
                   
@@ -1016,21 +1233,112 @@ const Profile = () => {
                   
                   <div className="terms-section">
                     <h4>11. Contact Us</h4>
-                    <p>For privacy-related questions or to exercise your rights, contact us at privacy@soilscan.com or write to us at: SoilScan Data Protection Officer, 123 Agriculture Boulevard, Quezon City, Philippines.</p>
+                    <p>For privacy-related questions or to exercise your rights, contact us at karlandreiroyo86@gmail.com.</p>
                   </div>
                 </div>
               </div>
             </div>
             
             <div className="terms-modal-footer">
-              <button className="terms-cancel-btn" onClick={() => setShowTermsModal(false)}>
+              <button className="terms-cancel-btn" onClick={() => {
+                setShowTermsModal(false);
+                setHasScrolledToBottom(false);
+              }}>
                 Cancel
               </button>
-              <button className="terms-accept-btn" onClick={handleAcceptTermsAndSave}>
+              <button 
+                className="terms-accept-btn" 
+                onClick={handleAcceptTermsAndSave}
+                disabled={!hasScrolledToBottom}
+              >
                 Done / Accept
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlertModal && (
+        <div className="terms-modal-overlay" onClick={() => setShowAlertModal(false)}>
+          <div className="terms-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="terms-modal-header">
+              <h2>{alertTitle}</h2>
+              <button className="terms-close-btn" onClick={() => setShowAlertModal(false)}>×</button>
+            </div>
+            <div className="terms-modal-body" style={{ padding: '20px', textAlign: 'center' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <AlertIcon />
+              </div>
+              <p style={{ whiteSpace: 'pre-line', fontSize: '16px', color: '#374151' }}>{alertMessage}</p>
+            </div>
+            <div className="terms-modal-footer">
+              <button 
+                className="terms-accept-btn" 
+                onClick={() => setShowAlertModal(false)}
+                style={{ width: '100%' }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification for OTP */}
+      {showToast && (
+        <div 
+          className="toast-notification"
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            backgroundColor: toastType === 'success' ? '#10b981' : '#ef4444',
+            color: 'white',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2)',
+            zIndex: 10001,
+            maxWidth: '400px',
+            animation: 'slideInRight 0.3s ease-out',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.95rem', fontWeight: '500', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+              {toastMessage}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowToast(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '20px',
+              lineHeight: '1',
+              padding: '0',
+              marginLeft: '8px',
+              opacity: '0.8'
+            }}
+          >
+            ×
+          </button>
+          <style>{`
+            @keyframes slideInRight {
+              from {
+                transform: translateX(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
         </div>
       )}
     </div>

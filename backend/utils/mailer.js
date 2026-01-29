@@ -188,10 +188,11 @@ async function sendLoginVerificationEmail({ to, code, expiresMinutes = 10 }) {
     `If you did not attempt to log in, please ignore this email.`;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">Login Verification</h1>
-      <p style="margin: 0 0 16px 0; color: #374151;">Your login verification code is:</p>
-      <div style="font-size: 32px; letter-spacing: 8px; font-weight: 600; padding: 20px; text-align: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 20px 0; font-family: 'Courier New', monospace;">
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">You have requested a login verification code.</p>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">Use the code below to complete your login:</p>
+      <div style="font-size: 36px; letter-spacing: 4px; font-weight: 700; padding: 24px; text-align: center; background: #f3f4f6; border: 2px solid #d1d5db; border-radius: 8px; margin: 24px 0; font-family: 'Courier New', monospace; color: #111;">
         ${code}
       </div>
       <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
@@ -627,6 +628,104 @@ async function sendSecurityAlertEmail({ to, failedAttempts, attemptedEmail, time
   }
 }
 
+/**
+ * Send new employee credentials email (username + password) via Gmail.
+ * @param {{ to: string, username: string, password: string, fullName: string }} opts
+ */
+async function sendNewEmployeeCredentialsEmail({ to, username, password, fullName }) {
+  const cfg = getSmtpConfig();
+
+  console.log('\n' + '═'.repeat(60));
+  console.log('📧 ATTEMPTING TO SEND EMPLOYEE CREDENTIALS EMAIL');
+  console.log('═'.repeat(60));
+  console.log(`To: ${to}`);
+  console.log(`SMTP Enabled: ${cfg.enabled}`);
+  console.log(`SMTP Host: ${cfg.host || 'NOT SET'}`);
+  console.log(`SMTP Port: ${cfg.port || 'NOT SET'}`);
+  console.log(`SMTP User: ${cfg.user || 'NOT SET'}`);
+  console.log(`SMTP From: ${cfg.from || 'NOT SET'}`);
+  console.log(`Has Placeholders: ${cfg.hasPlaceholders}`);
+  console.log(`User Email Valid: ${cfg.userEmailValid}`);
+  if (cfg.validationErrors && cfg.validationErrors.length > 0) {
+    console.log(`Validation Errors: ${cfg.validationErrors.join(', ')}`);
+  }
+  console.log('═'.repeat(60));
+
+  if (cfg.hasPlaceholders || !cfg.enabled || !cfg.userEmailValid) {
+    const reason = cfg.hasPlaceholders 
+      ? 'SMTP configuration contains placeholder values. Update backend/.env with actual SMTP credentials.'
+      : !cfg.enabled
+      ? 'SMTP is not enabled. Check SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM in backend/.env.'
+      : !cfg.userEmailValid
+      ? `SMTP_USER is not a valid email: ${cfg.user}`
+      : 'SMTP not configured. Set SMTP in backend/.env to send credentials via Gmail.';
+    
+    console.error('❌ SMTP Configuration Issue:', reason);
+    return { ok: false, reason };
+  }
+
+  const transporter = createTransport();
+  if (!transporter) {
+    console.error('❌ Failed to create SMTP transporter');
+    return { ok: false, reason: 'SMTP not configured. Failed to create transporter.' };
+  }
+
+  const subject = 'Your New Employee Account – Log In Credentials';
+  const text =
+    `Welcome, ${fullName}!\n\n` +
+    `Your account has been created. Use these credentials to log in:\n\n` +
+    `Username (Email): ${username}\n` +
+    `Password: ${password}\n\n` +
+    `Log in at your application login page. Change your password after first login. Keep these credentials secure.`;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto;">
+      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">Welcome, ${fullName}!</h1>
+      <p style="margin: 0 0 8px 0; color: #374151;">Your employee account has been created. <strong>Log in with these credentials:</strong></p>
+      <div style="background: #ecfdf5; border: 2px solid #047857; border-radius: 12px; padding: 20px; margin: 20px 0;">
+        <p style="margin: 0 0 4px 0; color: #047857; font-size: 12px; font-weight: 700; text-transform: uppercase;">Username (Email)</p>
+        <p style="margin: 0 0 16px 0; color: #111; font-size: 18px; font-family: 'Courier New', monospace; font-weight: 600;">${username}</p>
+        <p style="margin: 0 0 4px 0; color: #047857; font-size: 12px; font-weight: 700; text-transform: uppercase;">Password</p>
+        <p style="margin: 0; color: #111; font-size: 18px; font-family: 'Courier New', monospace; font-weight: 600; letter-spacing: 1px;">${password}</p>
+      </div>
+      <p style="margin: 0 0 8px 0; color: #374151; font-weight: 600;">Use the same login page as before. Enter the username and password above to sign in.</p>
+      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">Change your password after your first login. Keep these credentials secure.</p>
+    </div>
+  `;
+
+  try {
+    console.log(`[Mailer] Sending credentials email to: ${to}`);
+    console.log(`[Mailer] Subject: ${subject}`);
+    console.log(`[Mailer] From: ${cfg.from}`);
+    
+    const result = await transporter.sendMail({
+      from: cfg.from,
+      to,
+      subject,
+      text,
+      html,
+    });
+    
+    console.log(`[Mailer] ✅ Email sent successfully. MessageId: ${result.messageId || 'N/A'}`);
+    return { ok: true, subject, to, messageId: result.messageId };
+  } catch (error) {
+    console.error(`[Mailer] ❌ Failed to send credentials email to ${to}:`, error.message);
+    console.error(`[Mailer] Error details:`, error);
+    
+    // Provide more detailed error information
+    let reason = error.message || 'Failed to send credentials email.';
+    if (error.code === 'EAUTH') {
+      reason = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in backend/.env';
+    } else if (error.code === 'ECONNECTION') {
+      reason = `Cannot connect to SMTP server ${cfg.host}:${cfg.port}. Check SMTP_HOST and SMTP_PORT.`;
+    } else if (error.responseCode === 535) {
+      reason = 'Gmail authentication failed. Verify SMTP_PASS is a valid App Password (16 characters).';
+    }
+    
+    return { ok: false, reason, subject, to, originalError: error.message };
+  }
+}
+
 module.exports = {
   getSmtpConfig,
   createTransport,
@@ -635,5 +734,7 @@ module.exports = {
   sendChangePasswordVerificationEmail,
   sendResetPasswordVerificationEmail,
   sendSecurityAlertEmail,
+  sendNewEmployeeCredentialsEmail,
+  sendSecondEmailVerification,
 };
 

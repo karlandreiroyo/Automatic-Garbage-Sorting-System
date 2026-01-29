@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './forgot.css';
 
+// Decorative Green Translucent Shapes Component
+const DecorativeShapes = () => (
+  <div className="decorative-shapes">
+    {/* Top-left shape */}
+    <div className="shape shape-1"></div>
+    {/* Bottom-right shape */}
+    <div className="shape shape-2"></div>
+  </div>
+);
+
 // Eye icon component
 const EyeIcon = ({ visible }) => (
   visible ? (
@@ -91,13 +101,11 @@ const Forgot = () => {
 
       if (data.success) {
         setShowToast(true);
-        // Show the code in the message if available
-        const message = data.code 
-          ? `Verification code: ${data.code} (Check terminal or email)`
-          : (data.message || 'Password reset email sent. Check your email for the verification code.');
+        // Show generic message without revealing the code
+        const message = data.message || 'Verification code has been sent to your email. Please check your inbox.';
         setToastMessage(message);
         
-        // Also log to browser console
+        // Log to browser console for debugging (not shown to user)
         if (data.code) {
           console.log('═══════════════════════════════════════');
           console.log('🔑 VERIFICATION CODE:', data.code);
@@ -108,7 +116,7 @@ const Forgot = () => {
         setTimeout(() => {
           setShowToast(false);
           setStep('confirm');
-        }, 5000); // Show longer so user can see the code
+        }, 3000); // Reduced time since we're not showing the code
       } else {
         setError(data.message || 'Failed to send verification code');
       }
@@ -120,10 +128,20 @@ const Forgot = () => {
     }
   };
 
-  const confirmCode = async () => {
+  const confirmCode = async (e) => {
+    // Prevent any default behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!code.trim()) {
       setError('Please enter the verification code');
       return;
+    }
+
+    if (loading) {
+      return; // Prevent multiple clicks
     }
 
     setLoading(true);
@@ -163,26 +181,40 @@ const Forgot = () => {
   };
 
   const resetPassword = async () => {
+    // Clear previous errors
+    setError('');
+
+    // Validate new password is entered
     if (!newPassword.trim()) {
-      setError('Please enter a new password');
+      setError('⚠️ Warning: Please enter a new password');
       return;
     }
 
-    // Validate password
+    // Validate confirm password is entered
+    if (!confirmPassword.trim()) {
+      setError('⚠️ Warning: Please confirm your password');
+      return;
+    }
+
+    // Validate password requirements
     const errors = validatePassword(newPassword);
     if (Object.keys(errors).length > 0) {
       setPasswordErrors(errors);
-      setError('Please fix the password requirements');
+      // Create detailed error message from validation errors
+      const errorMessages = Object.values(errors);
+      setError('⚠️ Warning: ' + errorMessages.join('. '));
       return;
     }
 
+    // Validate passwords match
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError('⚠️ Warning: Passwords do not match. Please make sure both passwords are the same.');
       return;
     }
 
+    // Validate reset token exists
     if (!resetToken) {
-      setError('Reset token is missing. Please start over.');
+      setError('⚠️ Error: Reset token is missing. Please start over from the beginning.');
       return;
     }
 
@@ -221,6 +253,11 @@ const Forgot = () => {
   };
 
   const resendCode = async () => {
+    if (!emailOrMobile.trim()) {
+      setError('Email or mobile number is required to resend code');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -237,16 +274,27 @@ const Forgot = () => {
 
       if (data.success) {
         setShowToast(true);
-        setToastMessage('Code resent successfully');
+        // Show generic message without revealing the code
+        const message = data.message || 'Verification code has been resent to your email. Please check your inbox.';
+        setToastMessage(message);
+        
+        // Log to browser console for debugging (not shown to user)
+        if (data.code) {
+          console.log('═══════════════════════════════════════');
+          console.log('🔑 NEW VERIFICATION CODE:', data.code);
+          console.log('📧 Email:', emailOrMobile);
+          console.log('═══════════════════════════════════════');
+        }
+        
         setTimeout(() => {
           setShowToast(false);
-        }, 2000);
+        }, 3000);
       } else {
-        setError(data.message || 'Failed to resend code');
+        setError(data.message || 'Failed to resend code. Please try again.');
       }
     } catch (error) {
       console.error('Resend code error:', error);
-      setError('Failed to resend code. Please try again.');
+      setError('Failed to resend code. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -258,182 +306,194 @@ const Forgot = () => {
 
   return (
     <div className="forgot-container">
-      {showToast && <div className="toast">{toastMessage}</div>}
-      {error && <div className="error-message" style={{ 
-        color: '#ef4444', 
-        marginBottom: '10px', 
-        fontSize: '0.9rem',
-        textAlign: 'center'
-      }}>{error}</div>}
-
-      {step === 'forgot' && (
-        <div className="forgot-box">
-          <button className="close-btn" onClick={cancel}>✕</button>
-
-          <h2>Reset Password</h2>
-          <p className="subtitle">
-            Enter your mobile number or email
-          </p>
-
-          <input
-            type="text"
-            placeholder="Mobile number or email"
-            value={emailOrMobile}
-            onChange={(e) => {
-              setEmailOrMobile(e.target.value);
-              setError('');
-            }}
-            disabled={loading}
-          />
-
-          <div className="btn-group">
-            <button className="btn cancel" onClick={cancel} disabled={loading}>
-              Cancel
-            </button>
-            <button 
-              className="btn primary" 
-              onClick={sendCode}
-              disabled={loading}
-            >
-              {loading ? 'Sending...' : 'Send Verification'}
-            </button>
+      {/* Mobile Flower Decorations */}
+      <div className="mobile-flower-left"></div>
+      <div className="mobile-flower-right"></div>
+      
+      {/* Left Panel - 2/3 width */}
+      <div className="left-panel">
+        <DecorativeShapes />
+        <div className="left-panel-content">
+          <h1 className="system-title">
+            Automatic<br />Garbage<br />Sorting System
+          </h1>
+          <div className="illustration-container">
+            <img src="/sorting-logo.png" alt="Automatic Garbage Sorting System Logo" className="system-logo" />
           </div>
         </div>
-      )}
+      </div>
 
-      {step === 'confirm' && (
-        <div className="forgot-box">
-          <button className="close-btn" onClick={cancel}>✕</button>
+      {/* Right Panel - 1/3 width */}
+      <div className="right-panel">
+        {showToast && <div className="toast">{toastMessage}</div>}
+        
+        {step === 'forgot' && (
+          <div className="forgot-box forgot-step">
+            <button className="close-btn" onClick={cancel}>✕</button>
 
-          <h2>Confirm your account</h2>
-          <p className="subtitle">
-            Enter the verification code sent to your email
-          </p>
+            <h2>Reset Password</h2>
+            {error && <div className="error-message">{error}</div>}
+            <p className="subtitle">
+              Enter your mobile number or email
+            </p>
 
-          <input
-            type="text"
-            placeholder="Enter 6-digit code"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              setError('');
-            }}
-            disabled={loading}
-            maxLength="6"
-            style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.2rem' }}
-          />
-
-          <button 
-            className="btn primary full" 
-            onClick={confirmCode}
-            disabled={loading}
-          >
-            {loading ? 'Verifying...' : 'Continue'}
-          </button>
-
-          <button 
-            className="btn link" 
-            onClick={resendCode}
-            disabled={loading}
-            style={{ marginTop: '10px' }}
-          >
-            Didn't get a code? Resend
-          </button>
-        </div>
-      )}
-
-      {step === 'reset' && (
-        <div className="forgot-box">
-          <button className="close-btn" onClick={cancel}>✕</button>
-
-          <h2>Reset Password</h2>
-          <p className="subtitle">
-            Enter your new password
-          </p>
-
-          <div className="password-input-wrapper">
             <input
-              type={showNewPassword ? 'text' : 'password'}
-              placeholder="New password"
-              value={newPassword}
+              type="text"
+              placeholder="Mobile number or email"
+              value={emailOrMobile}
               onChange={(e) => {
-                setNewPassword(e.target.value);
+                setEmailOrMobile(e.target.value);
                 setError('');
-                const errors = validatePassword(e.target.value);
-                setPasswordErrors(errors);
               }}
               disabled={loading}
             />
-            <button
-              type="button"
-              className="password-toggle-btn"
-              onClick={() => setShowNewPassword(!showNewPassword)}
-              disabled={loading}
-            >
-              <EyeIcon visible={showNewPassword} />
-            </button>
-          </div>
 
-          {/* Password validation messages */}
-          {newPassword && (
-            <div className="password-validation">
-              <div className={`validation-item ${newPassword.length >= 8 && newPassword.length <= 128 ? 'valid' : 'invalid'}`}>
-                {newPassword.length >= 8 && newPassword.length <= 128 ? '✓' : '✗'} 8-128 characters
-              </div>
-              <div className={`validation-item ${/[A-Z]/.test(newPassword) ? 'valid' : 'invalid'}`}>
-                {/[A-Z]/.test(newPassword) ? '✓' : '✗'} 1 capital letter
-              </div>
-              <div className={`validation-item ${/[0-9]/.test(newPassword) ? 'valid' : 'invalid'}`}>
-                {/[0-9]/.test(newPassword) ? '✓' : '✗'} 1 numerical character
-              </div>
-              <div className={`validation-item ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? 'valid' : 'invalid'}`}>
-                {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? '✓' : '✗'} 1 special character
-              </div>
+            <div className="btn-group">
+              <button className="btn cancel" onClick={cancel} disabled={loading}>
+                Cancel
+              </button>
+              <button 
+                className="btn primary" 
+                onClick={sendCode}
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Verification'}
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="password-input-wrapper" style={{ marginTop: '16px' }}>
+        {step === 'confirm' && (
+          <div className="forgot-box confirm-step">
+            <button className="close-btn" onClick={cancel}>✕</button>
+
+            <h2>Confirm your account</h2>
+            {error && <div className="error-message">{error}</div>}
+            <p className="subtitle">
+              Enter the verification code sent to your email
+            </p>
+
             <input
-              type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Confirm new password"
-              value={confirmPassword}
+              type="text"
+              placeholder="Enter 6-digit code"
+              value={code}
               onChange={(e) => {
-                setConfirmPassword(e.target.value);
+                setCode(e.target.value);
                 setError('');
               }}
               disabled={loading}
+              maxLength="6"
+              style={{ textAlign: 'center', letterSpacing: '0.5em', fontSize: '1.2rem' }}
             />
-            <button
+
+            <button 
               type="button"
-              className="password-toggle-btn"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="btn primary full" 
+              onClick={confirmCode}
               disabled={loading}
+              aria-label="Continue to verify code"
             >
-              <EyeIcon visible={showConfirmPassword} />
+              {loading ? 'Verifying...' : 'Continue'}
+            </button>
+
+            <button 
+              type="button"
+              className="btn link" 
+              onClick={resendCode}
+              disabled={loading}
+              style={{ marginTop: '10px' }}
+              aria-label="Resend verification code"
+            >
+              {loading ? 'Resending...' : "Didn't get a code? Resend"}
             </button>
           </div>
+        )}
 
-          {/* Checkbox to show/hide confirm password */}
-          <label className="show-password-checkbox">
-            <input
-              type="checkbox"
-              checked={showConfirmPassword}
-              onChange={(e) => setShowConfirmPassword(e.target.checked)}
+        {step === 'reset' && (
+          <div className="forgot-box reset-step">
+            <button className="close-btn" onClick={cancel}>✕</button>
+
+            <h2>Reset Password</h2>
+            {error && <div className="error-message">{error}</div>}
+            <p className="subtitle">
+              Enter your new password
+            </p>
+
+            <div className="password-input-wrapper">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                placeholder="New password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  setError('');
+                  const errors = validatePassword(e.target.value);
+                  setPasswordErrors(errors);
+                }}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                disabled={loading}
+              >
+                <EyeIcon visible={showNewPassword} />
+              </button>
+            </div>
+
+            <div className="password-input-wrapper" style={{ marginTop: '16px' }}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setError('');
+                  // Check if passwords match in real-time
+                  if (e.target.value && newPassword && e.target.value !== newPassword) {
+                    // Don't show error while typing, only when they click submit
+                  }
+                }}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={loading}
+              >
+                <EyeIcon visible={showConfirmPassword} />
+              </button>
+            </div>
+
+            {/* Checkbox to show/hide password */}
+            <label className="show-password-checkbox">
+              <input
+                type="checkbox"
+                checked={showConfirmPassword}
+                onChange={(e) => {
+                  setShowConfirmPassword(e.target.checked);
+                  setShowNewPassword(e.target.checked);
+                }}
+                disabled={loading}
+              />
+              <span>Show password</span>
+            </label>
+
+            <button 
+              type="button"
+              className="btn primary full" 
+              onClick={resetPassword}
               disabled={loading}
-            />
-            <span>Show password</span>
-          </label>
-
-          <button 
-            className="btn primary full" 
-            onClick={resetPassword}
-            disabled={loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
-            style={{ marginTop: '20px' }}
-          >
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
-        </div>
-      )}
+              style={{ marginTop: '20px' }}
+              aria-label="Reset password"
+            >
+              {loading ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

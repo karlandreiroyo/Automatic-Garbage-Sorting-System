@@ -109,21 +109,51 @@ const CollectionHistory = () => {
   // Calculate statistics
   const stats = useMemo(() => {
     const totalCollections = historyData.length;
-    const totalWeight = historyData.reduce((sum, item) => {
-      const weight = parseFloat(item.weight.replace(' kg', ''));
-      return sum + (isNaN(weight) ? 0 : weight);
-    }, 0);
 
-    // Count this week collections
-    const thisWeek = historyData.filter(item => 
-      item.date.includes('Jan 17') || item.date.includes('Jan 16') || 
-      item.date.includes('Jan 15') || item.date.includes('Jan 14')
-    ).length;
+    // Get today's date for calculations
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Helper function to parse date string (e.g., "Jan 17, 2025")
+    const parseDate = (dateStr) => {
+      if (!dateStr) return null;
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return null;
+      date.setHours(0, 0, 0, 0);
+      return date;
+    };
+    
+    // Count daily collections (today)
+    const todayStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const daily = historyData.filter(item => {
+      const itemDate = parseDate(item.date);
+      if (!itemDate) return false;
+      return itemDate.getTime() === today.getTime();
+    }).length;
+
+    // Count weekly collections (last 7 days including today)
+    const oneWeekAgo = new Date(today);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const weekly = historyData.filter(item => {
+      const itemDate = parseDate(item.date);
+      if (!itemDate) return false;
+      return itemDate >= oneWeekAgo && itemDate <= today;
+    }).length;
+
+    // Count monthly collections (current month)
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const monthly = historyData.filter(item => {
+      const itemDate = parseDate(item.date);
+      if (!itemDate) return false;
+      return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+    }).length;
 
     return {
       totalCollections: totalCollections || 0,
-      totalWeight: totalWeight.toFixed(1) || '0.0',
-      thisWeek: thisWeek || 0
+      daily: daily || 0,
+      weekly: weekly || 0,
+      monthly: monthly || 0
     };
   }, [historyData]);
 
@@ -192,22 +222,20 @@ const CollectionHistory = () => {
         <div className="stats-row">
           <div className="stats-box">
             <div className="stats-icon-bg bg-green-light">
-              <CheckCircleIcon />
+              <TrashIcon />
             </div>
             <div className="stats-content">
-              <span className="stats-label">Total Collections</span>
+              <span className="stats-label">Total Trash Collection</span>
               <span className="stats-value">{stats.totalCollections}</span>
             </div>
           </div>
           <div className="stats-box">
             <div className="stats-icon-bg bg-blue-light">
-              <TrashIcon />
+              <CalendarIcon />
             </div>
             <div className="stats-content">
-              <span className="stats-label">Total Weight</span>
-              <span className="stats-value">
-                {stats.totalWeight} <small>kg</small>
-              </span>
+              <span className="stats-label">Daily</span>
+              <span className="stats-value">{stats.daily}</span>
             </div>
           </div>
           <div className="stats-box">
@@ -215,8 +243,17 @@ const CollectionHistory = () => {
               <CalendarIcon />
             </div>
             <div className="stats-content">
-              <span className="stats-label">This Week</span>
-              <span className="stats-value">{stats.thisWeek}</span>
+              <span className="stats-label">Weekly</span>
+              <span className="stats-value">{stats.weekly}</span>
+            </div>
+          </div>
+          <div className="stats-box">
+            <div className="stats-icon-bg bg-orange-light">
+              <CalendarIcon />
+            </div>
+            <div className="stats-content">
+              <span className="stats-label">Monthly</span>
+              <span className="stats-value">{stats.monthly}</span>
             </div>
           </div>
         </div>
@@ -239,15 +276,6 @@ const CollectionHistory = () => {
           </button>
         ))}
       </div>
-
-      {/* Active Filters Info */}
-      {safeFilter !== 'All' && hasFilteredResults && (
-        <div className="active-filters-info">
-          <span>
-            Showing {filteredList.length} of {historyData.length} collection{filteredList.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
 
       {/* Content Area */}
       {!hasData ? (
@@ -294,14 +322,6 @@ const CollectionHistory = () => {
                       <ClockIcon /> <span>{item.time || 'N/A'}</span>
                     </div>
                   </div>
-                  <div className="card-meta-row">
-                    <div className="meta-item">
-                      <UserIcon /> <span>Collected by: {item.collector || 'Unknown'}</span>
-                    </div>
-                    <div className="meta-item">
-                      <SmallTrashIcon /> <span>Weight: {item.weight || 'N/A'}</span>
-                    </div>
-                  </div>
                 </div>
                 <div className="card-right">
                   <span className="status-completed">
@@ -342,11 +362,6 @@ const CollectionHistory = () => {
               </button>
             </div>
           )}
-
-          {/* Page Info */}
-          <div className="page-info">
-            Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredList.length)} of {filteredList.length} collections
-          </div>
         </>
       )}
     </div>
