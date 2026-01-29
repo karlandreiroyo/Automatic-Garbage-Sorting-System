@@ -93,7 +93,7 @@ const getFillLevelColor = (fillLevel) => {
  * @param {Function} onClick - Callback when bin is clicked
  * @param {Function} onDrain - Callback when drain button is clicked
  */
-const BinListCard = ({ bin, onClick }) => {
+const BinListCard = ({ bin, onClick, isArchived }) => {
   /**
    * Gets status text based on fill level
    * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
@@ -131,7 +131,7 @@ const BinListCard = ({ bin, onClick }) => {
   };
 
   return (
-    <div className={`bin-list-card ${getColorClass()}`} onClick={onClick}>
+    <div className={`bin-list-card ${getColorClass()} ${isArchived ? 'archived' : ''}`} onClick={onClick}>
       {/* Colored Header Section */}
       <div className="bin-list-header">
         {/* Icon Circle */}
@@ -273,18 +273,27 @@ const BinDetailCard = ({ bin, onDrain }) => {
  * Main Bin Monitoring Component
  * Manages two views: list view and detail view
  * Handles bin data fetching, draining operations, and navigation
+ * @param {Object} props - openArchiveFromSidebar: open archive view when true; onViewedArchiveFromSidebar: callback to clear sidebar request; onArchiveViewChange: callback(isArchive) when archive view toggles; requestExitArchiveView: when true, exit archive view; onExitedArchiveView: callback to clear exit request
  */
-const BinMonitoring = () => {
+const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onArchiveViewChange, requestExitArchiveView, onExitedArchiveView }) => {
   // State to track current view ('list' or 'detail')
   const [view, setView] = useState('list');
   // State to track which bin is currently selected for detail view
   const [selectedBinId, setSelectedBinId] = useState(null);
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
+  // State for Search Bin dropdown
+  const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
+  const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
+  const [binSearchTerm, setBinSearchTerm] = useState('');
+  const [isArchiveView, setIsArchiveView] = useState(false);
+  const [showUnarchiveModal, setShowUnarchiveModal] = useState(false);
+  const [binToUnarchive, setBinToUnarchive] = useState(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const binsPerPage = 4;
-  // State for Add Bin modal
+  // State for Add Bin modal (kept for code; no button to open in admin)
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
   location: '',
@@ -342,17 +351,47 @@ const [collectors, setCollectors] = useState([]);
     }, 300);
   };
 
-  // Fetch bin data on component mount and set up real-time updates
+  // Open archive view when requested from sidebar
+  useEffect(() => {
+    if (openArchiveFromSidebar) {
+      setIsArchiveView(true);
+      setView('list');
+      setCurrentPage(1);
+      onViewedArchiveFromSidebar?.();
+    }
+  }, [openArchiveFromSidebar, onViewedArchiveFromSidebar]);
+
+  // Notify parent when archive view changes (for sidebar: know when to exit on trigger click)
+  useEffect(() => {
+    onArchiveViewChange?.(isArchiveView);
+  }, [isArchiveView, onArchiveViewChange]);
+
+  // Exit archive view when user clicks "Bin Monitoring" in sidebar while in archive view
+  useEffect(() => {
+    if (requestExitArchiveView) {
+      setIsArchiveView(false);
+      setView('list');
+      setCurrentPage(1);
+      onExitedArchiveView?.();
+    }
+  }, [requestExitArchiveView, onExitedArchiveView]);
+
+  // Fetch bin data on component mount and when archive view toggles
   useEffect(() => {
   fetchBinData();
-  fetchCollectors(); // Add this line
+  fetchCollectors();
   
   const interval = setInterval(() => {
     updateBinFillLevels();
   }, 2000);
 
   return () => clearInterval(interval);
-}, []);
+}, [isArchiveView]);
+
+  // Reset to page 1 when filter selection (Search Bin checkboxes) changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBinsForArchive]);
 
   /**
    * Fetches bin data from Supabase database
@@ -360,6 +399,7 @@ const [collectors, setCollectors] = useState([]);
    */
 const fetchBinData = async () => {
   try {
+    const statusFilter = isArchiveView ? 'INACTIVE' : 'ACTIVE';
     const { data, error } = await supabase
       .from('bins')
       .select(`
@@ -371,7 +411,7 @@ const fetchBinData = async () => {
           middle_name
         )
       `)
-      .eq('status', 'ACTIVE')
+      .eq('status', statusFilter)
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -491,8 +531,13 @@ const updateBinFillLevels = () => {
    * @param {Object} bin - The clicked bin object
    */
   const handleBinClick = (bin) => {
-    setSelectedBinId(bin.id);
-    setView('detail');
+    if (isArchiveView) {
+      setBinToUnarchive(bin);
+      setShowUnarchiveModal(true);
+    } else {
+      setSelectedBinId(bin.id);
+      setView('detail');
+    }
   };
 
   /**
@@ -821,11 +866,16 @@ await supabase.from('activity_logs').insert([{
     );
   }
 
+  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all
+  const displayBins = selectedBinsForArchive.length > 0
+    ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
+    : bins;
+
   // Calculate pagination
-  const totalPages = Math.ceil(bins.length / binsPerPage);
+  const totalPages = Math.ceil(displayBins.length / binsPerPage);
   const indexOfLastBin = currentPage * binsPerPage;
   const indexOfFirstBin = indexOfLastBin - binsPerPage;
-  const currentBins = bins.slice(indexOfFirstBin, indexOfLastBin);
+  const currentBins = displayBins.slice(indexOfFirstBin, indexOfLastBin);
 
   // Handle page change
   const handlePageChange = (page) => {
@@ -1051,19 +1101,91 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header */}
+      {/* List View Header - Search Bin dropdown */}
       <div className="bin-monitoring-header">
         <div>
-          <h1>Bin Monitoring</h1>
-          <p>Monitor bin fill levels</p>
+          <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
+          <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-        {/* Add Bin Button - Aligned with header, shows on all pages */}
-        <button className="add-bin-header-button" onClick={() => setShowAddBinModal(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Add Bin
-        </button>
+        <div className="bin-search-dropdown-wrapper">
+          <button
+            className="add-bin-header-button"
+            onClick={() => {
+              setIsBinDropdownOpen((prev) => {
+                if (!prev) return true;
+                setBinSearchTerm('');
+                return false;
+              });
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 8h16" />
+              <path d="M4 16h16" />
+              <path d="M10 12h10" />
+            </svg>
+            Search Bin
+            <span className="bin-search-caret">▾</span>
+          </button>
+
+          {isBinDropdownOpen && (
+            <div className="bin-search-dropdown">
+              <div className="bin-search-input-wrapper">
+                <div className="bin-search-input-inner">
+                  <input
+                    type="text"
+                    className="bin-search-input"
+                    placeholder="Search Bin #"
+                    value={binSearchTerm}
+                    onChange={(e) => setBinSearchTerm(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                </div>
+              </div>
+              {(() => {
+                const filteredBins = bins.filter(bin => {
+                  if (!binSearchTerm.trim()) return true;
+                  const binNumber = bin.name.replace(/[^0-9]/g, '');
+                  return binNumber.includes(binSearchTerm.trim());
+                });
+
+                if (filteredBins.length === 0) {
+                  return (
+                    <div className="bin-search-dropdown-item bin-search-empty">
+                      {bins.length === 0 ? 'No bins available' : 'No bins found'}
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    {filteredBins.map((bin) => (
+                      <div key={bin.id} className="bin-search-dropdown-item bin-search-item-with-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedBinsForArchive.includes(bin.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            if (e.target.checked) {
+                              setSelectedBinsForArchive(prev => [...prev, bin.id]);
+                            } else {
+                              setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
+                            }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bin-checkbox"
+                        />
+                        <span className="bin-name-text">{bin.name}</span>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bin List Cards - Clickable to view details */}
@@ -1072,7 +1194,8 @@ const handleAddBin = async (e) => {
           <BinListCard 
             key={bin.id} 
             bin={bin} 
-            onClick={() => handleBinClick(bin)} 
+            onClick={() => handleBinClick(bin)}
+            isArchived={isArchiveView}
           />
         ))}
       </div>
@@ -1080,6 +1203,14 @@ const handleAddBin = async (e) => {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination-container">
+          {currentPage > 1 && (
+            <button
+              className="pagination-btn pagination-first"
+              onClick={() => handlePageChange(1)}
+            >
+              First Page
+            </button>
+          )}
           <button 
             className="pagination-btn pagination-prev"
             onClick={() => handlePageChange(currentPage - 1)}
@@ -1105,6 +1236,13 @@ const handleAddBin = async (e) => {
             disabled={currentPage === totalPages}
           >
             Next
+          </button>
+          <button
+            className="pagination-btn pagination-last"
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            Last Page
           </button>
         </div>
       )}

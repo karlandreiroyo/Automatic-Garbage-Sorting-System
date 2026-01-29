@@ -680,6 +680,10 @@ body.modal-open {
   color: #991b1b;
 }
 
+.card-status-badge.pending {
+  background: #fef3c7;
+  color: #b45309;
+}
 
 .card-profile-section {
   display: flex;
@@ -941,6 +945,11 @@ body.modal-open {
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 /* Action Buttons */
