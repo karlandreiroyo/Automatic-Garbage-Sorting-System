@@ -314,6 +314,31 @@
   background-color: #9ca3af;
 }
 
+/* Super Admin Button */
+.superadmin-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #7c3aed;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: background-color 0.3s;
+}
+
+.superadmin-btn:hover:not(:disabled) {
+  background-color: #6d28d9;
+}
+
+.superadmin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9ca3af;
+}
+
 /* Lockout message */
 .lockout-message {
   margin-top: 1rem;
