@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import './admincss/accounts.css';
+import './superadmincss/accounts.css';
 
 // --- Icons ---
 const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
@@ -17,7 +17,7 @@ const AlertIcon = () => <svg width="48" height="48" viewBox="0 0 24 24" fill="no
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
+  const [filterRole, setFilterRole] = useState('ADMIN');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -56,10 +56,12 @@ const Accounts = () => {
   
   const [formData, setFormData] = useState({
     email: '',
-    role: '',
+    role: 'ADMIN',
     first_name: '',
     last_name: '',
     middle_name: '',
+    backup_email: '',
+    address: '',
     password: '',
     confirmPassword: '',
   });
@@ -193,9 +195,10 @@ const Accounts = () => {
         else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middle_name':
-        if (!value.trim()) error = 'Middle name is required';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
-        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        }
         break;
       case 'contact':
         const contactStr = String(value || '');
@@ -242,6 +245,29 @@ const Accounts = () => {
         break;
       case 'role':
         if (!value) error = 'Please select an account role';
+        break;
+      case 'backup_email': {
+        if (value && value.trim()) {
+          const emailVal = value.trim();
+          const atCount = (emailVal.match(/@/g) || []).length;
+          const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+          if (atCount === 0) {
+            error = 'You need to put @';
+          } else if (atCount > 1) {
+            error = 'Email must contain exactly one @ symbol';
+          } else if (atCount === 1) {
+            if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+              error = 'Email cannot end with @ or a period';
+            } else if (!emailRegex.test(emailVal)) {
+              error = 'Invalid domain format (e.g., .com, .ph)';
+            }
+          }
+        }
+        break;
+      }
+      case 'address':
+        // Address is optional, no validation needed
         break;
       default: 
       break;
@@ -302,7 +328,7 @@ const Accounts = () => {
     } 
     
     // Email Real-time cleaning
-    if (name === 'email') {
+    if (name === 'email' || name === 'backup_email') {
       // 1. Remove invalid characters
       let cleaned = value.replace(/[^a-zA-Z0-9@.]/g, '').toLowerCase();
       
@@ -357,22 +383,36 @@ const Accounts = () => {
     
     // 1. Validate all fields locally first
     const newErrors = {};
-      ['first_name', 'last_name', 'middle_name', 'email', 'role', 'password', 'confirmPassword'].forEach(f => {
+      ['first_name', 'last_name', 'email'].forEach(f => {
       const err = validateField(f, formData[f]);
       if (err) newErrors[f] = err;
       });
+    
+    // Validate middle_name only if it has a value (optional field)
+    if (formData.middle_name && formData.middle_name.trim()) {
+      const err = validateField('middle_name', formData.middle_name);
+      if (err) newErrors['middle_name'] = err;
+    }
+    
+    // Validate backup_email only if it has a value (optional field)
+    if (formData.backup_email && formData.backup_email.trim()) {
+      const err = validateField('backup_email', formData.backup_email);
+      if (err) newErrors['backup_email'] = err;
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setTouched({ 
-        first_name: true, last_name: true, email: true, 
-        middle_name: true, role: true, password: true, confirmPassword: true
+        first_name: true, last_name: true, email: true
       });
       return;
     }
 
+    // Auto-generate password
+    const generatedPassword = generateDefaultPassword();
+    
     // Show confirmation modal instead of window.confirm
-    setPendingCreateData({ ...formData });
+    setPendingCreateData({ ...formData, role: 'ADMIN', password: generatedPassword, confirmPassword: generatedPassword });
     setShowCreateConfirmModal(true);
   };
 
@@ -423,6 +463,8 @@ const handleConfirmCreate = async () => {
         first_name: pendingCreateData.first_name.trim(),
         last_name: pendingCreateData.last_name.trim(),
         middle_name: pendingCreateData.middle_name?.trim() || '',
+        backup_email: pendingCreateData.backup_email?.trim() || null,
+        address: pendingCreateData.address?.trim() || null,
         contact: null, // NULL allowed - employee will add their contact in profile
         status: 'ACTIVE',
         pass_hash: pendingCreateData.password // Storing the password in your required column
@@ -448,8 +490,9 @@ const handleConfirmCreate = async () => {
       setPendingCreateData(null);
       setFormData({ 
         email: '', 
-        role: 'COLLECTOR', first_name: '', last_name: '', 
-        middle_name: '', password: '', confirmPassword: ''
+        role: 'ADMIN', first_name: '', last_name: '', 
+        middle_name: '', backup_email: '', address: '',
+        password: '', confirmPassword: ''
       });
       setErrors({});
       setTouched({});
@@ -544,7 +587,7 @@ const handleCancelSave = () => {
   const filteredUsers = users.filter(user => {
     const fullName = getFullName(user).toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const matchesRole = user.role === 'ADMIN';
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -705,7 +748,7 @@ const handleCancelSave = () => {
         <div className="modal-overlay">
           <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add New Employee</h2>
+              <h2>Add New Admin</h2>
             </div>
             <form onSubmit={handleAddEmployee} className="employee-form">
               <div className="form-grid">
@@ -732,7 +775,7 @@ const handleCancelSave = () => {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name *</label>
+                  <label>Middle Name</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -753,113 +796,43 @@ const handleCancelSave = () => {
                   />
                   {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
-                <div className={`form-group ${errors.role ? 'has-error' : ''}`}>
-                  <label>Account Role *</label>
-                  <select name="role" value={formData.role} onChange={handleInputChange} onBlur={handleBlur}>
-                    <option value="" disabled>Select Role</option>
-                    <option value="COLLECTOR">Collector</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                  {errors.role && <span className="error-message">{errors.role}</span>}
+                <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
+                  <label>Backup Email</label>
+                  <input 
+                    type="text" 
+                    name="backup_email" 
+                    value={formData.backup_email} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur}
+                    placeholder="Optional backup email address"
+                  />
+                  {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
                 </div>
-                <div className={`form-group ${errors.password ? 'has-error' : ''}`} style={{ position: 'relative' }}>
-                  <label>Password *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type={showPassword ? 'text' : 'password'} 
-                      name="password" 
-                      value={formData.password} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                      placeholder="8+ characters, 1 capital, 1 number, 1 special"
-                      style={{ paddingRight: '80px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '45px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '5px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const generated = generateDefaultPassword();
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          password: generated, 
-                          confirmPassword: generated 
-                        }));
-                        setTouched(prev => ({ ...prev, password: true, confirmPassword: true }));
-                        setErrors(prev => ({ 
-                          ...prev, 
-                          password: validateField('password', generated),
-                          confirmPassword: validateField('confirmPassword', generated)
-                        }));
-                      }}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: '#047857',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Generate
-                    </button>
-                  </div>
-                  {errors.password && <span className="error-message">{errors.password}</span>}
+                <div className={`form-group ${errors.address ? 'has-error' : ''}`}>
+                  <label>Address</label>
+                  <input 
+                    type="text" 
+                    name="address" 
+                    value={formData.address} 
+                    onChange={handleInputChange} 
+                    onBlur={handleBlur}
+                    placeholder="Optional address"
+                  />
+                  {errors.address && <span className="error-message">{errors.address}</span>}
                 </div>
-                <div className={`form-group ${errors.confirmPassword ? 'has-error' : ''}`} style={{ position: 'relative' }}>
-                  <label>Confirm Password *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type={showConfirmPassword ? 'text' : 'password'} 
-                      name="confirmPassword" 
-                      value={formData.confirmPassword} 
-                      onChange={handleInputChange} 
-                      onBlur={handleBlur}
-                      placeholder="Confirm your password"
-                      style={{ paddingRight: '45px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '5px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+                <div className="form-group">
+                  <label>Account Role</label>
+                  <input 
+                    type="text" 
+                    value="Admin" 
+                    disabled
+                    style={{ 
+                      background: '#f3f4f6', 
+                      cursor: 'not-allowed',
+                      color: '#6b7280'
+                    }}
+                  />
+                  <input type="hidden" name="role" value="ADMIN" />
                 </div>
               </div>
               <div className="modal-footer">
@@ -950,32 +923,28 @@ const handleCancelSave = () => {
       <div className="accounts-header">
         <div>
           <h1>Account Management</h1>
-          <p>Collectors and Supervisors Accounts</p>
+          <p>Admin Account</p>
         </div>
         <button className="add-employee-btn" onClick={() => setShowAddModal(true)}>
-          <AddIcon /> Add Employee
+          <AddIcon /> Add Admin
         </button>
       </div>
 
       {/* --- FILTERS --- */}
       <div className="filters-row">
         <input type="text" placeholder="Search by name..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        <select className="filter-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-          <option value="all">All Roles</option>
-          <option value="ADMIN">Admin</option>
-          <option value="COLLECTOR">Collector</option>
-        </select>
         <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="all">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
+          <option value="PENDING">Pending</option>
         </select>
       </div>
 
       {/* --- TABLE (Desktop) --- */}
       <div className="accounts-table">
         <div className="table-header">
-          <div>Employee Name</div>
+          <div>Admin Name</div>
           <div>Email</div>
           <div>Role</div>
           <div>Status</div>

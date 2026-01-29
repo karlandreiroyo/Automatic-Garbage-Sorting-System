@@ -21,6 +21,9 @@ import Accounts from './admin/accounts.jsx';
 // Supervisor component
 import SupervisorDashboard from './supervisor/supervisordashboard';
 
+// Super Admin component
+import SuperAdminDashboard from './superadmin/superadmindashboard';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
@@ -131,6 +134,12 @@ function App() {
         <Route
           path="/supervisor"
           element={isLoggedIn && userRole === 'supervisor' ? <SupervisorDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+
+        {/* Super Admin route */}
+        <Route
+          path="/superadmin"
+          element={<SuperAdminDashboard onLogout={handleLogout} />}
         />
 
         {/* Employee routes */}

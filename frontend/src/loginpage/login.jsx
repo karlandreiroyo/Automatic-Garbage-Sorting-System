@@ -375,6 +375,15 @@ function Login({ setIsLoggedIn, setUserRole }) {
                 <p>Too many failed login attempts. Please wait {formatTimeRemaining(lockoutTimeRemaining)} before trying again.</p>
               </div>
             )}
+
+            <button 
+              type="button" 
+              className="superadmin-btn" 
+              onClick={() => navigate('/superadmin')}
+              disabled={loading || isLockedOut}
+            >
+              Super Admin
+            </button>
           </form>
 
           {/* Role Selection Buttons */}

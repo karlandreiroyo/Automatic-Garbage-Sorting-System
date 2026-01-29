@@ -1,0 +1,254 @@
+.admin-logs-container {
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-logs-header {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-logs-header h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.admin-logs-header p {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Desktop Table View */
+.admin-logs-table {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 200px 180px 1fr;
+  gap: 20px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.table-body {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 200px 180px 1fr;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.2s;
+}
+
+.table-row:hover {
+  background: #f8fafc;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.col-date {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.col-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activity-icon {
+  font-size: 1.2rem;
+}
+
+.activity-type {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-transform: capitalize;
+}
+
+.col-description {
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Mobile Card View */
+.admin-logs-cards {
+  display: none;
+}
+
+.log-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.log-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.log-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-description {
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.log-date {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Pagination */
+.pagination-container {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: #047857;
+  color: white;
+  border-color: #047857;
+}
+
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: #94a3b8;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .admin-logs-table {
+    display: none;
+  }
+
+  .admin-logs-cards {
+    display: block;
+  }
+
+  .admin-logs-header h1 {
+    font-size: 1.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-logs-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+  }
+
+  .admin-logs-header h1 {
+    font-size: 1.7rem;
+  }
+
+  .admin-logs-header p {
+    font-size: 0.95rem;
+  }
+
+  .pagination {
+    gap: 6px;
+  }
+
+  .pagination-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-width: 36px;
+  }
+
+  .pagination-first,
+  .pagination-last {
+    display: none;
+  }
+}
