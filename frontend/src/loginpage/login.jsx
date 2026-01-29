@@ -217,6 +217,8 @@ function Login({ setIsLoggedIn, setUserRole }) {
         reactRole = 'employee';
       } else if (userData.role === 'SUPERVISOR') {
         reactRole = 'supervisor';
+      } else if (userData.role === 'SUPERADMIN') {
+        reactRole = 'superadmin';
       } else {
         setAlertTitle('Error');
         setAlertMessage('Invalid user role!');
@@ -375,15 +377,6 @@ function Login({ setIsLoggedIn, setUserRole }) {
                 <p>Too many failed login attempts. Please wait {formatTimeRemaining(lockoutTimeRemaining)} before trying again.</p>
               </div>
             )}
-
-            <button 
-              type="button" 
-              className="superadmin-btn" 
-              onClick={() => navigate('/superadmin')}
-              disabled={loading || isLockedOut}
-            >
-              Super Admin
-            </button>
           </form>
 
           {/* Role Selection Buttons */}

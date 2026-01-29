@@ -98,6 +98,7 @@ function App() {
             isLoggedIn ? (
               userRole === 'admin' ? <Navigate to="/admin" /> :
               userRole === 'supervisor' ? <Navigate to="/supervisor" /> :
+              userRole === 'superadmin' ? <Navigate to="/superadmin" /> :
               <Navigate to="/" />
             ) : (
               <Login setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />
@@ -109,6 +110,7 @@ function App() {
           element={isLoggedIn ? (
             userRole === 'admin' ? <Navigate to="/admin" /> :
             userRole === 'supervisor' ? <Navigate to="/supervisor" /> :
+            userRole === 'superadmin' ? <Navigate to="/superadmin" /> :
             <Navigate to="/" />
           ) : (
             <VerifyLogin setIsLoggedIn={setIsLoggedIn} setUserRole={setUserRole} />
@@ -139,7 +141,7 @@ function App() {
         {/* Super Admin route */}
         <Route
           path="/superadmin"
-          element={<SuperAdminDashboard onLogout={handleLogout} />}
+          element={isLoggedIn && userRole === 'superadmin' ? <SuperAdminDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Employee routes */}

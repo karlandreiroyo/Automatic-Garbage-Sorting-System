@@ -80,6 +80,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
 
         if (pendingUser.role === 'admin') navigate('/admin');
         else if (pendingUser.role === 'supervisor') navigate('/supervisor');
+        else if (pendingUser.role === 'superadmin') navigate('/superadmin');
         else navigate('/');
       } else {
         setVerificationMessage(data.message || 'Invalid verification code');
