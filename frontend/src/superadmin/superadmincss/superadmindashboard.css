@@ -561,9 +561,8 @@ html::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   backdrop-filter: blur(4px);
-  pointer-events: none;
 }
 
 .modal-box {
@@ -573,7 +572,8 @@ html::-webkit-scrollbar {
   text-align: center;
   width: 350px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .modal-icon-wrapper {
@@ -593,6 +593,14 @@ html::-webkit-scrollbar {
   border: none;
   cursor: pointer;
   font-weight: 600;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.btn-modal:focus {
+  outline: 2px solid #064e3b;
+  outline-offset: 2px;
 }
 
 .btn-cancel { background: #f1f5f9; color: #475569; }

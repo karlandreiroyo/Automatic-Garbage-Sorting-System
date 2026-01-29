@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { supabase } from '../supabaseClient.jsx';
 import { useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
@@ -128,31 +129,38 @@ const SuperAdminDashboard = ({ onLogout }) => {
     }
   };
 
+  const logoutModal = showLogoutModal && (
+    <div className="modal-overlay" onClick={() => setShowLogoutModal(false)}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-icon-wrapper"><AlertIcon /></div>
+        <h3>Sign Out?</h3>
+        <p>Are you sure you want to end your session?</p>
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="btn-modal btn-cancel"
+            onClick={() => setShowLogoutModal(false)}
+          >
+            No, Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-modal btn-confirm"
+            onClick={() => {
+              setShowLogoutModal(false);
+              if (typeof onLogout === 'function') onLogout();
+            }}
+          >
+            Yes, Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="superadmin-container">
-      {showLogoutModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <div className="modal-icon-wrapper"><AlertIcon /></div>
-            <h3>Sign Out?</h3>
-            <p>Are you sure you want to end your session?</p>
-            <div className="modal-actions">
-              <button
-                className="btn-modal btn-cancel"
-                onClick={() => setShowLogoutModal(false)}
-              >
-                No, Cancel
-              </button>
-              <button
-                className="btn-modal btn-confirm"
-                onClick={onLogout}
-              >
-                Yes, Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {logoutModal && ReactDOM.createPortal(logoutModal, document.body)}
 
       {/* Mobile Header with Hamburger - Only show on mobile */}
       {isMobile && (
@@ -239,7 +247,10 @@ const SuperAdminDashboard = ({ onLogout }) => {
         <div className="sidebar-footer">
           <button
             className="sign-out-btn"
-            onClick={() => setShowLogoutModal(true)}
+            onClick={() => {
+              if (isMobile) setIsSidebarCollapsed(true);
+              setShowLogoutModal(true);
+            }}
           >
             <SignOutIcon /> Sign Out
           </button>

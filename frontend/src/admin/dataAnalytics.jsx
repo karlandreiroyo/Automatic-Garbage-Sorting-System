@@ -72,6 +72,7 @@ const GearIcon = () => (
 
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [categoryAccuracy, setCategoryAccuracy] = useState({
   'Unsorted': 0,
   'Biodegradable': 0,
@@ -93,7 +94,7 @@ const [wasteDistribution, setWasteDistribution] = useState([
   useEffect(() => {
     fetchAnalyticsData();
     setSelectedBar(null); // Clear selection when filter changes
-  }, [timeFilter]);
+  }, [timeFilter, selectedDate]);
 
 const fetchAnalyticsData = async () => {
   setLoading(true);
@@ -102,19 +103,30 @@ const fetchAnalyticsData = async () => {
       .from('waste_items')
       .select('*');
 
-    // Apply time filter
+    // Apply time filter based on selected date (same logic as superadmin Data Analytics)
+    const dateObj = new Date(selectedDate);
+
     if (timeFilter === 'daily') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      query = query.gte('created_at', today.toISOString());
+      dateObj.setHours(0, 0, 0, 0);
+      const startOfDay = dateObj.toISOString();
+      const endOfDay = new Date(dateObj);
+      endOfDay.setHours(23, 59, 59, 999);
+      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay.toISOString());
     } else if (timeFilter === 'weekly') {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      query = query.gte('created_at', weekAgo.toISOString());
+      const dayOfWeek = dateObj.getDay();
+      const startOfWeek = new Date(dateObj);
+      startOfWeek.setDate(dateObj.getDate() - dayOfWeek);
+      startOfWeek.setHours(0, 0, 0, 0);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+      query = query.gte('created_at', startOfWeek.toISOString()).lte('created_at', endOfWeek.toISOString());
     } else if (timeFilter === 'monthly') {
-      const monthAgo = new Date();
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      query = query.gte('created_at', monthAgo.toISOString());
+      const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+      query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
     }
 
     const { data, error } = await query;
@@ -346,29 +358,73 @@ const calculateYAxisLabels = () => {
         </div>
       </div>
 
-      {/* Time Filters */}
+      {/* Time Filters + Calendar (same as superadmin Data Analytics) */}
       <div className="time-filters">
-        <button
-          className={`time-filter-btn ${timeFilter === 'daily' ? 'active' : ''}`}
-          onClick={() => setTimeFilter('daily')}
-        >
-          <ClockIcon />
-          Daily
-        </button>
-        <button
-          className={`time-filter-btn ${timeFilter === 'weekly' ? 'active' : ''}`}
-          onClick={() => setTimeFilter('weekly')}
-        >
-          <CalendarIcon />
-          Weekly
-        </button>
-        <button
-          className={`time-filter-btn ${timeFilter === 'monthly' ? 'active' : ''}`}
-          onClick={() => setTimeFilter('monthly')}
-        >
-          <CalendarDatesIcon />
-          Monthly
-        </button>
+        <div className="time-filters-left">
+          <button
+            className={`time-filter-btn ${timeFilter === 'daily' ? 'active' : ''}`}
+            onClick={() => setTimeFilter('daily')}
+          >
+            <ClockIcon />
+            Daily
+          </button>
+          <button
+            className={`time-filter-btn ${timeFilter === 'weekly' ? 'active' : ''}`}
+            onClick={() => setTimeFilter('weekly')}
+          >
+            <CalendarIcon />
+            Weekly
+          </button>
+          <button
+            className={`time-filter-btn ${timeFilter === 'monthly' ? 'active' : ''}`}
+            onClick={() => setTimeFilter('monthly')}
+          >
+            <CalendarDatesIcon />
+            Monthly
+          </button>
+        </div>
+        <div className="date-selector-wrapper">
+          <button
+            className="date-nav-btn date-nav-up"
+            onClick={() => {
+              const date = new Date(selectedDate);
+              if (timeFilter === 'daily') date.setDate(date.getDate() - 1);
+              else if (timeFilter === 'weekly') date.setDate(date.getDate() - 7);
+              else if (timeFilter === 'monthly') date.setMonth(date.getMonth() - 1);
+              const maxDate = new Date().toISOString().split('T')[0];
+              if (date.toISOString().split('T')[0] <= maxDate) setSelectedDate(date.toISOString().split('T')[0]);
+            }}
+            title={timeFilter === 'daily' ? 'Previous Day' : timeFilter === 'weekly' ? 'Previous Week' : 'Previous Month'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            max={new Date().toISOString().split('T')[0]}
+            className="analytics-date-input"
+          />
+          <button
+            className="date-nav-btn date-nav-down"
+            onClick={() => {
+              const date = new Date(selectedDate);
+              if (timeFilter === 'daily') date.setDate(date.getDate() + 1);
+              else if (timeFilter === 'weekly') date.setDate(date.getDate() + 7);
+              else if (timeFilter === 'monthly') date.setMonth(date.getMonth() + 1);
+              const maxDate = new Date().toISOString().split('T')[0];
+              if (date.toISOString().split('T')[0] <= maxDate) setSelectedDate(date.toISOString().split('T')[0]);
+            }}
+            disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+            title={timeFilter === 'daily' ? 'Next Day' : timeFilter === 'weekly' ? 'Next Week' : 'Next Month'}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Sorting Accuracy Metrics */}
