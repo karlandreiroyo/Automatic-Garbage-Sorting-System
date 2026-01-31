@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import philippinesData from '../assets/philippines.json';
+import './AddressDropdowns.css';
 
 const AddressDropdowns = ({ 
   value = {}, 
@@ -12,6 +13,32 @@ const AddressDropdowns = ({
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
   const [barangays, setBarangays] = useState([]);
+  const [openField, setOpenField] = useState(null); // 'region' | 'province' | 'city_municipality' | 'barangay' | null
+  const [searchQuery, setSearchQuery] = useState('');
+  const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  // Close dropdown when clicking outside; clear search when closing
+  useEffect(() => {
+    if (!openField) return;
+    setSearchQuery('');
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpenField(null);
+        setSearchQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openField]);
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (openField) {
+      const t = setTimeout(() => searchInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [openField]);
 
   // Initialize regions on mount
   useEffect(() => {
@@ -83,25 +110,116 @@ const AddressDropdowns = ({
     }
 
     onChange(newValue);
+    setOpenField(null);
+    setSearchQuery('');
+  };
+
+  const handleOpenDropdown = (field, isOpen) => {
+    if (isOpen) {
+      setOpenField(null);
+      setSearchQuery('');
+    } else {
+      setSearchQuery('');
+      setOpenField(field);
+    }
+  };
+
+  // Custom dropdown with type-to-search; options list stays inside modal
+  const CustomSelect = ({ field, placeholder, options, valueKey, labelKey, value: currentValue, hasError, disabled: fieldDisabled, searchPlaceholder }) => {
+    const isOpen = openField === field;
+    const isDisabled = disabled || fieldDisabled;
+    const getVal = (o) => (typeof o === 'string' ? o : (o[valueKey] ?? o.name ?? o));
+    const getLabel = (o) => (typeof o === 'string' ? o : (o[labelKey] ?? o.name ?? o));
+    const displayValue = currentValue
+      ? (options.find(o => getVal(o) === currentValue) ? getLabel(options.find(o => getVal(o) === currentValue)) : currentValue)
+      : '';
+    const query = isOpen ? searchQuery : '';
+    const filteredOptions = query.trim()
+      ? options.filter((opt) => getLabel(opt).toLowerCase().includes(query.trim().toLowerCase()))
+      : options;
+    return (
+      <div className="address-select-wrapper" ref={field === openField ? dropdownRef : null}>
+        <button
+          type="button"
+          className={`address-select-trigger ${hasError ? 'error' : ''}`}
+          onClick={() => !isDisabled && handleOpenDropdown(field, isOpen)}
+          disabled={isDisabled}
+          title={displayValue || placeholder}
+        >
+          <span className={!displayValue ? 'placeholder' : ''}>{displayValue || placeholder}</span>
+          <span className="address-select-arrow">▾</span>
+        </button>
+        {isOpen && (
+          <div className="address-select-list" role="listbox">
+            <div className="address-select-search-wrap">
+              <input
+                ref={searchInputRef}
+                key={`address-search-${field}`}
+                type="text"
+                className="address-select-search"
+                placeholder={searchPlaceholder || 'Type to search...'}
+                value={query}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  requestAnimationFrame(() => searchInputRef.current?.focus());
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') e.preventDefault();
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                aria-label={`Search ${placeholder}`}
+                autoComplete="off"
+              />
+            </div>
+            <button
+              type="button"
+              className="address-select-option"
+              onClick={() => handleChange(field, '')}
+              role="option"
+            >
+              {placeholder}
+            </button>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((opt) => {
+                const val = getVal(opt);
+                const label = getLabel(opt);
+                return (
+                  <button
+                    key={val}
+                    type="button"
+                    className={`address-select-option ${currentValue === val ? 'selected' : ''}`}
+                    onClick={() => handleChange(field, val)}
+                    role="option"
+                  >
+                    {label}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="address-select-no-results">No matches</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="address-fields">
       <div className="form-group">
         <label>Region *</label>
-        <select
-          className={`form-input ${touched.region && errors.region ? 'error' : ''}`}
+        <CustomSelect
+          field="region"
+          placeholder="Select Region"
+          searchPlaceholder="Type region..."
+          options={regions}
+          valueKey="code"
+          labelKey="name"
           value={value.region || ''}
-          onChange={(e) => handleChange('region', e.target.value)}
-          disabled={disabled}
-        >
-          <option value="">Select Region</option>
-          {regions.map((region) => (
-            <option key={region.code} value={region.code}>
-              {region.name}
-            </option>
-          ))}
-        </select>
+          hasError={touched.region && errors.region}
+        />
         {touched.region && errors.region && (
           <span className="error-message">{errors.region}</span>
         )}
@@ -109,19 +227,17 @@ const AddressDropdowns = ({
 
       <div className="form-group">
         <label>Province *</label>
-        <select
-          className={`form-input ${touched.province && errors.province ? 'error' : ''}`}
+        <CustomSelect
+          field="province"
+          placeholder="Select Province"
+          searchPlaceholder="Type province..."
+          options={provinces}
+          valueKey="name"
+          labelKey="name"
           value={value.province || ''}
-          onChange={(e) => handleChange('province', e.target.value)}
+          hasError={touched.province && errors.province}
           disabled={disabled || !value.region}
-        >
-          <option value="">Select Province</option>
-          {provinces.map((province) => (
-            <option key={province.name} value={province.name}>
-              {province.name}
-            </option>
-          ))}
-        </select>
+        />
         {touched.province && errors.province && (
           <span className="error-message">{errors.province}</span>
         )}
@@ -129,19 +245,16 @@ const AddressDropdowns = ({
 
       <div className="form-group">
         <label>City/Municipality *</label>
-        <select
-          className={`form-input ${touched.city_municipality && errors.city_municipality ? 'error' : ''}`}
+        <CustomSelect
+          field="city_municipality"
+          placeholder="Select City/Municipality"
+          options={cities}
+          valueKey="name"
+          labelKey="name"
           value={value.city_municipality || ''}
-          onChange={(e) => handleChange('city_municipality', e.target.value)}
+          hasError={touched.city_municipality && errors.city_municipality}
           disabled={disabled || !value.province}
-        >
-          <option value="">Select City/Municipality</option>
-          {cities.map((city) => (
-            <option key={city.name} value={city.name}>
-              {city.name}
-            </option>
-          ))}
-        </select>
+        />
         {touched.city_municipality && errors.city_municipality && (
           <span className="error-message">{errors.city_municipality}</span>
         )}
@@ -149,19 +262,17 @@ const AddressDropdowns = ({
 
       <div className="form-group">
         <label>Barangay *</label>
-        <select
-          className={`form-input ${touched.barangay && errors.barangay ? 'error' : ''}`}
+        <CustomSelect
+          field="barangay"
+          placeholder="Select Barangay"
+          searchPlaceholder="Type barangay..."
+          options={barangays}
+          valueKey="name"
+          labelKey="name"
           value={value.barangay || ''}
-          onChange={(e) => handleChange('barangay', e.target.value)}
+          hasError={touched.barangay && errors.barangay}
           disabled={disabled || !value.city_municipality}
-        >
-          <option value="">Select Barangay</option>
-          {barangays.map((barangay) => (
-            <option key={barangay} value={barangay}>
-              {barangay}
-            </option>
-          ))}
-        </select>
+        />
         {touched.barangay && errors.barangay && (
           <span className="error-message">{errors.barangay}</span>
         )}

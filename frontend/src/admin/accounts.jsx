@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/accounts.css';
 import AddressDropdowns from '../components/AddressDropdowns';
@@ -68,6 +68,7 @@ const Accounts = () => {
     email: '',
     backup_email: '',
     role: 'COLLECTOR',
+    assigned_bin_id: '',
     first_name: '',
     last_name: '',
     middle_name: '',
@@ -80,16 +81,50 @@ const Accounts = () => {
     }
   });
 
+  const [bins, setBins] = useState([]);
+  const [editAssignedBinId, setEditAssignedBinId] = useState('');
+  const [binSelectOpen, setBinSelectOpen] = useState(false);
+  const [binSearchQuery, setBinSearchQuery] = useState('');
+  const binDropdownRef = useRef(null);
+  const binSearchInputRef = useRef(null);
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const fetchBins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bins')
+        .select('id, name, location, assigned_collector_id')
+        .eq('status', 'ACTIVE')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setBins(data || []);
+    } catch (err) {
+      console.error('Error fetching bins:', err);
+      setBins([]);
+    }
+  };
 
   useEffect(() => {
     if (showAddModal) {
       setEmailVerified(false);
       setGeneratedPassword(null);
+      fetchBins();
     }
   }, [showAddModal]);
+
+  useEffect(() => {
+    if (editingUser) fetchBins();
+  }, [editingUser]);
+
+  useEffect(() => {
+    if (editingUser && bins.length >= 0) {
+      const currentBin = bins.find(b => b.assigned_collector_id === editingUser.id);
+      setEditAssignedBinId(currentBin ? String(currentBin.id) : '');
+    }
+  }, [editingUser, bins]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -102,6 +137,27 @@ const Accounts = () => {
       document.body.style.overflow = '';
     };
   }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal, showCredentialsSentModal]);
+
+  // Assign Bin dropdown: close on click outside, clear search when opening
+  useEffect(() => {
+    if (!binSelectOpen) return;
+    setBinSearchQuery('');
+    const handleClickOutside = (e) => {
+      if (binDropdownRef.current && !binDropdownRef.current.contains(e.target)) {
+        setBinSelectOpen(false);
+        setBinSearchQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [binSelectOpen]);
+
+  useEffect(() => {
+    if (binSelectOpen) {
+      const t = setTimeout(() => binSearchInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [binSelectOpen]);
 
   const fetchUsers = async () => {
     try {
@@ -266,6 +322,9 @@ const Accounts = () => {
       }
       case 'role':
         if (!value) error = 'Please select an account role';
+        break;
+      case 'assigned_bin_id':
+        if (!value || !String(value).trim()) error = 'Please select a bin to assign';
         break;
       case 'region':
         if (!value) error = 'Region is required';
@@ -504,7 +563,7 @@ const Accounts = () => {
       return;
     }
     const newErrors = {};
-    ['first_name', 'last_name', 'email', 'role'].forEach(f => {
+    ['first_name', 'last_name', 'email', 'role', 'assigned_bin_id'].forEach(f => {
       const err = validateField(f, formData[f]);
       if (err) newErrors[f] = err;
     });
@@ -515,7 +574,7 @@ const Accounts = () => {
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setTouched({ first_name: true, last_name: true, email: true, middle_name: true, role: true });
+      setTouched({ first_name: true, last_name: true, email: true, middle_name: true, role: true, assigned_bin_id: true });
       return;
     }
     setPendingCreateData({ ...formData });
@@ -562,10 +621,24 @@ const handleConfirmCreate = async () => {
     setShowAddModal(false);
     setShowCreateConfirmModal(false);
     setPendingCreateData(null);
+    if (pendingCreateData.assigned_bin_id) {
+      const { data: newUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', pendingCreateData.email.trim().toLowerCase())
+        .single();
+      if (newUser) {
+        await supabase
+          .from('bins')
+          .update({ assigned_collector_id: newUser.id })
+          .eq('id', pendingCreateData.assigned_bin_id);
+      }
+    }
     setFormData({ 
       email: '', 
       backup_email: '',
       role: 'COLLECTOR', 
+      assigned_bin_id: '',
       first_name: '', 
       last_name: '', 
       middle_name: '',
@@ -651,8 +724,8 @@ const handleUpdateEmployee = async (e) => {
     return;
   }
 
-  // Show save confirmation modal
-  setPendingSaveData({ ...editingUser });
+  // Show save confirmation modal (include assigned bin for update)
+  setPendingSaveData({ ...editingUser, assigned_bin_id: editAssignedBinId });
   setShowSaveConfirmModal(true);
 };
 
@@ -681,6 +754,18 @@ const handleConfirmSave = async () => {
       .eq('auth_id', pendingSaveData.auth_id);
 
     if (error) throw error;
+
+    // Update bin assignment: unassign old bin(s) for this user, assign new bin if selected
+    await supabase
+      .from('bins')
+      .update({ assigned_collector_id: null })
+      .eq('assigned_collector_id', pendingSaveData.id);
+    if (pendingSaveData.assigned_bin_id) {
+      await supabase
+        .from('bins')
+        .update({ assigned_collector_id: pendingSaveData.id })
+        .eq('id', pendingSaveData.assigned_bin_id);
+    }
 
     // ADD ACTIVITY LOGGING HERE
     await supabase.from('activity_logs').insert([{
@@ -983,19 +1068,97 @@ const handleCancelSave = () => {
                   />
                   {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
                 </div>
-                <div className="form-group">
-                  <label>Account Role</label>
-                  <input 
-                    type="text" 
-                    value="Collector" 
-                    disabled
-                    style={{ 
-                      background: '#f3f4f6', 
-                      cursor: 'not-allowed',
-                      color: '#6b7280'
-                    }}
-                  />
+                <div className={`form-group ${errors.assigned_bin_id ? 'has-error' : ''}`}>
+                  <label>Assign Bin *</label>
+                  {(() => {
+                    const q = binSearchQuery.trim().toLowerCase();
+                    const filteredBinsAdd = q
+                      ? bins.filter((bin) => {
+                          const name = (bin.name || '').toLowerCase();
+                          const location = (bin.location || '').toLowerCase();
+                          const idStr = String(bin.id || '').toLowerCase();
+                          return name.includes(q) || location.includes(q) || idStr.includes(q);
+                        })
+                      : bins;
+                    return (
+                  <div className="bin-select-wrapper" ref={binDropdownRef}>
+                    <button
+                      type="button"
+                      className={`bin-select-trigger ${errors.assigned_bin_id && touched.assigned_bin_id ? 'error' : ''}`}
+                      onClick={() => setBinSelectOpen((prev) => { if (prev) setBinSearchQuery(''); return !prev; })}
+                      onBlur={() => setTouched((t) => ({ ...t, assigned_bin_id: true }))}
+                      aria-expanded={binSelectOpen}
+                      aria-haspopup="listbox"
+                    >
+                      <span className={!formData.assigned_bin_id ? 'placeholder' : ''}>
+                        {formData.assigned_bin_id
+                          ? (() => {
+                              const sel = bins.find((b) => b.id === formData.assigned_bin_id);
+                              return sel ? `${sel.name}${sel.location ? ` - ${sel.location}` : ''}` : 'Select bin';
+                            })()
+                          : 'Select bin'}
+                      </span>
+                      <span className="bin-select-arrow">▾</span>
+                    </button>
+                    {binSelectOpen && (
+                      <div className="bin-select-list" role="listbox">
+                        <div className="bin-select-search-wrap">
+                          <input
+                            ref={binSearchInputRef}
+                            key="bin-search-add"
+                            type="text"
+                            className="bin-select-search"
+                            placeholder="Type to search bin name or #..."
+                            value={binSearchQuery}
+                            onChange={(e) => {
+                              setBinSearchQuery(e.target.value);
+                              requestAnimationFrame(() => binSearchInputRef.current?.focus());
+                            }}
+                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.preventDefault(); }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Search bins"
+                            autoComplete="off"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="bin-select-option"
+                          onClick={() => { setFormData((p) => ({ ...p, assigned_bin_id: '' })); setTouched((t) => ({ ...t, assigned_bin_id: true })); setBinSelectOpen(false); setBinSearchQuery(''); }}
+                          role="option"
+                        >
+                          Select bin
+                        </button>
+                        {filteredBinsAdd.length > 0 ? (
+                          filteredBinsAdd.map((bin) => (
+                            <button
+                              key={bin.id}
+                              type="button"
+                              className={`bin-select-option ${formData.assigned_bin_id === bin.id ? 'selected' : ''}`}
+                              disabled={!!bin.assigned_collector_id}
+                              onClick={() => {
+                                if (bin.assigned_collector_id) return;
+                                setFormData((p) => ({ ...p, assigned_bin_id: bin.id }));
+                                setTouched((t) => ({ ...t, assigned_bin_id: true }));
+                                setBinSelectOpen(false);
+                                setBinSearchQuery('');
+                              }}
+                              role="option"
+                            >
+                              {bin.name}{bin.location ? ` - ${bin.location}` : ''}{bin.assigned_collector_id ? ' (Unavailable)' : ''}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="bin-select-no-results">No matches</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                    );
+                  })()}
+                  {errors.assigned_bin_id && <span className="error-message">{errors.assigned_bin_id}</span>}
                   <input type="hidden" name="role" value="COLLECTOR" />
+                  <input type="hidden" name="assigned_bin_id" value={formData.assigned_bin_id || ''} />
                 </div>
                 {/* Address Section */}
                 <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
@@ -1082,15 +1245,22 @@ const handleCancelSave = () => {
                   {editErrors.contact && <span className="error-message">{editErrors.contact}</span>}
                 </div>
                 <div className="form-group">
-                  <label>Role</label>
+                  <label>Assign Bin</label>
                   <select
-                    name="role"
-                    value={editingUser.role || ''}
-                    onChange={handleEditInputChange}
-                    required
+                    name="assigned_bin_id"
+                    value={editAssignedBinId || ''}
+                    onChange={(e) => setEditAssignedBinId(e.target.value)}
                   >
-                    <option value="COLLECTOR">Collector</option>
-                    <option value="ADMIN">Admin</option>
+                    <option value="">No bin assigned</option>
+                    {bins.map((bin) => (
+                      <option
+                        key={bin.id}
+                        value={bin.id}
+                        disabled={!!bin.assigned_collector_id && bin.assigned_collector_id !== editingUser.id}
+                      >
+                        {bin.name}{bin.location ? ` - ${bin.location}` : ''}{bin.assigned_collector_id && bin.assigned_collector_id !== editingUser.id ? ' (Unavailable)' : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

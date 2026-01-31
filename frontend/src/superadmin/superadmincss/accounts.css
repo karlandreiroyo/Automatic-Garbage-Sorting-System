@@ -259,6 +259,59 @@ body.modal-open {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
 }
 
+/* Verify button inline with email input */
+.input-with-verify {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.input-with-verify input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.verify-btn-inline {
+  background: #047857;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.verify-btn-inline.email {
+  background: #047857;
+}
+.verify-btn-inline.email:hover:not(:disabled) {
+  background: #065f46;
+}
+.verify-btn-inline:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.verify-btn-inline.verified {
+  background-color: #10b981 !important;
+  color: white;
+  cursor: default;
+}
+.verify-btn-inline.verified:hover:not(:disabled) {
+  background-color: #059669 !important;
+}
+.verified-badge-inline {
+  color: #047857;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
 /* Show Password Toggle */
 .show-password-toggle {
   display: flex;
@@ -439,6 +492,7 @@ body.modal-open {
   transition: 0.2s;
   height: 44px;
   box-sizing: border-box;
+  background: white;
 }
 
 .search-input:focus {

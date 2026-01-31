@@ -5,19 +5,25 @@ import './superadmincss/adminLogs.css';
 const AdminLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 6;
 
   useEffect(() => {
     fetchAdminLogs();
-  }, [currentPage]);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter]);
 
   const fetchAdminLogs = async () => {
     try {
       setLoading(true);
       
-      // Fetch activity logs where the user performing the action is an ADMIN
-      // Join with users table to filter by role
+      // Admin Logs: record when an admin creates, edits, archives or activates an employee (Collector/Admin)
+      // Only employee-related actions: USER_ADDED, USER_UPDATED, USER_ARCHIVED, USER_ACTIVATED
       const { data, error } = await supabase
         .from('activity_logs')
         .select(`
@@ -29,23 +35,15 @@ const AdminLogs = () => {
             last_name
           )
         `)
-        .or('user.role.eq.ADMIN,user_id.is.null')
         .in('activity_type', [
           'USER_ADDED',
           'USER_UPDATED',
           'USER_ARCHIVED',
-          'USER_ACTIVATED',
-          'BIN_ADDED',
-          'BIN_UPDATED',
-          'BIN_ARCHIVED',
-          'BIN_UNARCHIVED',
-          'BIN_DRAINED',
-          'BIN_DRAINED_ALL'
+          'USER_ACTIVATED'
         ])
         .order('created_at', { ascending: false });
 
       if (error) {
-        // If join fails, try without join and filter by activity types only
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('activity_logs')
           .select('*')
@@ -53,22 +51,29 @@ const AdminLogs = () => {
             'USER_ADDED',
             'USER_UPDATED',
             'USER_ARCHIVED',
-            'USER_ACTIVATED',
-            'BIN_ADDED',
-            'BIN_UPDATED',
-            'BIN_ARCHIVED',
-            'BIN_UNARCHIVED',
-            'BIN_DRAINED',
-            'BIN_DRAINED_ALL'
+            'USER_ACTIVATED'
           ])
           .order('created_at', { ascending: false });
-        
         if (fallbackError) throw fallbackError;
-        setLogs(fallbackData || []);
+        const raw = fallbackData || [];
+        const userIds = [...new Set(raw.map(l => l.user_id).filter(Boolean))];
+        if (userIds.length === 0) {
+          setLogs(raw);
+          return;
+        }
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, role, first_name, last_name')
+          .in('id', userIds);
+        const userMap = (usersData || []).reduce((acc, u) => { acc[u.id] = u; return acc; }, {});
+        const adminLogs = raw.filter(log =>
+          !log.user_id || (userMap[log.user_id] && userMap[log.user_id].role === 'ADMIN')
+        ).map(log => ({ ...log, user: log.user_id ? userMap[log.user_id] : null }));
+        setLogs(adminLogs);
       } else {
-        // Filter to only show logs where user is ADMIN or user_id is null (system/admin actions)
-        const adminLogs = (data || []).filter(log => 
-          !log.user || log.user.role === 'ADMIN' || log.user_id === null
+        // Filter to only show logs where actor is ADMIN or user_id is null (superadmin/system)
+        const adminLogs = (data || []).filter(log =>
+          !log.user_id || (log.user && log.user.role === 'ADMIN')
         );
         setLogs(adminLogs);
       }
@@ -80,11 +85,45 @@ const AdminLogs = () => {
     }
   };
 
-  // Pagination calculations
-  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const getAdminName = (log) => {
+    if (!log.user_id) return 'System';
+    if (!log.user) return 'Unknown';
+    const first = log.user.first_name || '';
+    const last = log.user.last_name || '';
+    return `${first} ${last}`.trim() || 'Admin';
+  };
+
+  const getAdminNameForFilter = (log) => {
+    return getAdminName(log).toLowerCase();
+  };
+
+  const filteredBySearch = searchTerm.trim()
+    ? logs.filter((log) => {
+        const term = searchTerm.trim().toLowerCase();
+        const adminName = getAdminNameForFilter(log);
+        const activityType = (log.activity_type || '').replace(/_/g, ' ').toLowerCase();
+        const description = (log.description || '').toLowerCase();
+        return (
+          adminName.includes(term) ||
+          activityType.includes(term) ||
+          description.includes(term)
+        );
+      })
+    : logs;
+
+  const filteredLogs = dateFilter
+    ? filteredBySearch.filter((log) => {
+        if (!log.created_at) return false;
+        const logDate = new Date(log.created_at);
+        const logDateStr = logDate.getFullYear() + '-' + String(logDate.getMonth() + 1).padStart(2, '0') + '-' + String(logDate.getDate()).padStart(2, '0');
+        return logDateStr === dateFilter;
+      })
+    : filteredBySearch;
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentLogs = logs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentLogs = filteredLogs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -131,6 +170,46 @@ const AdminLogs = () => {
     });
   };
 
+  // Parse employee/target name (and role) from stored description for display
+  const getEmployeeNameFromDescription = (activityType, description) => {
+    if (!description || !description.trim()) return { name: 'Unknown', roleLabel: 'Employee' };
+    const d = description.trim();
+    if (activityType === 'USER_ADDED') {
+      const match = d.match(/^Added\s+(.+?)\s+as\s+(?:a|an)\s+(COLLECTOR|ADMIN)/i);
+      if (match) {
+        const name = match[1].trim();
+        const roleLabel = match[2].toUpperCase() === 'ADMIN' ? 'Admin' : 'Collector';
+        return { name, roleLabel };
+      }
+    }
+    if (activityType === 'USER_UPDATED') {
+      const match = d.match(/^Updated\s+(.+?)'s\s+information/i) || d.match(/^Updated\s+(.+)/i);
+      if (match) return { name: match[1].trim(), roleLabel: 'Employee' };
+    }
+    if (activityType === 'USER_ARCHIVED' || activityType === 'USER_ACTIVATED') {
+      const match = d.match(/^(?:Archived|Activated)\s+(.+)/i);
+      if (match) return { name: match[1].trim(), roleLabel: 'Employee' };
+    }
+    return { name: d, roleLabel: 'Employee' };
+  };
+
+  // Format description as "Archive / Activate / Add / Update" then "name"
+  const formatAdminLogDescription = (log) => {
+    const { name: employeeName } = getEmployeeNameFromDescription(log.activity_type, log.description);
+    switch (log.activity_type) {
+      case 'USER_ADDED':
+        return `Add ${employeeName}`;
+      case 'USER_UPDATED':
+        return `Update ${employeeName}`;
+      case 'USER_ARCHIVED':
+        return `Archive ${employeeName}`;
+      case 'USER_ACTIVATED':
+        return `Activate ${employeeName}`;
+      default:
+        return log.description || 'No description';
+    }
+  };
+
   const getActivityIcon = (activityType) => {
     switch (activityType) {
       case 'USER_ADDED':
@@ -141,18 +220,6 @@ const AdminLogs = () => {
         return '📦';
       case 'USER_ACTIVATED':
         return '✅';
-      case 'BIN_ADDED':
-        return '🗑️';
-      case 'BIN_UPDATED':
-        return '🔄';
-      case 'BIN_ARCHIVED':
-        return '📦';
-      case 'BIN_UNARCHIVED':
-        return '📤';
-      case 'BIN_DRAINED':
-        return '💧';
-      case 'BIN_DRAINED_ALL':
-        return '💧';
       default:
         return '📝';
     }
@@ -163,38 +230,56 @@ const AdminLogs = () => {
       <div className="admin-logs-header">
         <div>
           <h1>Admin Logs</h1>
-          <p>Track all admin activities and actions</p>
+          <p>Track admin activities</p>
+        </div>
+      </div>
+
+      <div className="admin-logs-search-row">
+        <input
+          type="text"
+          placeholder="Search by admin name, activity or description..."
+          className="search-input"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div className="admin-logs-date-filter">
+          <input
+            id="admin-logs-date-picker"
+            type="date"
+            className="admin-logs-date-input"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            title="Filter by date (above Date & Time)"
+          />
         </div>
       </div>
 
       {loading ? (
         <div className="loading-state">Loading logs...</div>
-      ) : logs.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <div className="empty-state">
-          <p>No admin logs found</p>
+          <p>{searchTerm.trim() || dateFilter ? 'No logs match your search' : 'No admin logs found'}</p>
         </div>
       ) : (
         <>
-          {/* Desktop Table View */}
+          {/* Desktop Table View - same column order as Collector Logs: Activity, Admin, Description, Date & Time */}
           <div className="admin-logs-table">
             <div className="table-header">
-              <div className="col-date">Date & Time</div>
               <div className="col-activity">Activity</div>
+              <div className="col-admin">Admin</div>
               <div className="col-description">Description</div>
+              <div className="col-date">Date & Time</div>
             </div>
             <div className="table-body">
               {currentLogs.map((log) => (
                 <div key={log.id} className="table-row">
-                  <div className="col-date">
-                    {formatDate(log.created_at)}
-                  </div>
                   <div className="col-activity">
                     <span className="activity-icon">{getActivityIcon(log.activity_type)}</span>
                     <span className="activity-type">{log.activity_type?.replace(/_/g, ' ') || 'Unknown'}</span>
                   </div>
-                  <div className="col-description">
-                    {log.description || 'No description'}
-                  </div>
+                  <div className="col-admin">{getAdminName(log)}</div>
+                  <div className="col-description">{formatAdminLogDescription(log)}</div>
+                  <div className="col-date">{formatDate(log.created_at)}</div>
                 </div>
               ))}
             </div>
@@ -209,7 +294,8 @@ const AdminLogs = () => {
                   <span className="activity-type">{log.activity_type?.replace(/_/g, ' ') || 'Unknown'}</span>
                 </div>
                 <div className="log-card-body">
-                  <p className="log-description">{log.description || 'No description'}</p>
+                  <p className="log-admin">{getAdminName(log)}</p>
+                  <p className="log-description">{formatAdminLogDescription(log)}</p>
                   <p className="log-date">{formatDate(log.created_at)}</p>
                 </div>
               </div>
@@ -217,25 +303,25 @@ const AdminLogs = () => {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div className="pagination-container">
               <div className="pagination">
                 {currentPage > 1 && (
-                  <button 
-                    className="pagination-btn pagination-first" 
+                  <button
+                    className="pagination-btn pagination-first"
                     onClick={() => handlePageChange(1)}
                   >
                     First Page
                   </button>
                 )}
-                <button 
-                  className="pagination-btn pagination-prev" 
-                  onClick={() => handlePageChange(currentPage - 1)} 
+                <button
+                  className="pagination-btn pagination-prev"
+                  onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
                   Previous
                 </button>
-                {generatePageNumbers().map((page, index) => (
+                {generatePageNumbers().map((page, index) =>
                   page === '...' ? (
                     <span key={`ellipsis-${index}`} className="pagination-ellipsis">...</span>
                   ) : (
@@ -247,17 +333,17 @@ const AdminLogs = () => {
                       {page}
                     </button>
                   )
-                ))}
-                <button 
-                  className="pagination-btn pagination-next" 
-                  onClick={() => handlePageChange(currentPage + 1)} 
+                )}
+                <button
+                  className="pagination-btn pagination-next"
+                  onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                 >
                   Next
                 </button>
-                {currentPage < totalPages && (
-                  <button 
-                    className="pagination-btn pagination-last" 
+                {currentPage === 1 && totalPages > 1 && (
+                  <button
+                    className="pagination-btn pagination-last"
                     onClick={() => handlePageChange(totalPages)}
                   >
                     Last Page
@@ -265,7 +351,7 @@ const AdminLogs = () => {
                 )}
               </div>
               <div className="pagination-info">
-                Page {currentPage} of {totalPages} ({logs.length} total logs)
+                Page {currentPage} of {totalPages} ({filteredLogs.length} total logs)
               </div>
             </div>
           )}
