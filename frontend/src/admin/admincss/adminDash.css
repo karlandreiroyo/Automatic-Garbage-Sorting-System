@@ -52,11 +52,46 @@
   border-radius: 12px;
   padding: 12px;
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+}
+
+/* Force center alignment inside each card - admin dashboard; icon a bit in from left */
+.admin-dash-container .stat-card {
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  padding-left: 22px;
+}
+
+/* Larger icons, less space between icon and text */
+.admin-dash-container .stat-icon-bg {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+}
+
+.admin-dash-container .stat-icon-bg svg {
+  width: 28px;
+  height: 28px;
+}
+
+.admin-dash-container .stat-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 0 1 auto;
+}
+
+.admin-dash-container .stat-label,
+.admin-dash-container .stat-value {
+  text-align: center;
 }
 
 .stat-card:hover {
@@ -78,6 +113,8 @@
 .stat-info {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .stat-label {
@@ -330,6 +367,20 @@
     padding: 10px;
   }
   
+  .admin-dash-container .stat-card {
+    gap: 5px;
+  }
+  
+  .admin-dash-container .stat-icon-bg {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .admin-dash-container .stat-icon-bg svg {
+    width: 26px;
+    height: 26px;
+  }
+  
   .stat-value {
     font-size: 1.3rem;
   }
@@ -399,9 +450,23 @@
     gap: 8px;
   }
   
+  .admin-dash-container .stat-card {
+    gap: 5px;
+  }
+  
   .stat-icon-bg {
     width: 36px;
     height: 36px;
+  }
+  
+  .admin-dash-container .stat-icon-bg {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .admin-dash-container .stat-icon-bg svg {
+    width: 26px;
+    height: 26px;
   }
   
   .stat-value {
@@ -507,9 +572,23 @@
     gap: 10px;
   }
   
+  .admin-dash-container .stat-card {
+    gap: 5px;
+  }
+  
   .stat-icon-bg {
     width: 40px;
     height: 40px;
+  }
+  
+  .admin-dash-container .stat-icon-bg {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .admin-dash-container .stat-icon-bg svg {
+    width: 26px;
+    height: 26px;
   }
   
   .stat-value {

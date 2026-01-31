@@ -11,12 +11,18 @@ import './admincss/collectorLogs.css';
 const CollectorLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 6;
 
   useEffect(() => {
     fetchCollectorLogs();
-  }, [currentPage]);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter]);
 
   const fetchCollectorLogs = async () => {
     try {
@@ -77,10 +83,40 @@ const CollectorLogs = () => {
     }
   };
 
-  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const getCollectorNameForFilter = (log) => {
+    if (!log.user) return '';
+    const first = log.user.first_name || '';
+    const last = log.user.last_name || '';
+    return `${first} ${last}`.trim().toLowerCase();
+  };
+
+  const filteredBySearch = searchTerm.trim()
+    ? logs.filter((log) => {
+        const term = searchTerm.trim().toLowerCase();
+        const collectorName = getCollectorNameForFilter(log);
+        const activityType = (log.activity_type || '').replace(/_/g, ' ').toLowerCase();
+        const description = (log.description || '').toLowerCase();
+        return (
+          collectorName.includes(term) ||
+          activityType.includes(term) ||
+          description.includes(term)
+        );
+      })
+    : logs;
+
+  const filteredLogs = dateFilter
+    ? filteredBySearch.filter((log) => {
+        if (!log.created_at) return false;
+        const logDate = new Date(log.created_at);
+        const logDateStr = logDate.getFullYear() + '-' + String(logDate.getMonth() + 1).padStart(2, '0') + '-' + String(logDate.getDate()).padStart(2, '0');
+        return logDateStr === dateFilter;
+      })
+    : filteredBySearch;
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentLogs = logs.slice(indexOfFirstItem, indexOfLastItem);
+  const currentLogs = filteredLogs.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -166,11 +202,31 @@ const CollectorLogs = () => {
         </div>
       </div>
 
+      <div className="collector-logs-search-row">
+        <input
+          type="text"
+          placeholder="Search by collector name, activity or description..."
+          className="search-input"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div className="collector-logs-date-filter">
+          <input
+            id="collector-logs-date-picker"
+            type="date"
+            className="collector-logs-date-input"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            title="Filter by date (above Date & Time)"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="loading-state">Loading logs...</div>
-      ) : logs.length === 0 ? (
+      ) : filteredLogs.length === 0 ? (
         <div className="empty-state">
-          <p>No collector logs found</p>
+          <p>{searchTerm.trim() ? 'No logs match your search' : 'No collector logs found'}</p>
         </div>
       ) : (
         <>
@@ -212,11 +268,16 @@ const CollectorLogs = () => {
             ))}
           </div>
 
-          {totalPages > 1 && (
+          {totalPages > 0 && (
             <div className="pagination-container">
               <div className="pagination">
                 {currentPage > 1 && (
-                  <button className="pagination-btn pagination-first" onClick={() => handlePageChange(1)}>First Page</button>
+                  <button
+                    className="pagination-btn pagination-first"
+                    onClick={() => handlePageChange(1)}
+                  >
+                    First Page
+                  </button>
                 )}
                 <button
                   className="pagination-btn pagination-prev"
@@ -245,12 +306,17 @@ const CollectorLogs = () => {
                 >
                   Next
                 </button>
-                {currentPage < totalPages && (
-                  <button className="pagination-btn pagination-last" onClick={() => handlePageChange(totalPages)}>Last Page</button>
+                {currentPage === 1 && totalPages > 1 && (
+                  <button
+                    className="pagination-btn pagination-last"
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    Last Page
+                  </button>
                 )}
               </div>
               <div className="pagination-info">
-                Page {currentPage} of {totalPages} ({logs.length} total logs)
+                Page {currentPage} of {totalPages} ({filteredLogs.length} total logs)
               </div>
             </div>
           )}

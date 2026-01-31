@@ -99,6 +99,10 @@ const SuperAdminDashboard = ({ onLogout }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [binMonitoringDropdownOpen, setBinMonitoringDropdownOpen] = useState(false);
+  const [sidebarArchiveRequested, setSidebarArchiveRequested] = useState(false);
+  const [binMonitoringArchiveActive, setBinMonitoringArchiveActive] = useState(false);
+  const [requestExitArchiveView, setRequestExitArchiveView] = useState(false);
   
   // Check screen size on mount and resize
   useEffect(() => {
@@ -124,6 +128,34 @@ const SuperAdminDashboard = ({ onLogout }) => {
 
   const handleNavClick = (tab) => {
     setActiveTab(tab);
+    if (tab !== 'bins') {
+      setBinMonitoringDropdownOpen(false);
+      setBinMonitoringArchiveActive(false);
+    }
+    if (isMobile) {
+      setIsSidebarCollapsed(true);
+    }
+  };
+
+  const handleBinMonitoringClick = () => {
+    if (activeTab !== 'bins') {
+      handleNavClick('bins');
+      setBinMonitoringDropdownOpen(true);
+    } else if (binMonitoringArchiveActive) {
+      setRequestExitArchiveView(true);
+      setBinMonitoringDropdownOpen(false);
+    } else {
+      setBinMonitoringDropdownOpen((prev) => !prev);
+    }
+  };
+
+  const handleViewArchiveBinsFromSidebar = (e) => {
+    e.stopPropagation();
+    setSidebarArchiveRequested(true);
+    setBinMonitoringDropdownOpen(false);
+    if (activeTab !== 'bins') {
+      setActiveTab('bins');
+    }
     if (isMobile) {
       setIsSidebarCollapsed(true);
     }
@@ -227,13 +259,36 @@ const SuperAdminDashboard = ({ onLogout }) => {
             Accounts
           </div>
 
-          <div
-            className={`nav-item ${activeTab === 'bins' ? 'active' : ''}`}
-            onClick={() => handleNavClick('bins')}
-          >
-            <div className="nav-icon"><BinMonitoringIcon /></div>
-            Bin Monitoring
-          </div>
+          {activeTab === 'bins' ? (
+            <div className={`nav-item-dropdown ${binMonitoringDropdownOpen ? 'open' : ''}`}>
+              <div
+                className={`nav-item nav-item-dropdown-trigger active`}
+                onClick={handleBinMonitoringClick}
+              >
+                <div className="nav-icon"><BinMonitoringIcon /></div>
+                Bin Monitoring
+                <span className={`nav-dropdown-caret ${binMonitoringDropdownOpen ? 'open' : ''}`}>▾</span>
+              </div>
+              {binMonitoringDropdownOpen && (
+                <div className="nav-item-submenu">
+                  <div
+                    className="nav-item nav-item-sub"
+                    onClick={handleViewArchiveBinsFromSidebar}
+                  >
+                    View Archive Bins
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className="nav-item"
+              onClick={handleBinMonitoringClick}
+            >
+              <div className="nav-icon"><BinMonitoringIcon /></div>
+              Bin Monitoring
+            </div>
+          )}
 
           <div
             className={`nav-item ${activeTab === 'logs' ? 'active' : ''}`}
@@ -267,7 +322,15 @@ const SuperAdminDashboard = ({ onLogout }) => {
         {activeTab === 'users' && <WasteCategories />}
         {activeTab === 'data' && <DataAnalytics />}
         {activeTab === 'account' && <Accounts />}
-        {activeTab === 'bins' && <BinMonitoring />}
+        {activeTab === 'bins' && (
+          <BinMonitoring
+            openArchiveFromSidebar={sidebarArchiveRequested}
+            onViewedArchiveFromSidebar={() => setSidebarArchiveRequested(false)}
+            onArchiveViewChange={setBinMonitoringArchiveActive}
+            requestExitArchiveView={requestExitArchiveView}
+            onExitedArchiveView={() => setRequestExitArchiveView(false)}
+          />
+        )}
         {activeTab === 'logs' && <AdminLogs />}
       </div>
     </div>

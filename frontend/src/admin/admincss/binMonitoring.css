@@ -754,7 +754,7 @@
   border-radius: 8px;
   font-size: 0.95rem;
   color: #374151;
-  background: #f9fafb;
+  background: white;
   transition: all 0.2s;
   box-sizing: border-box;
 }

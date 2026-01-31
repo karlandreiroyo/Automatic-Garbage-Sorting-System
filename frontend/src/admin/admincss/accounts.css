@@ -260,6 +260,143 @@ body.modal-open {
   box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
 }
 
+/* Assign Bin searchable dropdown */
+.bin-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.bin-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background-color: #fcfcfc;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.bin-select-trigger:hover {
+  border-color: #cbd5e1;
+}
+
+.bin-select-trigger:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.bin-select-trigger .placeholder {
+  color: #94a3b8;
+}
+
+.bin-select-trigger.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.bin-select-trigger .bin-select-arrow {
+  flex-shrink: 0;
+  margin-left: 8px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.bin-select-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.bin-select-search-wrap {
+  padding: 6px 8px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.bin-select-search {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #334155;
+  background: #f8fafc;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.bin-select-search::placeholder {
+  color: #94a3b8;
+}
+
+.bin-select-search:focus {
+  outline: none;
+  border-color: #10b981;
+  background: white;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.bin-select-option {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s;
+}
+
+.bin-select-option:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.bin-select-option:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.bin-select-option.selected {
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+}
+
+.bin-select-no-results {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #64748b;
+  text-align: center;
+}
+
 /* Verify buttons inline with inputs */
 .input-with-verify {
   display: flex;
@@ -595,6 +732,7 @@ body.modal-open {
   transition: 0.2s;
   height: 44px;
   box-sizing: border-box;
+  background: white;
 }
 
 .search-input:focus {

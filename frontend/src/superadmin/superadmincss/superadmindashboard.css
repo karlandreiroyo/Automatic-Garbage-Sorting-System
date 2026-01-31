@@ -422,6 +422,58 @@ html::-webkit-scrollbar {
   color: white;
 }
 
+/* Bin Monitoring sidebar dropdown (when active) */
+.nav-item-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.nav-item-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-dropdown-caret {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.9;
+  transition: transform 0.2s ease;
+}
+
+.nav-dropdown-caret.open {
+  transform: rotate(180deg);
+}
+
+.nav-item-dropdown.open .nav-item-dropdown-trigger {
+  border-radius: 10px 10px 0 0;
+}
+
+.nav-item-submenu {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin-top: -4px;
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.nav-item-sub {
+  padding-left: 47px;
+  background-color: rgba(0, 0, 0, 0.15);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.nav-item-sub:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
 .nav-icon {
   margin-right: 12px;
   min-width: 20px;

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import AddressDropdowns from '../components/AddressDropdowns';
 import './superadmincss/accounts.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // --- Icons ---
 const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
@@ -32,6 +35,11 @@ const Accounts = () => {
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isNotificationHiding, setIsNotificationHiding] = useState(false);
   
+  // Verify state for Add Admin (email verification)
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState(null);
+  
   // Confirmation modal states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [userToConfirm, setUserToConfirm] = useState(null);
@@ -61,7 +69,13 @@ const Accounts = () => {
     last_name: '',
     middle_name: '',
     backup_email: '',
-    address: '',
+    address: {
+      region: '',
+      province: '',
+      city_municipality: '',
+      barangay: '',
+      street_address: ''
+    },
     password: '',
     confirmPassword: '',
   });
@@ -69,6 +83,13 @@ const Accounts = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (showAddModal) {
+      setEmailVerified(false);
+      setGeneratedPassword(null);
+    }
+  }, [showAddModal]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -267,12 +288,22 @@ const Accounts = () => {
         break;
       }
       case 'address':
-        // Address is optional, no validation needed
+        // Address validated via validateAddress()
         break;
       default: 
       break;
     }
     return error;
+  };
+
+  // Validate address fields (region, province, city/municipality, barangay required)
+  const validateAddress = () => {
+    const addressErrors = {};
+    if (!formData.address.region) addressErrors.region = 'Region is required';
+    if (!formData.address.province) addressErrors.province = 'Province is required';
+    if (!formData.address.city_municipality) addressErrors.city_municipality = 'City/Municipality is required';
+    if (!formData.address.barangay) addressErrors.barangay = 'Barangay is required';
+    return addressErrors;
   };
 
   const validateEditField = (name, value) => {
@@ -340,6 +371,7 @@ const Accounts = () => {
       finalValue = cleaned;
     }
 
+    if (name === 'email') setEmailVerified(false);
     setFormData(prev => ({ ...prev, [name]: finalValue }));
     setTouched(prev => ({ ...prev, [name]: true }));
     setErrors(prev => ({ ...prev, [name]: validateField(name, finalValue) }));
@@ -349,6 +381,58 @@ const Accounts = () => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+  };
+
+  const handleVerifyEmail = async () => {
+    const emailErr = validateField('email', formData.email);
+    if (emailErr) {
+      setErrors(prev => ({ ...prev, email: emailErr }));
+      setTouched(prev => ({ ...prev, email: true }));
+      return;
+    }
+    if (!formData.first_name || !formData.last_name) {
+      setAlertTitle('Name Required');
+      setAlertMessage('Please fill in First Name and Last Name before verifying email. These are needed to generate the password.');
+      setShowAlertModal(true);
+      return;
+    }
+    setVerifyingEmail(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/verify-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          middle_name: formData.middle_name
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setEmailVerified(true);
+        if (data.password) setGeneratedPassword(data.password);
+        const msg = data.emailSent
+          ? 'Email verified and credentials sent! Check the admin\'s email inbox.'
+          : data.message || 'Email verified successfully.';
+        showSuccessNotification(msg);
+        if (data.emailError) {
+          setAlertTitle('Email Sent with Warning');
+          setAlertMessage(`Email verified, but sending credentials failed: ${data.emailError}`);
+          setShowAlertModal(true);
+        }
+      } else {
+        setAlertTitle('Email Verification Failed');
+        setAlertMessage(data.message || 'Could not verify email. Please check and try again.');
+        setShowAlertModal(true);
+      }
+    } catch (err) {
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Email verification failed. Please try again.');
+      setShowAlertModal(true);
+    } finally {
+      setVerifyingEmail(false);
+    }
   };
 
   const handleEditInputChange = (e) => {
@@ -380,7 +464,12 @@ const Accounts = () => {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    
+    if (!emailVerified) {
+      setAlertTitle('Verification Required');
+      setAlertMessage('Please verify the email address before creating the account.');
+      setShowAlertModal(true);
+      return;
+    }
     // 1. Validate all fields locally first
     const newErrors = {};
       ['first_name', 'last_name', 'email'].forEach(f => {
@@ -400,19 +489,23 @@ const Accounts = () => {
       if (err) newErrors['backup_email'] = err;
     }
 
+    // Validate address (region, province, city/municipality, barangay required)
+    const addressErrors = validateAddress();
+    Object.assign(newErrors, addressErrors);
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setTouched({ 
-        first_name: true, last_name: true, email: true
-      });
+      setTouched(prev => ({ 
+        ...prev,
+        first_name: true, last_name: true, email: true,
+        region: true, province: true, city_municipality: true, barangay: true
+      }));
       return;
     }
 
-    // Auto-generate password
-    const generatedPassword = generateDefaultPassword();
-    
-    // Show confirmation modal instead of window.confirm
-    setPendingCreateData({ ...formData, role: 'ADMIN', password: generatedPassword, confirmPassword: generatedPassword });
+    // Use password from verification (generated when Verify was clicked)
+    const passwordToUse = generatedPassword || generateDefaultPassword();
+    setPendingCreateData({ ...formData, role: 'ADMIN', password: passwordToUse, confirmPassword: passwordToUse });
     setShowCreateConfirmModal(true);
   };
 
@@ -464,7 +557,12 @@ const handleConfirmCreate = async () => {
         last_name: pendingCreateData.last_name.trim(),
         middle_name: pendingCreateData.middle_name?.trim() || '',
         backup_email: pendingCreateData.backup_email?.trim() || null,
-        address: pendingCreateData.address?.trim() || null,
+        address: (() => {
+          const a = pendingCreateData.address;
+          if (!a || typeof a !== 'object') return null;
+          const parts = [a.street_address, a.barangay, a.city_municipality, a.province, a.region].filter(Boolean);
+          return parts.length ? parts.join(', ') : null;
+        })(),
         contact: null, // NULL allowed - employee will add their contact in profile
         status: 'ACTIVE',
         pass_hash: pendingCreateData.password // Storing the password in your required column
@@ -491,7 +589,8 @@ const handleConfirmCreate = async () => {
       setFormData({ 
         email: '', 
         role: 'ADMIN', first_name: '', last_name: '', 
-        middle_name: '', backup_email: '', address: '',
+        middle_name: '', backup_email: '',
+        address: { region: '', province: '', city_municipality: '', barangay: '', street_address: '' },
         password: '', confirmPassword: ''
       });
       setErrors({});
@@ -787,13 +886,25 @@ const handleCancelSave = () => {
                 </div>
                 <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
                   <label>Email Address *</label>
-                  <input 
-                    type="text" 
-                    name="email" 
-                    value={formData.email} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur}
-                  />
+                  <div className="input-with-verify">
+                    <input 
+                      type="text" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                    />
+                    <button
+                      type="button"
+                      className={`verify-btn-inline email ${emailVerified ? 'verified' : ''}`}
+                      onClick={handleVerifyEmail}
+                      disabled={verifyingEmail || !formData.email.trim() || emailVerified}
+                      title={emailVerified ? 'Email already verified' : 'Verify email'}
+                    >
+                      {verifyingEmail ? 'Verifying...' : emailVerified ? 'Verified ✓' : 'Verify'}
+                    </button>
+                    {emailVerified && <span className="verified-badge-inline">✓</span>}
+                  </div>
                   {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
                 <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
@@ -808,17 +919,18 @@ const handleCancelSave = () => {
                   />
                   {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
                 </div>
-                <div className={`form-group ${errors.address ? 'has-error' : ''}`}>
-                  <label>Address</label>
-                  <input 
-                    type="text" 
-                    name="address" 
-                    value={formData.address} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur}
-                    placeholder="Optional address"
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ marginBottom: '1.25rem', marginTop: '0.5rem', color: '#374151', fontSize: '1rem', fontWeight: '600' }}>Address Information</h4>
+                  <AddressDropdowns
+                    value={formData.address}
+                    onChange={(newAddress) => {
+                      setFormData(prev => ({ ...prev, address: newAddress }));
+                      setTouched(prev => ({ ...prev, region: true, province: true, city_municipality: true, barangay: true, street_address: true }));
+                    }}
+                    disabled={false}
+                    errors={errors}
+                    touched={touched}
                   />
-                  {errors.address && <span className="error-message">{errors.address}</span>}
                 </div>
                 <div className="form-group">
                   <label>Account Role</label>
@@ -837,8 +949,8 @@ const handleCancelSave = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? 'Creating...' : 'Create Account'}
+                <button type="submit" className="btn-primary" disabled={loading || !emailVerified}>
+                  {loading ? 'Creating...' : emailVerified ? 'Create Account' : 'Verify email first'}
                 </button>
               </div>
             </form>

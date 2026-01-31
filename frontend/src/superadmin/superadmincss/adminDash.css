@@ -39,10 +39,10 @@
   width: 100%;
 }
 
-/* Stats Cards Section */
+/* Stats Cards Section - 2 columns = 3 rows of cards */
 .stats-grid {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 12px;
   margin-bottom: 20px;
   width: 100%;
@@ -54,12 +54,15 @@
   max-width: 100%;
 }
 
+/* Card: icon + label + value all in one horizontal row; icon and content centered */
 .stat-card {
   background: white;
   border-radius: 12px;
   padding: 12px;
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -85,23 +88,43 @@
   flex-shrink: 0;
 }
 
+/* Superadmin dashboard: center icon and content inside each card */
+.admin-dash-container .stat-card {
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.admin-dash-container .stat-info {
+  flex: 0 1 auto;
+}
+
+.admin-dash-container .stat-card .stat-icon-bg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .stat-info {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   color: #64748b;
   font-weight: 500;
-  margin-bottom: 2px;
+  margin: 0;
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: #0f172a;
-  margin: 2px 0 0 0;
+  margin: 0;
   line-height: 1.1;
 }
 
@@ -208,7 +231,7 @@
   padding: 6px 12px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #475569;
   background: white;
   cursor: pointer;
@@ -244,7 +267,7 @@
 }
 
 .section-title {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1e293b;
   margin-bottom: 0;
@@ -319,7 +342,7 @@
 
 .bar-name {
   margin-top: 15px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #475569;
 }
@@ -345,7 +368,7 @@
 }
 
 .act-text {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: #1e293b;
 }
@@ -450,8 +473,16 @@
     padding: 10px;
   }
   
+  .admin-dash-container .stat-card {
+    justify-content: center !important;
+  }
+  
   .stat-value {
-    font-size: 1.3rem;
+    font-size: 1.55rem;
+  }
+  
+  .stat-label {
+    font-size: 0.9rem;
   }
   
   .chart-card-full,
@@ -519,21 +550,25 @@
     gap: 8px;
   }
   
+  .admin-dash-container .stat-card {
+    justify-content: center !important;
+  }
+  
   .stat-icon-bg {
     width: 36px;
     height: 36px;
   }
   
   .stat-value {
-    font-size: 1.2rem;
+    font-size: 1.45rem;
   }
   
   .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
   }
   
   .section-title {
-    font-size: 1rem;
+    font-size: 1.15rem;
     margin-bottom: 15px;
   }
   
@@ -587,7 +622,7 @@
   }
   
   .act-text {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
   
   .act-timestamp {
@@ -643,6 +678,10 @@
     gap: 10px;
   }
   
+  .admin-dash-container .stat-card {
+    justify-content: center !important;
+  }
+  
   .stat-icon-bg {
     width: 40px;
     height: 40px;
@@ -670,15 +709,15 @@
   }
   
   .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
   }
   
   .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
   }
   
   .section-title {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     margin-bottom: 12px;
   }
   
@@ -737,7 +776,7 @@
   }
   
   .act-text {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
   
   .act-timestamp {

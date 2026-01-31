@@ -277,8 +277,9 @@ const BinDetailCard = ({ bin, onDrain }) => {
  * Main Bin Monitoring Component
  * Manages two views: list view and detail view
  * Handles bin data fetching, draining operations, and navigation
+ * @param {Object} props - openArchiveFromSidebar: open archive view when true; onViewedArchiveFromSidebar: callback to clear sidebar request; onArchiveViewChange: callback(isArchive) when archive view toggles; requestExitArchiveView: when true, exit archive view; onExitedArchiveView: callback to clear exit request
  */
-const BinMonitoring = () => {
+const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onArchiveViewChange, requestExitArchiveView, onExitedArchiveView }) => {
   // State to track current view ('list' or 'detail')
   const [view, setView] = useState('list');
   // State to track which bin is currently selected for detail view
@@ -304,8 +305,7 @@ const BinMonitoring = () => {
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: '',
-  assigned_collector_id: ''
+  location: ''
 });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
@@ -359,7 +359,32 @@ const [collectors, setCollectors] = useState([]);
     }, 300);
   };
 
-  // Fetch bin data on component mount and set up real-time updates
+  // Open archive view when requested from sidebar
+  useEffect(() => {
+    if (openArchiveFromSidebar) {
+      setIsArchiveView(true);
+      setView('list');
+      setCurrentPage(1);
+      onViewedArchiveFromSidebar?.();
+    }
+  }, [openArchiveFromSidebar, onViewedArchiveFromSidebar]);
+
+  // Notify parent when archive view changes (for sidebar: know when to exit on trigger click)
+  useEffect(() => {
+    onArchiveViewChange?.(isArchiveView);
+  }, [isArchiveView, onArchiveViewChange]);
+
+  // Exit archive view when user clicks "Bin Monitoring" in sidebar while in archive view
+  useEffect(() => {
+    if (requestExitArchiveView) {
+      setIsArchiveView(false);
+      setView('list');
+      setCurrentPage(1);
+      onExitedArchiveView?.();
+    }
+  }, [requestExitArchiveView, onExitedArchiveView]);
+
+  // Fetch bin data on component mount and when archive view toggles
   useEffect(() => {
   fetchBinData();
   fetchCollectors(); // Add this line
@@ -937,13 +962,6 @@ await supabase.from('activity_logs').insert([{
   // Handle Add Bin form submission
 const handleAddBin = async (e) => {
   e.preventDefault();
-  
-  if (!binFormData.assigned_collector_id) {
-    setAlertTitle('Validation Error');
-    setAlertMessage('Please select a collector to assign to this bin.');
-    setShowAlertModal(true);
-    return;
-  }
 
   if (!binFormData.location || !binFormData.location.trim()) {
     setAlertTitle('Validation Error');
@@ -970,31 +988,22 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database
+    // Insert into database (no assigned collector on add)
     const { data: newBinData, error } = await supabase
       .from('bins')
       .insert([{
         name: newBinName,
         location: binFormData.location.trim(),
         capacity: '20kg', // Default capacity
-        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
         system_power: 100,
         status: 'ACTIVE'
       }])
-      .select(`
-        *,
-        assigned_collector:users!bins_assigned_collector_id_fkey(
-          id,
-          first_name,
-          last_name,
-          middle_name
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
 
-    // Create new bin object for local state
+    // Create new bin object for local state (unassigned on add)
     const newBin = {
       id: newBinData.id,
       name: newBinData.name,
@@ -1004,10 +1013,8 @@ const handleAddBin = async (e) => {
       lastUpdate: 'Just now',
       category: 'Biodegradable',
       location: newBinData.location,
-      assigned_collector_id: newBinData.assigned_collector_id,
-      assigned_collector_name: newBinData.assigned_collector 
-        ? `${newBinData.assigned_collector.first_name} ${newBinData.assigned_collector.middle_name || ''} ${newBinData.assigned_collector.last_name}`.trim()
-        : 'Unassigned',
+      assigned_collector_id: newBinData.assigned_collector_id || null,
+      assigned_collector_name: 'Unassigned',
       categoryBins: [
         {
           id: `bio-${newBinData.id}`,
@@ -1060,8 +1067,7 @@ const handleAddBin = async (e) => {
 
     // Reset form
     setBinFormData({
-      location: '',
-      assigned_collector_id: ''
+      location: ''
     });
 
     // Close modal
@@ -1263,23 +1269,6 @@ const handleAddBin = async (e) => {
         required
       />
     </div>
-    
-    <div className="form-group">
-      <label>Assigned Collector *</label>
-      <select 
-        name="assigned_collector_id" 
-        value={binFormData.assigned_collector_id} 
-        onChange={handleBinInputChange}
-        required
-      >
-        <option value="">Select Collector</option>
-        {collectors.map(collector => (
-          <option key={collector.id} value={collector.id}>
-            {collector.first_name} {collector.middle_name ? collector.middle_name + ' ' : ''}{collector.last_name}
-          </option>
-        ))}
-      </select>
-    </div>
   </div>
   
   <div className="modal-footer">
@@ -1404,34 +1393,6 @@ const handleAddBin = async (e) => {
                     )}
                   </svg>
                   {isArchiveView ? `Unarchive (${selectedBinsForArchive.length})` : `Archive (${selectedBinsForArchive.length})`}
-                </button>
-                <button
-                  className="bin-archive-menu-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsArchiveView(!isArchiveView);
-                    setSelectedBinsForArchive([]);
-                    setBinSearchTerm('');
-                    setCurrentPage(1);
-                    setView('list');
-                    setIsBinDropdownOpen(false);
-                  }}
-                  title={isArchiveView ? 'Back to Bin Monitoring' : 'View Archive Bins'}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="1"/>
-                    <circle cx="19" cy="12" r="1"/>
-                    <circle cx="5" cy="12" r="1"/>
-                  </svg>
                 </button>
               </div>
               {/* Add Bin button as second item (hidden in archive view) */}

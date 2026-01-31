@@ -1,0 +1,160 @@
+/* Address dropdowns - custom select so option list stays inside modal (no native overflow) */
+
+.address-fields .form-group {
+  margin-bottom: 12px;
+}
+
+.address-fields .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.address-fields .address-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.address-fields .address-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: white;
+  color: #334155;
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.address-fields .address-select-trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+
+.address-fields .address-select-trigger:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.address-fields .address-select-trigger:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.address-fields .address-select-trigger .placeholder {
+  color: #94a3b8;
+}
+
+.address-fields .address-select-trigger.error {
+  border-color: #ef4444;
+}
+
+.address-fields .address-select-trigger .address-select-arrow {
+  flex-shrink: 0;
+  margin-left: 8px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+/* Option list - in-DOM so it stays inside modal; max-height + overflow keeps it contained */
+.address-fields .address-select-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  padding: 4px 0;
+}
+
+.address-fields .address-select-search-wrap {
+  padding: 6px 8px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.address-fields .address-select-search {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #334155;
+  background: #f8fafc;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.address-fields .address-select-search::placeholder {
+  color: #94a3b8;
+}
+
+.address-fields .address-select-search:focus {
+  outline: none;
+  border-color: #10b981;
+  background: white;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.address-fields .address-select-no-results {
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.address-fields .address-select-option {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 1rem;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s;
+}
+
+.address-fields .address-select-option:hover {
+  background: #f1f5f9;
+}
+
+.address-fields .address-select-option.selected {
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+}
+
+.address-fields .form-group input.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+}
+
+.address-fields .form-group input.form-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
