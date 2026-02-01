@@ -165,6 +165,7 @@ const Accounts = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .eq('role', 'COLLECTOR')
         .order('id', { ascending: false });
       
       if (error) throw error;

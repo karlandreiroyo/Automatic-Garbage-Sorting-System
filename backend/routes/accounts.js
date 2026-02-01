@@ -194,9 +194,10 @@ router.post('/create-employee', async (req, res) => {
     });
 
     if (authError) {
+      const msg = (authError.message || '').toLowerCase();
       const isEmailExists = authError.code === 'email_exists' ||
         authError.status === 422 ||
-        (authError.message && /already registered|already exists|already been registered/i.test(authError.message));
+        /already registered|already exists|already been registered|email.*exists|user.*registered/i.test(msg);
       if (isEmailExists) {
         return res.status(409).json({
           success: false,
@@ -216,7 +217,7 @@ router.post('/create-employee', async (req, res) => {
         role,
         first_name: String(first_name).trim(),
         last_name: String(last_name).trim(),
-        middle_name: String(middle_name || '').trim() || null,
+        middle_name: String(middle_name || '').trim() || '', // empty string if not provided (DB may have NOT NULL)
         region: String(region).trim(),
         province: String(province).trim(),
         city_municipality: String(city_municipality).trim(),
@@ -337,6 +338,16 @@ router.post('/create-employee', async (req, res) => {
     });
   } catch (e) {
     console.error('Create employee error:', e);
+    const msg = (e.message || '').toLowerCase();
+    const isEmailExists = e.code === 'email_exists' || e.status === 422 ||
+      /already registered|already exists|already been registered|email.*exists|user.*registered/i.test(msg);
+    if (isEmailExists) {
+      return res.status(409).json({
+        success: false,
+        message: 'A user with this email address has already been registered. If you deleted this user from the database table, you must also remove them from Supabase: go to Dashboard → Authentication → Users, find the user by this email, and delete. Then try creating the employee again.',
+        code: 'email_exists',
+      });
+    }
     return res.status(500).json({
       success: false,
       message: e.message || 'Failed to create employee. Please try again.',

@@ -53,6 +53,14 @@ const Accounts = () => {
   const [showCreateConfirmModal, setShowCreateConfirmModal] = useState(false);
   const [pendingCreateData, setPendingCreateData] = useState(null);
   
+  // Credentials sent modal (after Create Account – same as Admin)
+  const [showCredentialsSentModal, setShowCredentialsSentModal] = useState(false);
+  const [lastCreatedEmail, setLastCreatedEmail] = useState('');
+  const [lastCreatedBackupEmail, setLastCreatedBackupEmail] = useState('');
+  const [credentialsSentToEmail, setCredentialsSentToEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [resendingEmail, setResendingEmail] = useState(false);
+  
   // Alert/Error modal states
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -93,7 +101,7 @@ const Accounts = () => {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal) {
+    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal || showCredentialsSentModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -101,7 +109,7 @@ const Accounts = () => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal]);
+  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal, showCredentialsSentModal]);
 
   const fetchUsers = async () => {
     try {
@@ -109,6 +117,7 @@ const Accounts = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .in('role', ['ADMIN', 'SUPERADMIN'])
         .order('id', { ascending: false });
       
       if (error) throw error;
@@ -514,97 +523,106 @@ const Accounts = () => {
     setPendingCreateData(null);
   };
 
+  const handleCloseCredentialsSent = () => {
+    setShowCredentialsSentModal(false);
+    setLastCreatedEmail('');
+    setLastCreatedBackupEmail('');
+    setCredentialsSentToEmail(false);
+    setEmailError('');
+  };
+
+  const handleResendCredentials = async () => {
+    if (!lastCreatedEmail) return;
+    setResendingEmail(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/resend-credentials-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: lastCreatedEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setCredentialsSentToEmail(true);
+        setEmailError('');
+        showSuccessNotification('Credentials resent to email.');
+      } else {
+        setAlertTitle('Resend Failed');
+        setAlertMessage(data.message || 'Could not resend to email.');
+        setShowAlertModal(true);
+      }
+    } catch (err) {
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Resend failed.');
+      setShowAlertModal(true);
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
 const handleConfirmCreate = async () => {
   if (!pendingCreateData) return;
 
   try {
     setLoading(true);
-
-      // 2. Gmail Normalization Check (Prevents duplicate accounts with different dots)
-      let checkEmail = pendingCreateData.email.trim().toLowerCase();
-      if (checkEmail.endsWith('@gmail.com')) {
-        const [user, dom] = checkEmail.split('@');
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('email')
-          .or(`email.eq.${checkEmail},email.ilike.${user.replace(/\./g, '%')}@${dom}`)
-          .single();
-
-        if (existingUser) {
-          setAlertTitle('Account Already Exists');
-          setAlertMessage('This Gmail account (or a version of it with different dots) is already registered.');
-          setShowAlertModal(true);
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Create Auth Account using the password from form
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
+    // Use same backend as Admin (add collector): creates auth user, users row, sends credentials, sends second-email verification if backup provided
+    const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: pendingCreateData.first_name,
+        last_name: pendingCreateData.last_name,
+        middle_name: pendingCreateData.middle_name || '',
+        email: pendingCreateData.email,
+        backup_email: pendingCreateData.backup_email || '',
+        role: 'ADMIN',
         password: pendingCreateData.password,
-      });
-
-      if (authError) throw authError;
-
-      // 4. Insert into 'users' table (mapping password to pass_hash)
-      // Note: contact is set to null - employee will update it in their profile
-      const { error: dbError } = await supabase.from('users').insert([{
-        auth_id: authData.user.id,
-        email: pendingCreateData.email.trim().toLowerCase(), // Store email in lowercase for consistency
-        role: pendingCreateData.role,
-        first_name: pendingCreateData.first_name.trim(),
-        last_name: pendingCreateData.last_name.trim(),
-        middle_name: pendingCreateData.middle_name?.trim() || '',
-        backup_email: pendingCreateData.backup_email?.trim() || null,
-        address: (() => {
-          const a = pendingCreateData.address;
-          if (!a || typeof a !== 'object') return null;
-          const parts = [a.street_address, a.barangay, a.city_municipality, a.province, a.region].filter(Boolean);
-          return parts.length ? parts.join(', ') : null;
-        })(),
-        contact: null, // NULL allowed - employee will add their contact in profile
-        status: 'ACTIVE',
-        pass_hash: pendingCreateData.password // Storing the password in your required column
-      }]);
-
-      if (dbError) throw dbError;
-
-      // 5. Activity Logging (from backend/lei branch)
-      try {
-        await supabase.from('activity_logs').insert([{
-          activity_type: 'USER_ADDED',
-          description: `Added ${pendingCreateData.first_name} ${pendingCreateData.last_name} as a ${pendingCreateData.role}`,
-          user_id: null
-        }]);
-      } catch (logError) {
-        // Don't fail the user creation if activity logging fails
-        console.error('Activity logging failed:', logError);
-      }
-      
-      // 6. Success UI cleanup
-      setShowAddModal(false);
-      setShowCreateConfirmModal(false);
-      setPendingCreateData(null);
-      setFormData({ 
-        email: '', 
-        role: 'ADMIN', first_name: '', last_name: '', 
-        middle_name: '', backup_email: '',
-        address: { region: '', province: '', city_municipality: '', barangay: '', street_address: '' },
-        password: '', confirmPassword: ''
-      });
-      setErrors({});
-      setTouched({});
-      fetchUsers();
-      showSuccessNotification('Employee account created successfully!');
-    } catch (error) {
+        region: pendingCreateData.address?.region || '',
+        province: pendingCreateData.address?.province || '',
+        city_municipality: pendingCreateData.address?.city_municipality || '',
+        barangay: pendingCreateData.address?.barangay || '',
+        street_address: pendingCreateData.address?.street_address || ''
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
       setAlertTitle('Error');
-      setAlertMessage('Error: ' + error.message);
+      setAlertMessage(data.message || 'Failed to create admin. Please try again.');
       setShowAlertModal(true);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+    const hadBackupEmail = !!(pendingCreateData.backup_email && pendingCreateData.backup_email.trim());
+    setLastCreatedEmail(pendingCreateData.email.trim().toLowerCase());
+    setLastCreatedBackupEmail(hadBackupEmail ? pendingCreateData.backup_email.trim().toLowerCase() : '');
+    setCredentialsSentToEmail(Boolean(data.sentToEmail));
+    setEmailError(data.emailError || '');
+    setShowAddModal(false);
+    setShowCreateConfirmModal(false);
+    setPendingCreateData(null);
+    setFormData({
+      email: '',
+      role: 'ADMIN',
+      first_name: '',
+      last_name: '',
+      middle_name: '',
+      backup_email: '',
+      address: { region: '', province: '', city_municipality: '', barangay: '', street_address: '' },
+      password: '',
+      confirmPassword: ''
+    });
+    setErrors({});
+    setTouched({});
+    setEmailVerified(false);
+    setGeneratedPassword(null);
+    fetchUsers();
+    setShowCredentialsSentModal(true);
+  } catch (error) {
+    setAlertTitle('Error');
+    setAlertMessage('Error: ' + (error.message || 'Failed to create admin. Please try again.'));
+    setShowAlertModal(true);
+  } finally {
+    setLoading(false);
+  }
+};
 
 const handleUpdateEmployee = async (e) => {
   e.preventDefault();
@@ -686,7 +704,7 @@ const handleCancelSave = () => {
   const filteredUsers = users.filter(user => {
     const fullName = getFullName(user).toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
-    const matchesRole = user.role === 'ADMIN';
+    const matchesRole = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -824,6 +842,46 @@ const handleCancelSave = () => {
                 disabled={loading}
               >
                 {loading ? 'Creating...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Credentials Sent Modal (after Create Account – same as Admin; includes backup email Accept message) */}
+      {showCredentialsSentModal && (
+        <div className="confirm-modal-overlay" onClick={handleCloseCredentialsSent}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Account Created</h3>
+            <p className="confirm-modal-message">
+              {credentialsSentToEmail && 'Credentials sent to the admin\'s email. Also check the terminal for username and password.'}
+              {!credentialsSentToEmail && 'Account created. Email sending failed; check SMTP config. Check the terminal for username and password.'}
+            </p>
+            {lastCreatedBackupEmail && (
+              <p className="confirm-modal-message" style={{ marginTop: '12px', fontWeight: 600 }}>
+                A verification email was sent to the backup email. They must click <strong>Accept</strong> in that email to activate it. After that, they can log in with the backup email if they forget their main email.
+              </p>
+            )}
+            {emailError && (
+              <div style={{ marginTop: '12px', padding: '8px 12px', background: '#fee', borderRadius: '8px', fontSize: '14px' }}>
+                <strong>Email Error:</strong> {emailError}
+              </div>
+            )}
+            <p className="confirm-modal-message" style={{ marginTop: '16px', fontSize: '14px' }}>Resend credentials if needed:</p>
+            <div className="confirm-modal-actions" style={{ marginTop: '8px' }}>
+              <button
+                type="button"
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleResendCredentials}
+                disabled={resendingEmail}
+              >
+                {resendingEmail ? 'Sending...' : 'Resend Email'}
+              </button>
+              <button type="button" className="confirm-btn-cancel" onClick={handleCloseCredentialsSent}>
+                Close
               </button>
             </div>
           </div>
