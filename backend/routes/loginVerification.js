@@ -5,17 +5,89 @@ const { generateVerificationCode, verificationCodes } = require('../utils/verifi
 const { getSmtpConfig, sendLoginVerificationEmail } = require('../utils/mailer');
 const requireAuth = require('../middleware/requireAuth');
 
+const COOLDOWN_HOURS = 3;
+
+// Route: Resolve backup email to primary email (for login with backup email)
+// If the given email is a verified second_email, returns primary email so frontend can sign in with it
+router.get('/resolve-backup-email', async (req, res) => {
+  try {
+    const email = req.query.email && String(req.query.email).trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.', primaryEmail: null });
+    }
+
+    const { data: userRow, error } = await supabase
+      .from('users')
+      .select('email, second_email, second_email_verified')
+      .eq('second_email', email)
+      .eq('second_email_verified', true)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[resolve-backup-email] DB error:', error.message);
+      return res.status(200).json({ primaryEmail: null });
+    }
+    if (!userRow || !userRow.email) {
+      return res.status(200).json({ primaryEmail: null });
+    }
+
+    return res.status(200).json({ primaryEmail: userRow.email });
+  } catch (err) {
+    console.error('Resolve backup email error:', err);
+    return res.status(200).json({ primaryEmail: null });
+  }
+});
+
+// Route: Check if email verification can be skipped (cooldown active)
+// Call this after password login; if skipVerification is true, go straight to dashboard
+router.get('/check-cooldown', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser.id;
+
+    const { data: userRow, error } = await supabase
+      .from('users')
+      .select('last_verified_at')
+      .eq('auth_id', authId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[check-cooldown] DB error (add last_verified_at column if missing):', error.message);
+      return res.status(200).json({ skipVerification: false });
+    }
+
+    if (!userRow || !userRow.last_verified_at) {
+      return res.status(200).json({ skipVerification: false });
+    }
+
+    const lastVerified = new Date(userRow.last_verified_at).getTime();
+    const now = Date.now();
+    const hoursSince = (now - lastVerified) / (1000 * 60 * 60);
+
+    if (hoursSince < COOLDOWN_HOURS) {
+      const cooldownMinutesLeft = Math.ceil((COOLDOWN_HOURS * 60) - (hoursSince * 60));
+      console.log(`✅ Cooldown active for ${req.authUser.email}, ${cooldownMinutesLeft} min left`);
+      return res.status(200).json({ skipVerification: true, cooldownMinutesLeft });
+    }
+
+    return res.status(200).json({ skipVerification: false });
+  } catch (err) {
+    console.error('Check cooldown error:', err);
+    return res.status(200).json({ skipVerification: false });
+  }
+});
+
 // Route: Send verification code after login
-// This route sends verification email to the authenticated user's email address
+// This route sends verification email to the authenticated user's email address (or to sendCodeTo if provided, e.g. backup email)
 router.post('/send-verification', requireAuth, async (req, res) => {
   try {
     const authenticatedUserEmail = req.authUser.email;
-    console.log('Login verification code requested for authenticated user:', authenticatedUserEmail);
+    const sendCodeTo = req.body.sendCodeTo && String(req.body.sendCodeTo).trim().toLowerCase();
+    console.log('Login verification code requested for authenticated user:', authenticatedUserEmail, sendCodeTo ? `(send to: ${sendCodeTo})` : '');
 
     // Find user by auth_id from token
     const { data: userData, error: userErr } = await supabase
       .from('users')
-      .select('id, email, auth_id, status')
+      .select('id, email, auth_id, status, second_email, second_email_verified')
       .eq('auth_id', req.authUser.id)
       .maybeSingle();
 
@@ -31,17 +103,37 @@ router.post('/send-verification', requireAuth, async (req, res) => {
       });
     }
 
+    // If sendCodeTo provided, must be this user's primary or verified second email
+    const recipientEmail = (() => {
+      if (!sendCodeTo) return authenticatedUserEmail;
+      if (sendCodeTo === (userData.email || '').toLowerCase()) return sendCodeTo;
+      if (userData.second_email_verified && (userData.second_email || '').toLowerCase() === sendCodeTo) return sendCodeTo;
+      return authenticatedUserEmail;
+    })();
+
     // Generate 6-digit verification code
     const code = generateVerificationCode();
     const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes expiry
 
-    // Store verification code with login session identifier
+    // Store verification code with login session identifier (keyed by primary email so verify-code works)
     verificationCodes.set(`login_verification_${authenticatedUserEmail}`, {
       code,
       expiresAt,
       userId: userData.auth_id,
       email: authenticatedUserEmail
     });
+
+    // Record verification_sent_at in database (for tracking / cooldown)
+    const sentAt = new Date().toISOString();
+    const { error: sentUpdateError } = await supabase
+      .from('users')
+      .update({ verification_sent_at: sentAt })
+      .eq('auth_id', userData.auth_id);
+    if (sentUpdateError) {
+      console.warn('Failed to update verification_sent_at:', sentUpdateError.message);
+    } else {
+      console.log('✅ verification_sent_at set for', authenticatedUserEmail);
+    }
 
     // Send verification email to the authenticated user's email address
     // Subject: "Login Verification"
@@ -52,13 +144,13 @@ router.post('/send-verification', requireAuth, async (req, res) => {
 
     if (smtpCfg.enabled) {
       try {
-        emailResult = await sendLoginVerificationEmail({ to: authenticatedUserEmail, code, expiresMinutes: 10 });
+        emailResult = await sendLoginVerificationEmail({ to: recipientEmail, code, expiresMinutes: 10 });
       } catch (err) {
         console.error('SMTP email sending failed:', err);
-        emailResult = { ok: false, reason: err.message, subject: emailSubject, to: authenticatedUserEmail };
+        emailResult = { ok: false, reason: err.message, subject: emailSubject, to: recipientEmail };
       }
     } else {
-      emailResult = { ok: false, reason: 'SMTP not configured', subject: emailSubject, to: authenticatedUserEmail };
+      emailResult = { ok: false, reason: 'SMTP not configured', subject: emailSubject, to: recipientEmail };
       console.warn('⚠️ SMTP not configured. Verification code is logged to terminal only.');
       console.warn('⚠️ To receive emails with proper subject, configure SMTP in backend/.env');
     }
@@ -134,7 +226,7 @@ router.post('/send-verification', requireAuth, async (req, res) => {
     if (emailResult.ok) {
       return res.status(200).json({ 
         success: true, 
-        message: `Verification code sent to ${authenticatedUserEmail}. Check your email for "Login Verification". Code is also logged in terminal.`
+        message: `Verification code sent to ${recipientEmail}. Check your email for "Login Verification". Code is also logged in terminal.`
       });
     } else {
       return res.status(200).json({ 
@@ -192,7 +284,26 @@ router.post('/verify-code', requireAuth, async (req, res) => {
       });
     }
 
-    // Code is valid - generate login token
+    // Code is valid - update last_verified_at in database for cooldown
+    const verifiedAt = new Date().toISOString();
+    const { data: updatedRow, error: updateError } = await supabase
+      .from('users')
+      .update({ last_verified_at: verifiedAt })
+      .eq('auth_id', storedData.userId)
+      .select('id')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('Failed to update last_verified_at:', updateError.message);
+      console.error('→ Ensure backend/.env has SUPABASE_SERVICE_KEY (service_role key).');
+      console.error('→ If column missing, run SQL in backend/VERIFICATION_COOLDOWN_SETUP.md');
+    } else if (!updatedRow) {
+      console.warn('last_verified_at: no row updated (auth_id may not match).');
+    } else {
+      console.log(`✅ last_verified_at set — cooldown ${COOLDOWN_HOURS}h for user: ${authenticatedUserEmail}`);
+    }
+
+    // Generate login token
     const loginToken = Buffer.from(`${authenticatedUserEmail}:${Date.now()}:login`).toString('base64');
     
     // Store login token temporarily

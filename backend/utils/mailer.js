@@ -535,64 +535,50 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
 }
 
 /**
- * Send 2FA verification email (resend verification code)
- * @param {string} to - Recipient email address
- * @param {string} code - 6-digit verification code
- * @param {number} expiresMinutes - Code expiration time in minutes
- * 
- * Note: This function is used for resending 2FA verification codes.
- * SMTP_USER in .env is the SENDER account (one account sends emails to all users).
+ * Send backup (second) email verification: notifies whose account it is and includes Accept button.
+ * @param {{ to: string, primaryEmail: string, fullName: string, verificationToken: string, baseUrl?: string }} opts
+ * When user clicks Accept, they hit verify-second-email and it is recorded in the database.
  */
-async function sendSecondEmailVerification({ to, code, expiresMinutes = 10 }) {
+async function sendSecondEmailVerification({ to, primaryEmail, fullName, verificationToken, baseUrl }) {
   const cfg = getSmtpConfig();
-  
+  const backendUrl = process.env.BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
+  const verifyLink = `${backendUrl.replace(/\/$/, '')}/api/accounts/verify-second-email?token=${encodeURIComponent(verificationToken)}&email=${encodeURIComponent((to || '').trim().toLowerCase())}`;
+
   if (cfg.hasPlaceholders) {
-    return { 
-      ok: false, 
-      reason: 'SMTP configuration contains placeholder values. Please update backend/.env with actual SMTP credentials.', 
-      subject: '2FA Verification Code' 
-    };
+    return { ok: false, reason: 'SMTP configuration contains placeholder values.', subject: 'Backup Email Confirmation' };
   }
-
   if (!cfg.userEmailValid) {
-    return {
-      ok: false,
-      reason: `SMTP_USER is not a valid email address: "${cfg.user}". Please check your backend/.env file.`,
-      subject: '2FA Verification Code'
-    };
+    return { ok: false, reason: `SMTP_USER is not a valid email: "${cfg.user}".`, subject: 'Backup Email Confirmation' };
   }
-
   if (cfg.validationErrors && cfg.validationErrors.length > 0) {
-    return {
-      ok: false,
-      reason: `SMTP configuration errors:\n${cfg.validationErrors.map(e => `  - ${e}`).join('\n')}`,
-      subject: '2FA Verification Code'
-    };
+    return { ok: false, reason: cfg.validationErrors.join('; '), subject: 'Backup Email Confirmation' };
   }
-  
   const transporter = createTransport();
-
   if (!transporter) {
-    return { ok: false, reason: 'SMTP not configured', subject: '2FA Verification Code' };
+    return { ok: false, reason: 'SMTP not configured', subject: 'Backup Email Confirmation' };
   }
 
-  const subject = '2FA Verification Code';
+  const displayName = fullName || 'This account';
+  const subject = 'Confirm your backup email – ' + (fullName || 'Automatic Garbage Sorting System');
   const text =
-    `2FA Verification Code\n\n` +
-    `Your two-factor authentication verification code is: ${code}\n\n` +
-    `This code expires in ${expiresMinutes} minutes.\n\n` +
-    `If you did not request this code, please ignore this email and secure your account.`;
+    `Backup Email Confirmation\n\n` +
+    `This email address has been added as the backup for ${displayName}'s account.\n` +
+    `Primary email: ${primaryEmail || '(not shown)'}\n\n` +
+    `If you accept, you can use this backup email to log in if you forget your main email.\n\n` +
+    `Click the link below to confirm:\n${verifyLink}\n\n` +
+    `If you did not request this, you can ignore this email.`;
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #111;">2FA Verification Code</h1>
-      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">You have requested a two-factor authentication code.</p>
-      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">Use the code below to complete your verification:</p>
-      <div style="font-size: 36px; letter-spacing: 4px; font-weight: 700; padding: 24px; text-align: center; background: #f3f4f6; border: 2px solid #d1d5db; border-radius: 8px; margin: 24px 0; font-family: 'Courier New', monospace; color: #111;">
-        ${code}
-      </div>
-      <p style="margin: 16px 0 0 0; color: #6b7280; font-size: 14px;">This code expires in ${expiresMinutes} minutes.</p>
-      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">If you did not request this code, please ignore this email and secure your account.</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #111; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 600; color: #111;">Backup email for this account</h1>
+      <p style="margin: 0 0 12px 0; color: #374151; font-size: 16px;">This email address is the <strong>backup</strong> for <strong>${displayName}</strong>'s account.</p>
+      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Primary email: ${primaryEmail || '(not shown)'}</p>
+      <p style="margin: 16px 0 20px 0; color: #374151; font-size: 15px;">If you accept, you can use this backup email to log in if you forget your main email.</p>
+      <p style="margin: 0 0 20px 0;">
+        <a href="${verifyLink}" style="display: inline-block; padding: 14px 28px; background: #047857; color: #fff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px;">Accept</a>
+      </p>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 13px;">If you did not request this, you can ignore this email.</p>
+      <p style="margin: 12px 0 0 0; color: #9ca3af; font-size: 12px;">Or copy this link: ${verifyLink}</p>
     </div>
   `;
 
@@ -662,7 +648,7 @@ async function sendSecondEmailVerification({ to, code, expiresMinutes = 10 }) {
                'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
     }
     
-    return { ok: false, reason, subject, to, originalError: error.message };
+    return { ok: false, reason, subject: 'Backup Email Confirmation', to, originalError: error.message };
   }
 }
 /**

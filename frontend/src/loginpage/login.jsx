@@ -125,57 +125,67 @@ function Login({ setIsLoggedIn, setUserRole }) {
     setLoading(true);
 
     try {
-      // 1. Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email,
+      // 1. Sign in with Supabase Auth (primary or backup email)
+      let authData = null;
+      let backupEmailUsed = null;
+
+      const { data: primaryAuth, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
         password: password,
       });
 
       if (authError) {
-        // Increment failed attempts
-        const newAttempts = failedAttempts + 1;
-        setFailedAttempts(newAttempts);
-        localStorage.setItem('failedLoginAttempts', newAttempts.toString());
-
-        // If 3 failed attempts, lock out for 3 minutes and send security alert
-        if (newAttempts >= 3) {
-          const lockoutUntil = Date.now() + (3 * 60 * 1000); // 3 minutes
-          localStorage.setItem('loginLockout', JSON.stringify({ lockoutUntil }));
-          setIsLockedOut(true);
-          setLockoutTimeRemaining(180); // 3 minutes in seconds
-          
-          // Send security alert email to the user
-          try {
-            const alertResponse = await fetch(`${API_BASE_URL}/api/security/send-alert`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: email,
-                failedAttempts: newAttempts
-              }),
+        // Maybe they entered their backup email: resolve to primary and try again
+        try {
+          const resolveRes = await fetch(`${API_BASE_URL}/api/login/resolve-backup-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+          const resolveData = await resolveRes.json();
+          if (resolveData.primaryEmail) {
+            const { data: resolvedAuth, error: resolvedError } = await supabase.auth.signInWithPassword({
+              email: resolveData.primaryEmail,
+              password: password,
             });
-
-            const alertData = await alertResponse.json();
-            if (alertData.success) {
-              console.log('Security alert sent successfully');
+            if (!resolvedError && resolvedAuth) {
+              authData = resolvedAuth;
+              backupEmailUsed = email.trim().toLowerCase();
             }
-          } catch (alertError) {
-            console.error('Failed to send security alert:', alertError);
-            // Don't block the user flow if alert fails
           }
-
-          setAlertTitle('Too Many Failed Attempts');
-          setAlertMessage('Too many failed login attempts. Login is disabled for 3 minutes. A security alert has been sent to your email.');
-          setShowAlertModal(true);
-        } else {
-          setAlertTitle('Invalid Credentials');
-          setAlertMessage(`Invalid email or password! ${3 - newAttempts} attempt(s) remaining.`);
-          setShowAlertModal(true);
+        } catch (resolveErr) {
+          console.warn('Resolve backup email failed:', resolveErr);
         }
-        setLoading(false);
-        return;
+
+        if (!authData) {
+          // Still invalid
+          const newAttempts = failedAttempts + 1;
+          setFailedAttempts(newAttempts);
+          localStorage.setItem('failedLoginAttempts', newAttempts.toString());
+
+          if (newAttempts >= 3) {
+            const lockoutUntil = Date.now() + (3 * 60 * 1000);
+            localStorage.setItem('loginLockout', JSON.stringify({ lockoutUntil }));
+            setIsLockedOut(true);
+            setLockoutTimeRemaining(180);
+            try {
+              await fetch(`${API_BASE_URL}/api/security/send-alert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, failedAttempts: newAttempts }),
+              });
+            } catch (alertError) {
+              console.error('Failed to send security alert:', alertError);
+            }
+            setAlertTitle('Too Many Failed Attempts');
+            setAlertMessage('Too many failed login attempts. Login is disabled for 3 minutes. A security alert has been sent to your email.');
+            setShowAlertModal(true);
+          } else {
+            setAlertTitle('Invalid Credentials');
+            setAlertMessage(`Invalid email or password! ${3 - newAttempts} attempt(s) remaining.`);
+            setShowAlertModal(true);
+          }
+          setLoading(false);
+          return;
+        }
+      } else {
+        authData = primaryAuth;
       }
 
       // Successful login - reset failed attempts
@@ -227,7 +237,45 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // 5. Store user data temporarily (don't set logged in yet)
+      // 5. Check cooldown via backend (so it works even if frontend can't read last_verified_at)
+      const accessToken = authData?.session?.access_token;
+      if (!accessToken) {
+        setAlertTitle('Error');
+        setAlertMessage('Login session not found. Please try again.');
+        setShowAlertModal(true);
+        setLoading(false);
+        return;
+      }
+
+      let skipVerification = false;
+      try {
+        const cooldownRes = await fetch(`${API_BASE_URL}/api/login/check-cooldown`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        });
+        const cooldownData = await cooldownRes.json();
+        skipVerification = cooldownData.skipVerification === true;
+      } catch (err) {
+        console.warn('Check cooldown failed, requiring verification:', err);
+      }
+
+      // 6. If cooldown is active, skip verification and go directly to dashboard
+      if (skipVerification) {
+        localStorage.setItem('userRole', reactRole);
+        localStorage.setItem('userEmail', userData.email);
+        localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
+        
+        setIsLoggedIn(true);
+        setUserRole(reactRole);
+        
+        if (reactRole === 'admin') navigate('/admin');
+        else if (reactRole === 'supervisor') navigate('/supervisor');
+        else if (reactRole === 'superadmin') navigate('/superadmin');
+        else navigate('/');
+        return;
+      }
+
+      // 7. Store user data temporarily (don't set logged in yet)
       const pendingLoginUser = {
         email: userData.email,
         role: reactRole,
@@ -236,23 +284,15 @@ function Login({ setIsLoggedIn, setUserRole }) {
         authId: authData.user.id
       };
 
-      // 6. Send verification code, then go to verification page
+      // 8. Send verification code (to backup email if they logged in with backup), then go to verification page
       try {
-        const accessToken = authData?.session?.access_token;
-        if (!accessToken) {
-          setAlertTitle('Error');
-          setAlertMessage('Login session not found. Please try again.');
-          setShowAlertModal(true);
-          return;
-        }
-
         const response = await fetch(`${API_BASE_URL}/api/login/send-verification`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({}),
+          body: JSON.stringify(backupEmailUsed ? { sendCodeTo: backupEmailUsed } : {}),
         });
 
         const data = await response.json();

@@ -138,7 +138,9 @@ router.post('/verify-email', async (req, res) => {
  */
 router.post('/create-employee', async (req, res) => {
   try {
-    const { first_name, last_name, middle_name, email, second_email, role, password: providedPassword, region, province, city_municipality, barangay, street_address } = req.body;
+    const { first_name, last_name, middle_name, email, role, password: providedPassword, region, province, city_municipality, barangay, street_address } = req.body;
+    // Frontend may send backup_email; API also accepts second_email
+    const second_email = req.body.second_email ?? req.body.backup_email;
 
     if (!first_name || !last_name || !email || !role) {
       return res.status(400).json({
@@ -192,8 +194,15 @@ router.post('/create-employee', async (req, res) => {
     });
 
     if (authError) {
-      if (authError.message && /already registered|already exists/i.test(authError.message)) {
-        return res.status(409).json({ success: false, message: 'This email is already registered.' });
+      const isEmailExists = authError.code === 'email_exists' ||
+        authError.status === 422 ||
+        (authError.message && /already registered|already exists|already been registered/i.test(authError.message));
+      if (isEmailExists) {
+        return res.status(409).json({
+          success: false,
+          message: 'A user with this email address has already been registered. If you deleted this user from the database table, you must also remove them from Supabase: go to Dashboard → Authentication → Users, find the user by this email, and delete. Then try creating the employee again.',
+          code: 'email_exists',
+        });
       }
       throw authError;
     }
