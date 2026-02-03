@@ -478,6 +478,13 @@ body.modal-open {
   color: #475569;
   line-height: 1.5;
 }
+.credentials-sent-backup {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: #047857;
+  font-weight: 500;
+}
+
 .credentials-sent-sub {
   margin: 0 0 16px 0;
   font-size: 0.9rem;

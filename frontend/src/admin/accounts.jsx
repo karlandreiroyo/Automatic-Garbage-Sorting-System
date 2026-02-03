@@ -58,6 +58,9 @@ const Accounts = () => {
   const [lastCreatedEmail, setLastCreatedEmail] = useState('');
   const [credentialsSentToEmail, setCredentialsSentToEmail] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [backupEmailSent, setBackupEmailSent] = useState(null); // null = not requested, true/false = result
+  const [backupEmailError, setBackupEmailError] = useState('');
+  const [backupEmailAddress, setBackupEmailAddress] = useState('');
   const [resendingEmail, setResendingEmail] = useState(false);
   
   // Pagination states
@@ -599,7 +602,8 @@ const handleConfirmCreate = async () => {
         last_name: pendingCreateData.last_name,
         middle_name: pendingCreateData.middle_name || '',
         email: pendingCreateData.email,
-        backup_email: pendingCreateData.backup_email || '',
+        backup_email: (pendingCreateData.backup_email || '').trim(),
+        second_email: (pendingCreateData.backup_email || '').trim(),
         role: 'COLLECTOR',
         password: generatedPassword, // Use password from verification
         region: pendingCreateData.address?.region || '',
@@ -619,6 +623,9 @@ const handleConfirmCreate = async () => {
     setLastCreatedEmail(pendingCreateData.email.trim().toLowerCase());
     setCredentialsSentToEmail(Boolean(data.sentToEmail));
     setEmailError(data.emailError || '');
+    setBackupEmailSent(data.backupEmailSent ?? null);
+    setBackupEmailError(data.backupEmailError || '');
+    setBackupEmailAddress(data.backupEmailAddress || '');
     setShowAddModal(false);
     setShowCreateConfirmModal(false);
     setPendingCreateData(null);
@@ -671,6 +678,9 @@ const handleCloseCredentialsSent = () => {
   setLastCreatedEmail('');
   setCredentialsSentToEmail(false);
   setEmailError('');
+  setBackupEmailSent(null);
+  setBackupEmailError('');
+  setBackupEmailAddress('');
 };
 
 const handleVerifyEmailSent = async () => {
@@ -962,6 +972,18 @@ const handleCancelSave = () => {
                 <strong>Email Error:</strong> {emailError}
               </div>
             )}
+            {backupEmailAddress && (
+              <>
+                {backupEmailSent === true && (
+                  <p className="credentials-sent-backup">Backup email verification sent to <strong>{backupEmailAddress}</strong>. Recipient can click &quot;Accept backup email&quot; in that inbox (check spam if not in inbox).</p>
+                )}
+                {backupEmailSent === false && (
+                  <div className="credentials-error-box">
+                    <strong>Backup email not sent to {backupEmailAddress}:</strong> {backupEmailError || 'Could not send backup email verification.'}
+                  </div>
+                )}
+              </>
+            )}
             <p className="credentials-sent-sub">Resend credentials if needed:</p>
             <div className="credentials-sent-buttons">
               <button
@@ -1057,15 +1079,16 @@ const handleCancelSave = () => {
                   </div>
                   {errors.email && <span className="error-message">{errors.email}</span>}
                 </div>
-                <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
+                <div className={`form-group full-width-group ${errors.backup_email ? 'has-error' : ''}`}>
                   <label>Back up Email</label>
                   <input 
-                    type="text" 
+                    type="email" 
                     name="backup_email" 
                     value={formData.backup_email} 
                     onChange={handleInputChange} 
                     onBlur={handleBlur}
-                    placeholder="Optional backup email address"
+                    placeholder="Optional backup email (e.g. user@gmail.com)"
+                    autoComplete="email"
                   />
                   {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
                 </div>

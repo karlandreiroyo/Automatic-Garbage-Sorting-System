@@ -565,7 +565,7 @@ async function sendSecondEmailVerification({ to, primaryEmail, fullName, verific
     `This email address has been added as the backup for ${displayName}'s account.\n` +
     `Primary email: ${primaryEmail || '(not shown)'}\n\n` +
     `If you accept, you can use this backup email to log in if you forget your main email.\n\n` +
-    `Click the link below to confirm:\n${verifyLink}\n\n` +
+    `>>> ACCEPT BACKUP EMAIL (click this link):\n${verifyLink}\n\n` +
     `If you did not request this, you can ignore this email.`;
 
   const html = `
@@ -574,23 +574,34 @@ async function sendSecondEmailVerification({ to, primaryEmail, fullName, verific
       <p style="margin: 0 0 12px 0; color: #374151; font-size: 16px;">This email address is the <strong>backup</strong> for <strong>${displayName}</strong>'s account.</p>
       <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Primary email: ${primaryEmail || '(not shown)'}</p>
       <p style="margin: 16px 0 20px 0; color: #374151; font-size: 15px;">If you accept, you can use this backup email to log in if you forget your main email.</p>
-      <p style="margin: 0 0 20px 0;">
-        <a href="${verifyLink}" style="display: inline-block; padding: 14px 28px; background: #047857; color: #fff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px;">Accept</a>
-      </p>
-      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 13px;">If you did not request this, you can ignore this email.</p>
-      <p style="margin: 12px 0 0 0; color: #9ca3af; font-size: 12px;">Or copy this link: ${verifyLink}</p>
+      <p style="margin: 0 0 12px 0; color: #111; font-size: 15px; font-weight: 600;">Click the button below to accept this backup email:</p>
+      <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 16px 0;">
+        <tr>
+          <td align="center" style="border-radius: 8px; background-color: #047857;">
+            <a href="${verifyLink}" target="_blank" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 16px;">Accept backup email</a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0 0 16px 0; color: #111; font-size: 15px;">Or use this link to accept: <a href="${verifyLink}" target="_blank" style="color: #047857; font-weight: 600; text-decoration: underline;">Accept backup email</a></p>
+      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">If neither works, copy and paste this URL into your browser:</p>
+      <p style="margin: 0 0 24px 0; color: #047857; font-size: 12px; word-break: break-all;">${verifyLink}</p>
+      <p style="margin: 0; color: #9ca3af; font-size: 12px;">If you did not request this, you can ignore this email.</p>
     </div>
   `;
 
   try {
+    const toAddress = (to || '').trim().toLowerCase();
+    if (!toAddress) return { ok: false, reason: 'No backup email address provided.', subject: 'Backup Email Confirmation', to };
+    console.log(`[Mailer] Sending backup email verification to: ${toAddress}`);
     await transporter.sendMail({
       from: cfg.from,
-      to,
+      to: toAddress,
       subject,
       text,
       html,
     });
-    return { ok: true, subject, to };
+    console.log(`[Mailer] ✅ Backup email verification sent to: ${toAddress}`);
+    return { ok: true, subject, to: toAddress };
   } catch (error) {
     // Provide user-friendly error messages for common Gmail issues
     let reason = error.message;

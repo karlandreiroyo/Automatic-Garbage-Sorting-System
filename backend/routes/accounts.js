@@ -139,8 +139,8 @@ router.post('/verify-email', async (req, res) => {
 router.post('/create-employee', async (req, res) => {
   try {
     const { first_name, last_name, middle_name, email, role, password: providedPassword, region, province, city_municipality, barangay, street_address } = req.body;
-    // Frontend may send backup_email; API also accepts second_email
-    const second_email = req.body.second_email ?? req.body.backup_email;
+    // Frontend may send backup_email or second_email (send both for reliability)
+    const second_email = (req.body.second_email ?? req.body.backup_email ?? '').trim() || null;
 
     if (!first_name || !last_name || !email || !role) {
       return res.status(400).json({
@@ -266,6 +266,7 @@ router.post('/create-employee', async (req, res) => {
     // Send second email verification if second email is provided
     let secondEmailVerificationResult = { ok: false };
     if (secondEmailVal) {
+      console.log(`📬 Sending backup email verification to: ${secondEmailVal}`);
       const verificationToken = generateSecondEmailToken();
       const expiresAt = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days expiry
       
@@ -322,12 +323,20 @@ router.post('/create-employee', async (req, res) => {
     }
 
     const sentToEmail = mailResult.ok;
+    const backupEmailSent = secondEmailVal ? secondEmailVerificationResult.ok : null; // null = no backup email requested
     let message = 'Employee account created successfully. ';
-    
+
     if (sentToEmail) {
       message += 'Credentials sent via email.';
     } else {
       message += `⚠️ Email sending failed: ${mailResult.reason || 'Unknown error'}. Check backend terminal for details. Credentials are logged in terminal.`;
+    }
+    if (secondEmailVal) {
+      if (backupEmailSent) {
+        message += ' Backup email verification sent.';
+      } else {
+        message += ` ⚠️ Backup email verification could not be sent: ${secondEmailVerificationResult.reason || 'Unknown error'}.`;
+      }
     }
 
     return res.status(200).json({
@@ -335,6 +344,9 @@ router.post('/create-employee', async (req, res) => {
       message,
       sentToEmail,
       emailError: !mailResult.ok ? mailResult.reason : null,
+      backupEmailSent: backupEmailSent ?? undefined,
+      backupEmailError: secondEmailVal && !secondEmailVerificationResult.ok ? (secondEmailVerificationResult.reason || 'Failed to send') : undefined,
+      backupEmailAddress: secondEmailVal || undefined,
     });
   } catch (e) {
     console.error('Create employee error:', e);
