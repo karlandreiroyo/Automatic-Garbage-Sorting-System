@@ -341,7 +341,7 @@ const AdminLogs = () => {
                 >
                   Next
                 </button>
-                {currentPage === 1 && totalPages > 1 && (
+                {currentPage < totalPages && totalPages > 1 && (
                   <button
                     className="pagination-btn pagination-last"
                     onClick={() => handlePageChange(totalPages)}

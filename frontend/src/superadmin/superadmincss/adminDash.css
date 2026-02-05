@@ -128,6 +128,83 @@
   line-height: 1.1;
 }
 
+/* Collectors, Superadmins, and Total Employees card dropdown */
+.admin-dash-container .stat-card-wrapper.stat-card-collectors-dropdown,
+.admin-dash-container .stat-card-wrapper.stat-card-superadmins-dropdown,
+.admin-dash-container .stat-card-wrapper.stat-card-employees-dropdown {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-dash-container .stat-card-dropdown-role {
+  color: #64748b;
+  font-size: 0.85em;
+}
+
+.admin-dash-container .stat-card-dropdown-trigger {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.admin-dash-container .stat-card-dropdown-caret {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.admin-dash-container .stat-card-dropdown-caret.open {
+  transform: rotate(180deg);
+}
+
+.admin-dash-container .stat-card-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.admin-dash-container .stat-card-dropdown-title {
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.admin-dash-container .stat-card-dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+}
+
+.admin-dash-container .stat-card-dropdown-item {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: #334155;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.admin-dash-container .stat-card-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.admin-dash-container .stat-card-dropdown-item.empty {
+  color: #94a3b8;
+  font-style: italic;
+}
+
 
 /* Charts and Activity Layout */
 .main-charts-layout {
@@ -581,17 +658,25 @@
   }
   
   .chart-card-full {
-    min-height: 280px;
-    height: 280px;
+    min-height: 320px;
+    height: auto;
+    overflow: visible;
+  }
+  
+  .chart-card-full.distribution-section {
+    min-height: 340px;
   }
   
   .visual-chart-area {
     gap: 8px;
-    min-height: 200px;
-    height: 200px;
+    min-height: 220px;
+    height: auto;
     flex: 1;
     display: flex;
     align-items: flex-end;
+    padding-bottom: 36px;
+    overflow: visible;
+    box-sizing: border-box;
   }
   
   .bars-flex-container {
@@ -599,11 +684,13 @@
     height: 100%;
     display: flex;
     gap: 8px;
+    overflow: visible;
   }
   
   .single-bar-column {
     height: 100%;
     flex: 1;
+    overflow: visible;
   }
   
   .single-bar-column {
@@ -615,6 +702,8 @@
   .bar-name {
     font-size: 0.8rem;
     margin-top: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   
   .activity-row {
@@ -730,17 +819,25 @@
   }
   
   .chart-card-full {
-    min-height: 250px;
-    height: 250px;
+    min-height: 280px;
+    height: auto;
+    overflow: visible;
+  }
+  
+  .chart-card-full.distribution-section {
+    min-height: 300px;
   }
   
   .visual-chart-area {
     gap: 6px;
-    min-height: 180px;
-    height: 180px;
+    min-height: 200px;
+    height: auto;
     flex: 1;
     display: flex;
     align-items: flex-end;
+    padding-bottom: 40px;
+    overflow: visible;
+    box-sizing: border-box;
   }
   
   .bars-flex-container {
@@ -748,11 +845,13 @@
     height: 100%;
     display: flex;
     gap: 6px;
+    overflow: visible;
   }
   
   .single-bar-column {
     height: 100%;
     flex: 1;
+    overflow: visible;
   }
   
   .y-axis-labels {
@@ -769,6 +868,8 @@
   .bar-name {
     font-size: 0.75rem;
     margin-top: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   
   .activity-row {

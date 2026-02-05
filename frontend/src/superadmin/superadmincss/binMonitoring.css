@@ -99,6 +99,12 @@
   align-items: flex-start;
 }
 
+/* Keep Recent and Back buttons side by side */
+.bin-monitoring-header .header-actions {
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
 /* Style the h1 and p in bin-monitoring-header to make them visible */
 .bin-monitoring-header h1 {
   font-size: 1.75rem;
@@ -312,8 +318,10 @@
 
 .header-actions {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 12px; /* Space between back and drain all buttons */
+  gap: 12px; /* Space between Recent and Back buttons */
   flex-shrink: 0;
 }
 
@@ -1519,6 +1527,20 @@
   background: #334155;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn.recent-btn {
+  background: #006633;
+  color: white;
+  border: 1px solid #006633;
+}
+
+.action-btn.recent-btn:hover {
+  background: #005a2d;
+  border-color: #005a2d;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .action-btn.drain-all-btn {
@@ -2827,6 +2849,102 @@
     grid-template-columns: 1fr !important; /* Force single column */
     gap: 14px;
   }
+}
+
+/* Collection History inline section (on bin detail page - Recent button) */
+.collection-history-inline {
+  margin-top: 24px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.collection-history-inline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.collection-history-inline-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.collection-history-inline-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #e2e8f0;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.collection-history-inline-close:hover {
+  background: #cbd5e1;
+  color: #334155;
+}
+
+.collection-history-inline-loading,
+.collection-history-inline-empty {
+  padding: 32px 20px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.collection-history-inline-list-wrap {
+  max-height: 320px;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.collection-history-inline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.collection-history-inline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+}
+
+.collection-history-inline-item:last-child {
+  border-bottom: none;
+}
+
+.collection-history-inline-date {
+  color: #475569;
+  min-width: 140px;
+}
+
+.collection-history-inline-category {
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+
+.collection-history-inline-time {
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 /* Modal Styles for Confirmation Dialogs */

@@ -316,6 +316,13 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
+
+  // Collection history (Recent button on detail view)
+  const [showCollectionHistoryInline, setShowCollectionHistoryInline] = useState(false);
+  const [collectionHistoryBin, setCollectionHistoryBin] = useState(null);
+  const [collectionHistoryCategory, setCollectionHistoryCategory] = useState(null);
+  const [collectionHistoryItems, setCollectionHistoryItems] = useState([]);
+  const [loadingCollectionHistory, setLoadingCollectionHistory] = useState(false);
   
 const fetchCollectors = async () => {
   try {
@@ -357,6 +364,44 @@ const [collectors, setCollectors] = useState([]);
       setShowNotification(false);
       setIsNotificationHiding(false);
     }, 300);
+  };
+
+  const openCollectionHistory = async (bin, categoryBinOrFilter, showOnPage = false) => {
+    const mainBin = bin && bin.id && typeof bin.id === 'number' ? bin : null;
+    const categoryLabel = categoryBinOrFilter && typeof categoryBinOrFilter === 'object' ? categoryBinOrFilter.category : (categoryBinOrFilter || null);
+    const binToUse = mainBin || bin;
+    setCollectionHistoryBin(binToUse);
+    setCollectionHistoryCategory(categoryLabel);
+    if (showOnPage) setShowCollectionHistoryInline(true);
+    setLoadingCollectionHistory(true);
+    setCollectionHistoryItems([]);
+    try {
+      let query = supabase
+        .from('waste_items')
+        .select('id, category, processing_time, created_at')
+        .eq('bin_id', binToUse.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (categoryLabel) {
+        const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
+        query = query.eq('category', dbCategory);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      setCollectionHistoryItems(data || []);
+    } catch (err) {
+      console.error('Error fetching collection history:', err);
+      setCollectionHistoryItems([]);
+    } finally {
+      setLoadingCollectionHistory(false);
+    }
+  };
+
+  const closeCollectionHistory = () => {
+    setShowCollectionHistoryInline(false);
+    setCollectionHistoryBin(null);
+    setCollectionHistoryCategory(null);
+    setCollectionHistoryItems([]);
   };
 
   // Open archive view when requested from sidebar
@@ -555,6 +600,7 @@ const updateBinFillLevels = () => {
    * Handles back button click to return to list view
    */
   const handleBack = () => {
+    setShowCollectionHistoryInline(false);
     setView('list');
   };
 
@@ -911,6 +957,14 @@ await supabase.from('activity_logs').insert([{
             <p>Monitor bin fill levels</p>
           </div>
           <div className="header-actions">
+            <button
+              type="button"
+              className="action-btn recent-btn"
+              onClick={() => openCollectionHistory(selectedBin, null, true)}
+              aria-label={`View collection history for ${selectedBin?.name}`}
+            >
+              Recent
+            </button>
             <button className="action-btn back-btn" onClick={handleBack}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -930,6 +984,37 @@ await supabase.from('activity_logs').insert([{
             />
           ))}
         </div>
+
+        {/* Collection History section (shown on page when Recent is clicked) */}
+        {showCollectionHistoryInline && collectionHistoryBin && (
+          <div className="collection-history-inline">
+            <div className="collection-history-inline-header">
+              <h3>Collection History – {collectionHistoryBin.name}{collectionHistoryCategory ? ` (${collectionHistoryCategory})` : ''}</h3>
+              <button type="button" className="collection-history-inline-close" onClick={() => setShowCollectionHistoryInline(false)} aria-label="Hide collection history">×</button>
+            </div>
+            {loadingCollectionHistory ? (
+              <div className="collection-history-inline-loading">Loading collection history...</div>
+            ) : collectionHistoryItems.length === 0 ? (
+              <div className="collection-history-inline-empty">No collection history for this bin yet.</div>
+            ) : (
+              <div className="collection-history-inline-list-wrap">
+                <ul className="collection-history-inline-list">
+                  {collectionHistoryItems.map((item) => (
+                    <li key={item.id} className="collection-history-inline-item">
+                      <span className="collection-history-inline-date">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                      </span>
+                      <span className="collection-history-inline-category">{item.category || 'Unsorted'}</span>
+                      {item.processing_time != null && (
+                        <span className="collection-history-inline-time">{item.processing_time}s</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
