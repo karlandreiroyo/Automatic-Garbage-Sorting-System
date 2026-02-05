@@ -1137,14 +1137,35 @@ body.modal-open {
   transform: translateY(-1px);
 }
 
+/* Override global index.css button:focus outline - use higher specificity */
+button.action-btn.archive-btn,
+button.card-action-btn.archive-btn {
+  outline: none !important;
+  outline-offset: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .archive-btn {
   background: #14b8a6;
   color: white;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  outline: none !important;
+  outline-offset: 0;
 }
 
 .archive-btn:hover {
   background: #0d9488;
   transform: translateY(-1px);
+  outline: none !important;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+button.action-btn.archive-btn:focus,
+button.action-btn.archive-btn:focus-visible,
+button.card-action-btn.archive-btn:focus,
+button.card-action-btn.archive-btn:focus-visible {
+  outline: none !important;
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .icon-btn {

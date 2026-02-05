@@ -41,7 +41,7 @@ const Icons = {
   )
 };
 
-const SuperAdminDash = () => {
+const SuperAdminDash = ({ onNavigateTo }) => {
   const [stats, setStats] = useState({
     totalBins: 0,
     overallItemsSorted: 0,
@@ -54,6 +54,15 @@ const SuperAdminDash = () => {
   const [distribution, setDistribution] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [collectorsList, setCollectorsList] = useState([]);
+  const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
+  const collectorsDropdownRef = React.useRef(null);
+  const [superadminsList, setSuperadminsList] = useState([]);
+  const [superadminsDropdownOpen, setSuperadminsDropdownOpen] = useState(false);
+  const superadminsDropdownRef = React.useRef(null);
+  const [employeesList, setEmployeesList] = useState([]);
+  const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
+  const employeesDropdownRef = React.useRef(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -62,6 +71,24 @@ const SuperAdminDash = () => {
   useEffect(() => {
     fetchWasteDistribution(selectedDate);
   }, [selectedDate]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
+        setCollectorsDropdownOpen(false);
+      }
+      if (superadminsDropdownRef.current && !superadminsDropdownRef.current.contains(e.target)) {
+        setSuperadminsDropdownOpen(false);
+      }
+      if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
+        setEmployeesDropdownOpen(false);
+      }
+    };
+    if (collectorsDropdownOpen || superadminsDropdownOpen || employeesDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [collectorsDropdownOpen, superadminsDropdownOpen, employeesDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
@@ -73,16 +100,22 @@ const fetchDashboardData = async () => {
     
     if (binsError) throw binsError;
     
-    // Fetch users to get employee counts
+    // Fetch users to get employee counts and collector list (names for dropdown)
     const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('role, status');
+      .select('id, role, status, first_name, last_name');
 
     if (usersError) throw usersError;
 
-    const collectors = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE').length || 0;
-    const supervisors = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE').length || 0;
-    const totalEmployees = usersData?.filter(u => u.status === 'ACTIVE').length || 0;
+    const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
+    const collectors = collectorUsers.length;
+    setCollectorsList(collectorUsers);
+    const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE') || [];
+    const supervisors = supervisorUsers.length;
+    setSuperadminsList(supervisorUsers);
+    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
+    const totalEmployees = activeEmployees.length;
+    setEmployeesList(activeEmployees);
 
     // Fetch waste items for statistics (overall - not date-specific)
     const { data: itemsData, error: itemsError } = await supabase
@@ -236,7 +269,14 @@ const fetchWasteDistribution = async (dateString) => {
       </div>
 
       <div className="stats-grid">
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('bins')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
+          aria-label="Go to Bin Monitoring"
+        >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
           <div className="stat-info">
             <span className="stat-label">Total Bins</span>
@@ -244,7 +284,14 @@ const fetchWasteDistribution = async (dateString) => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('data')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
+          aria-label="Go to Data Analytics"
+        >
           <div className="stat-icon-bg"><Icons.ItemsSorted /></div>
           <div className="stat-info">
             <span className="stat-label">Overall Items Sorted</span>
@@ -252,7 +299,14 @@ const fetchWasteDistribution = async (dateString) => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('data')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
+          aria-label="Go to Data Analytics"
+        >
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
             <span className="stat-label">Average Processing Time</span>
@@ -260,28 +314,112 @@ const fetchWasteDistribution = async (dateString) => {
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.Collector /></div>
-          <div className="stat-info">
-            <span className="stat-label">Collectors</span>
-            <h2 className="stat-value">{stats.collectors}</h2>
+        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setCollectorsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollectorsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={collectorsDropdownOpen}
+            aria-label="Collectors count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.Collector /></div>
+            <div className="stat-info">
+              <span className="stat-label">Collectors</span>
+              <h2 className="stat-value">{stats.collectors}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {collectorsDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Collectors</div>
+              <ul className="stat-card-dropdown-list">
+                {collectorsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No collectors</li>
+                ) : (
+                  collectorsList.map((c) => (
+                    <li key={c.id || `${c.first_name}-${c.last_name}`} className="stat-card-dropdown-item">
+                      {[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.Supervisor /></div>
-          <div className="stat-info">
-            <span className="stat-label">Superadmin</span>
-            <h2 className="stat-value">{stats.supervisor}</h2>
+        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={superadminsDropdownOpen}
+            aria-label="Superadmin count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.Supervisor /></div>
+            <div className="stat-info">
+              <span className="stat-label">Superadmin</span>
+              <h2 className="stat-value">{stats.supervisor}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {superadminsDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Superadmins</div>
+              <ul className="stat-card-dropdown-list">
+                {superadminsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No superadmins</li>
+                ) : (
+                  superadminsList.map((s) => (
+                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
+                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
-          <div className="stat-info">
-            <span className="stat-label">Total Employees</span>
-            <h2 className="stat-value">{stats.totalEmployees}</h2>
+        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setEmployeesDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEmployeesDropdownOpen((prev) => !prev); } }}
+            aria-expanded={employeesDropdownOpen}
+            aria-label="Total employees count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
+            <div className="stat-info">
+              <span className="stat-label">Total Employees</span>
+              <h2 className="stat-value">{stats.totalEmployees}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {employeesDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Employees</div>
+              <ul className="stat-card-dropdown-list">
+                {employeesList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No employees</li>
+                ) : (
+                  employeesList.map((emp) => {
+                    const roleLabel = emp.role === 'SUPERVISOR' ? 'Superadmin' : emp.role === 'ADMIN' ? 'Admin' : 'Collector';
+                    return (
+                      <li key={emp.id || `${emp.first_name}-${emp.last_name}-${emp.role}`} className="stat-card-dropdown-item">
+                        {[emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Unnamed'} <span className="stat-card-dropdown-role">({roleLabel})</span>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import '../employee/employeecss/App.css'; // Make sure your CSS matches the admin one or uses the shared one
+import TermsAndConditionsModal from '../components/TermsAndConditionsModal';
 
 // Assets
 import sidebarLogo from '../assets/whitelogo.png';
@@ -38,10 +39,65 @@ const InfoIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('monitoring');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [termsCheckDone, setTermsCheckDone] = useState(false);
+
   // Mobile Responsive States (Matching Admin Dashboard)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // First-login: show Terms and Conditions for collector if not yet accepted (users.terms_accepted_at is null)
+  useEffect(() => {
+    if (termsCheckDone) return;
+    const checkFirstLoginTerms = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          setTermsCheckDone(true);
+          return;
+        }
+        const { data: userRow, error } = await supabase
+          .from('users')
+          .select('id, terms_accepted_at')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        if (error) {
+          console.warn('Terms check failed:', error);
+          setTermsCheckDone(true);
+          return;
+        }
+        setTermsCheckDone(true);
+        if (userRow && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
+          setCurrentUserId(userRow.id);
+          setShowTermsModal(true);
+        }
+      } catch (e) {
+        console.warn('Terms check error:', e);
+        setTermsCheckDone(true);
+      }
+    };
+    checkFirstLoginTerms();
+  }, [termsCheckDone]);
+
+  const handleAcceptTermsFirstLogin = async () => {
+    if (!currentUserId) {
+      setShowTermsModal(false);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ terms_accepted_at: new Date().toISOString() })
+        .eq('id', currentUserId);
+      if (error) throw error;
+      setShowTermsModal(false);
+      setCurrentUserId(null);
+    } catch (e) {
+      console.error('Failed to save terms acceptance:', e);
+      setShowTermsModal(false);
+    }
+  };
 
   // Check screen size on mount and resize
   useEffect(() => {
@@ -73,6 +129,13 @@ const Dashboard = ({ onLogout }) => {
 
   return (
     <div className="dashboard-container"> {/* Ensure CSS class name matches Admin CSS */}
+
+      {/* --- FIRST LOGIN: Terms and Conditions (collector only, once) --- */}
+      <TermsAndConditionsModal
+        open={showTermsModal}
+        onAccept={handleAcceptTermsFirstLogin}
+        onCancel={() => setShowTermsModal(false)}
+      />
       
       {/* --- LOGOUT MODAL --- */}
       {showLogoutModal && (

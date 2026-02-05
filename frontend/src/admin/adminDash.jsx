@@ -41,7 +41,7 @@ const Icons = {
   )
 };
 
-const AdminDash = () => {
+const AdminDash = ({ onNavigateTo }) => {
   const [stats, setStats] = useState({
     totalBins: 0,
     overallItemsSorted: 0,
@@ -52,11 +52,43 @@ const AdminDash = () => {
   });
   
   const [distribution, setDistribution] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [collectorsList, setCollectorsList] = useState([]);
+  const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
+  const collectorsDropdownRef = React.useRef(null);
+  const [superadminsList, setSuperadminsList] = useState([]);
+  const [superadminsDropdownOpen, setSuperadminsDropdownOpen] = useState(false);
+  const superadminsDropdownRef = React.useRef(null);
+  const [employeesList, setEmployeesList] = useState([]);
+  const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
+  const employeesDropdownRef = React.useRef(null);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    fetchWasteDistribution(selectedDate);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
+        setCollectorsDropdownOpen(false);
+      }
+      if (superadminsDropdownRef.current && !superadminsDropdownRef.current.contains(e.target)) {
+        setSuperadminsDropdownOpen(false);
+      }
+      if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
+        setEmployeesDropdownOpen(false);
+      }
+    };
+    if (collectorsDropdownOpen || superadminsDropdownOpen || employeesDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [collectorsDropdownOpen, superadminsDropdownOpen, employeesDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
@@ -68,16 +100,22 @@ const fetchDashboardData = async () => {
     
     if (binsError) throw binsError;
     
-    // Fetch users to get employee counts
+    // Fetch users to get employee counts and lists for dropdowns
     const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('role, status');
+      .select('id, role, status, first_name, last_name');
 
     if (usersError) throw usersError;
 
-    const collectors = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE').length || 0;
-    const supervisors = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE').length || 0;
-    const totalEmployees = usersData?.filter(u => u.status === 'ACTIVE').length || 0;
+    const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
+    const collectors = collectorUsers.length;
+    setCollectorsList(collectorUsers);
+    const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE') || [];
+    const supervisors = supervisorUsers.length;
+    setSuperadminsList(supervisorUsers);
+    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
+    const totalEmployees = activeEmployees.length;
+    setEmployeesList(activeEmployees);
 
     // Fetch waste items for statistics
     const today = new Date();
@@ -96,25 +134,6 @@ const fetchDashboardData = async () => {
     const avgTime = itemsData?.length > 0
       ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
       : 0;
-
-    // Create distribution data by category
-    const categoryCounts = {
-      'Biodegradable': 0,
-      'Non-Bio': 0,
-      'Recycle': 0,
-      'Unsorted': 0
-    };
-    
-    itemsData?.forEach(item => {
-      if (categoryCounts.hasOwnProperty(item.category)) {
-        categoryCounts[item.category]++;
-      }
-    });
-
-    const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
 
     // Fetch recent activity
     const { data: activityData, error: activityError } = await supabase
@@ -139,7 +158,6 @@ const fetchDashboardData = async () => {
       totalEmployees
     });
 
-    setDistribution(distributionArray);
     setRecentActivity(formattedActivity);
 
   } catch (error) {
@@ -147,6 +165,42 @@ const fetchDashboardData = async () => {
     // Keep your existing fallback values
   }
 };
+
+  const fetchWasteDistribution = async (dateString) => {
+    try {
+      const selectedDateObj = new Date(dateString);
+      selectedDateObj.setHours(0, 0, 0, 0);
+      const startOfDay = selectedDateObj.toISOString();
+      const endOfDay = new Date(selectedDateObj);
+      endOfDay.setHours(23, 59, 59, 999);
+      const endOfDayISO = endOfDay.toISOString();
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('waste_items')
+        .select('*, bins(name)')
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDayISO);
+      if (itemsError) throw itemsError;
+      const categoryCounts = {
+        'Biodegradable': 0,
+        'Non-Bio': 0,
+        'Recycle': 0,
+        'Unsorted': 0
+      };
+      itemsData?.forEach(item => {
+        if (categoryCounts.hasOwnProperty(item.category)) {
+          categoryCounts[item.category]++;
+        }
+      });
+      const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
+        name,
+        count
+      }));
+      setDistribution(distributionArray);
+    } catch (error) {
+      console.error('Error fetching waste distribution:', error);
+      setDistribution([]);
+    }
+  };
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();
@@ -205,7 +259,14 @@ const fetchDashboardData = async () => {
       </div>
 
       <div className="stats-grid">
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('bins')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
+          aria-label="Go to Bin Monitoring"
+        >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
           <div className="stat-info">
             <span className="stat-label">Total Bins</span>
@@ -213,7 +274,14 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('data')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
+          aria-label="Go to Data Analytics"
+        >
           <div className="stat-icon-bg"><Icons.ItemsSorted /></div>
           <div className="stat-info">
             <span className="stat-label">Overall Items Sorted</span>
@@ -221,7 +289,14 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card stat-card-link"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('data')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
+          aria-label="Go to Data Analytics"
+        >
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
             <span className="stat-label">Average Processing Time</span>
@@ -229,34 +304,171 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.Collector /></div>
-          <div className="stat-info">
-            <span className="stat-label">Collectors</span>
-            <h2 className="stat-value">{stats.collectors}</h2>
+        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setCollectorsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollectorsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={collectorsDropdownOpen}
+            aria-label="Collectors count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.Collector /></div>
+            <div className="stat-info">
+              <span className="stat-label">Collectors</span>
+              <h2 className="stat-value">{stats.collectors}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {collectorsDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Collectors</div>
+              <ul className="stat-card-dropdown-list">
+                {collectorsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No collectors</li>
+                ) : (
+                  collectorsList.map((c) => (
+                    <li key={c.id || `${c.first_name}-${c.last_name}`} className="stat-card-dropdown-item">
+                      {[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.Supervisor /></div>
-          <div className="stat-info">
-            <span className="stat-label">Superadmin</span>
-            <h2 className="stat-value">{stats.supervisor}</h2>
+        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={superadminsDropdownOpen}
+            aria-label="Superadmin count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.Supervisor /></div>
+            <div className="stat-info">
+              <span className="stat-label">Superadmin</span>
+              <h2 className="stat-value">{stats.supervisor}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {superadminsDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Superadmins</div>
+              <ul className="stat-card-dropdown-list">
+                {superadminsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No superadmins</li>
+                ) : (
+                  superadminsList.map((s) => (
+                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
+                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
-          <div className="stat-info">
-            <span className="stat-label">Total Employees</span>
-            <h2 className="stat-value">{stats.totalEmployees}</h2>
+        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
+          <div
+            className="stat-card stat-card-dropdown-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => setEmployeesDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEmployeesDropdownOpen((prev) => !prev); } }}
+            aria-expanded={employeesDropdownOpen}
+            aria-label="Total employees count, click to view list"
+          >
+            <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
+            <div className="stat-info">
+              <span className="stat-label">Total Employees</span>
+              <h2 className="stat-value">{stats.totalEmployees}</h2>
+            </div>
+            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {employeesDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Employees</div>
+              <ul className="stat-card-dropdown-list">
+                {employeesList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No employees</li>
+                ) : (
+                  employeesList.map((emp) => {
+                    const roleLabel = emp.role === 'SUPERVISOR' ? 'Superadmin' : emp.role === 'ADMIN' ? 'Admin' : 'Collector';
+                    return (
+                      <li key={emp.id || `${emp.first_name}-${emp.last_name}-${emp.role}`} className="stat-card-dropdown-item">
+                        {[emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Unnamed'} <span className="stat-card-dropdown-role">({roleLabel})</span>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="main-charts-layout">
         <div className="chart-card-full distribution-section">
-  <h3 className="section-title">Today's Waste Distribution</h3>
+  <div className="distribution-header">
+    <h3 className="section-title">Waste Distribution</h3>
+    <div className="date-selector-container">
+      <button
+        type="button"
+        className="date-nav-btn"
+        onClick={() => {
+          const prevDate = new Date(selectedDate);
+          prevDate.setDate(prevDate.getDate() - 1);
+          setSelectedDate(prevDate.toISOString().split('T')[0]);
+        }}
+        title="Previous Day"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+        max={new Date().toISOString().split('T')[0]}
+        className="date-input"
+      />
+      <button
+        type="button"
+        className="date-nav-btn date-nav-btn-next"
+        onClick={() => {
+          const nextDate = new Date(selectedDate);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const today = new Date().toISOString().split('T')[0];
+          if (nextDate.toISOString().split('T')[0] <= today) {
+            setSelectedDate(nextDate.toISOString().split('T')[0]);
+          }
+        }}
+        disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+        title="Next Day"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+      {selectedDate !== new Date().toISOString().split('T')[0] && (
+        <button
+          type="button"
+          className="date-today-btn"
+          onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+          title="Go to Today"
+        >
+          Today
+        </button>
+      )}
+    </div>
+  </div>
   <div className="visual-chart-area">
     <div className="y-axis-labels">
       {calculateYAxisLabels().map((label, index) => (
@@ -264,7 +476,7 @@ const fetchDashboardData = async () => {
       ))}
     </div>
     <div className="bars-flex-container">
-      {distribution.length > 0 ? (
+      {distribution.length > 0 && distribution.some((d) => d.count > 0) ? (
         distribution.map((item, index) => (
           <div key={index} className="single-bar-column">
             {item.count > 0 && (
@@ -280,8 +492,8 @@ const fetchDashboardData = async () => {
           </div>
         ))
       ) : (
-        <div style={{ textAlign: 'center', width: '100%', padding: '20px', color: '#666' }}>
-          No data available for today
+        <div className="distribution-empty-state">
+          No data available for {new Date(selectedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       )}
     </div>

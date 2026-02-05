@@ -307,7 +307,7 @@ const AdminDashboard = ({ onLogout }) => {
       )}
 
       <div className={`main-content ${isSidebarCollapsed && isMobile ? 'mobile-expanded' : ''}`}>
-        {activeTab === 'dashboard' && <AdminDash />}
+        {activeTab === 'dashboard' && <AdminDash onNavigateTo={handleNavClick} />}
         {activeTab === 'users' && <WasteCategories />}
         {activeTab === 'data' && <DataAnalytics />}
         {activeTab === 'account' && <Accounts />}

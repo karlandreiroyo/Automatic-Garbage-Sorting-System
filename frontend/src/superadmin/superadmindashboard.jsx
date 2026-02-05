@@ -318,7 +318,7 @@ const SuperAdminDashboard = ({ onLogout }) => {
       )}
 
       <div className={`main-content ${isSidebarCollapsed && isMobile ? 'mobile-expanded' : ''}`}>
-        {activeTab === 'dashboard' && <SuperAdminDash />}
+        {activeTab === 'dashboard' && <SuperAdminDash onNavigateTo={handleNavClick} />}
         {activeTab === 'users' && <WasteCategories />}
         {activeTab === 'data' && <DataAnalytics />}
         {activeTab === 'account' && <Accounts />}
