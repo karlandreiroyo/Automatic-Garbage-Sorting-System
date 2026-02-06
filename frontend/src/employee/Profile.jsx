@@ -209,17 +209,6 @@ const fetchProfile = async () => {
         }
         break;
       }
-      case 'phone':
-        const contactStr = String(value || '');
-        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
-        if (!contactStr.trim()) {
-          error = 'Contact number is required';
-        } else if (digitsOnly.length < 11) {
-          error = `Remaining ${11 - digitsOnly.length} digits required`;
-        } else if (!digitsOnly.startsWith('09')) {
-          error = 'Contact number must start with 09';
-        }
-        break;
       default:
         break;
     }
@@ -243,15 +232,6 @@ const fetchProfile = async () => {
         cleaned = parts[0] + '@' + parts.slice(1).join('');
       }
       finalValue = cleaned;
-    }
-
-    // Format contact number - ensure it starts with "09" and is 11 digits
-    if (field === 'phone') {
-      let digits = value.replace(/\D/g, '');
-      if (!digits.startsWith('09')) {
-        digits = '09' + digits;
-      }
-      finalValue = digits.slice(0, 11);
     }
 
     setFormData({ ...formData, [field]: finalValue });
@@ -726,7 +706,7 @@ const handleAcceptTermsAndSave = async () => {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <h1>Profile Settings</h1>
+        <h1> Profile Settings</h1>
         <p className="profile-subtitle">Manage your account information and preferences</p>
       </div>
 
@@ -746,7 +726,7 @@ const handleAcceptTermsAndSave = async () => {
                 <p className="user-email">{formData.email}</p>
                 <div className="role-badge">
                   <ShieldIcon />
-                  <span>Employee</span>
+                  <span>COLLECTOR</span>
                 </div>
                 <p className="joined-date">Joined {joinedDate}</p>
               </div>
@@ -837,28 +817,6 @@ const handleAcceptTermsAndSave = async () => {
                 />
                 {touched.email && errors.email && (
                   <span className="error-message">{errors.email}</span>
-                )}
-              </div>
-
-              <div className={`form-group ${touched.phone && errors.phone ? 'has-error' : ''}`}>
-                <label>Contact Number *</label>
-                <input
-                  type="tel"
-                  className={`form-input ${touched.phone && errors.phone ? 'error' : ''}`}
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  onBlur={() => handleBlur('phone')}
-                  disabled={!isEditing}
-                  placeholder="09XXXXXXXXX"
-                  onKeyDown={(e) => {
-                    // Prevent backspacing the "09" prefix
-                    if ((e.key === 'Backspace' || e.key === 'Delete') && e.target.value.length <= 2) {
-                      e.preventDefault();
-                    }
-                  }}
-                />
-                {touched.phone && errors.phone && (
-                  <span className="error-message">{errors.phone}</span>
                 )}
               </div>
             </div>
@@ -1170,7 +1128,7 @@ const handleAcceptTermsAndSave = async () => {
                 <div className="terms-card-content">
                   <div className="terms-section">
                     <h4>1. Information We Collect</h4>
-                    <p>We collect information you provide directly to us, including your first name, middle name, last name, email address, phone number, and complete address (region, province, city/municipality, barangay, and street address). We also collect data related to your role, account status, and activities within the Automatic Garbage Sorting System.</p>
+                    <p>We collect information you provide directly to us, including your first name, middle name, last name, email address and complete address (region, province, city/municipality, barangay, and street address). We also collect data related to your role, account status, and activities within the Automatic Garbage Sorting System.</p>
                   </div>
                   
                   <div className="terms-section">

@@ -59,7 +59,7 @@ const Dashboard = ({ onLogout }) => {
         }
         const { data: userRow, error } = await supabase
           .from('users')
-          .select('id, terms_accepted_at')
+          .select('id, role, terms_accepted_at')
           .eq('auth_id', session.user.id)
           .maybeSingle();
         if (error) {
@@ -68,7 +68,8 @@ const Dashboard = ({ onLogout }) => {
           return;
         }
         setTermsCheckDone(true);
-        if (userRow && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
+        // Only show terms for COLLECTOR role if not accepted
+        if (userRow && userRow.role === 'COLLECTOR' && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
           setCurrentUserId(userRow.id);
           setShowTermsModal(true);
         }
@@ -134,7 +135,12 @@ const Dashboard = ({ onLogout }) => {
       <TermsAndConditionsModal
         open={showTermsModal}
         onAccept={handleAcceptTermsFirstLogin}
-        onCancel={() => setShowTermsModal(false)}
+        onCancel={() => {
+          // If user cancels on first login, sign them out
+          if (onLogout) {
+            onLogout();
+          }
+        }}
       />
       
       {/* --- LOGOUT MODAL --- */}

@@ -237,7 +237,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      // 5. Check cooldown via backend (so it works even if frontend can't read last_verified_at)
+      // 5. Get access token for API calls
       const accessToken = authData?.session?.access_token;
       if (!accessToken) {
         setAlertTitle('Error');
@@ -247,35 +247,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
         return;
       }
 
-      let skipVerification = false;
-      try {
-        const cooldownRes = await fetch(`${API_BASE_URL}/api/login/check-cooldown`, {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-        });
-        const cooldownData = await cooldownRes.json();
-        skipVerification = cooldownData.skipVerification === true;
-      } catch (err) {
-        console.warn('Check cooldown failed, requiring verification:', err);
-      }
-
-      // 6. If cooldown is active, skip verification and go directly to dashboard
-      if (skipVerification) {
-        localStorage.setItem('userRole', reactRole);
-        localStorage.setItem('userEmail', userData.email);
-        localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
-        
-        setIsLoggedIn(true);
-        setUserRole(reactRole);
-        
-        if (reactRole === 'admin') navigate('/admin');
-        else if (reactRole === 'supervisor') navigate('/supervisor');
-        else if (reactRole === 'superadmin') navigate('/superadmin');
-        else navigate('/');
-        return;
-      }
-
-      // 7. Store user data temporarily (don't set logged in yet)
+      // 6. Store user data temporarily (don't set logged in yet)
       const pendingLoginUser = {
         email: userData.email,
         role: reactRole,
@@ -284,7 +256,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
         authId: authData.user.id
       };
 
-      // 8. Send verification code (to backup email if they logged in with backup), then go to verification page
+      // 7. Send verification code (to backup email if they logged in with backup), then go to verification page
       try {
         const response = await fetch(`${API_BASE_URL}/api/login/send-verification`, {
           method: 'POST',

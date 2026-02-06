@@ -385,15 +385,6 @@ const Accounts = () => {
           else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
-      case 'contact': {
-        const contactStr = String(value || '');
-        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
-        if (digitsOnly.length > 0) {
-          if (digitsOnly.length < 11) error = `Remaining ${11 - digitsOnly.length} digits required`;
-          else if (!digitsOnly.startsWith('09')) error = 'Contact number must start with 09';
-        }
-        break;
-      }
       default: break;
     }
     return error;
@@ -1255,18 +1246,6 @@ const handleCancelSave = () => {
                     onBlur={handleEditBlur}
                   />
                   {editErrors.middle_name && <span className="error-message">{editErrors.middle_name}</span>}
-                </div>
-                <div className={`form-group ${editErrors.contact ? 'has-error' : ''}`}>
-                  <label>Contact Number</label>
-                  <input 
-                    type="text" 
-                    name="contact"
-                    value={editingUser.contact || ''} 
-                    onChange={handleEditInputChange}
-                    onBlur={handleEditBlur}
-                    placeholder="09XXXXXXXXX"
-                  />
-                  {editErrors.contact && <span className="error-message">{editErrors.contact}</span>}
                 </div>
                 <div className="form-group">
                   <label>Assign Bin</label>

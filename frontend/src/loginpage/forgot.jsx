@@ -81,7 +81,7 @@ const Forgot = () => {
 
   const sendCode = async () => {
     if (!emailOrMobile.trim()) {
-      setError('Please enter your email or mobile number');
+      setError('Please enter your email');
       return;
     }
 
@@ -254,7 +254,7 @@ const Forgot = () => {
 
   const resendCode = async () => {
     if (!emailOrMobile.trim()) {
-      setError('Email or mobile number is required to resend code');
+      setError('Email is required to resend code');
       return;
     }
 
@@ -334,12 +334,12 @@ const Forgot = () => {
             <h2>Reset Password</h2>
             {error && <div className="error-message">{error}</div>}
             <p className="subtitle">
-              Enter your mobile number or email
+              Enter your email
             </p>
 
             <input
               type="text"
-              placeholder="Mobile number or email"
+              placeholder="Email"
               value={emailOrMobile}
               onChange={(e) => {
                 setEmailOrMobile(e.target.value);
