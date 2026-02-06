@@ -32,17 +32,17 @@ const Notifications = () => {
     { id: 5, type: 'info', title: 'Scheduled Collection', time: '5 hours ago', date: 'Jan 17, 2025', message: 'Recyclable bin collection scheduled for tomorrow 9:00 AM', subtext: 'Recyclable', scheduledTime: '9:00 AM', location: 'Zone B', isUnread: false },
   ]);
 
-  const [activeFilter, setActiveFilter] = useState(null);
+  const [activeFilters, setActiveFilters] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
-  // Filter logic: 
-  // - When no filter is active: show only unread notifications (main view)
-  // - When filter is active: show all notifications (read and unread) filtered by type
-  const filteredNotifications = activeFilter 
-    ? notifications.filter(n => n.type === activeFilter)
+  // Filter logic:
+  // - When no filters selected: show only unread notifications (main view)
+  // - When one or more filters selected: show notifications matching ANY selected type
+  const filteredNotifications = activeFilters.length > 0
+    ? notifications.filter(n => activeFilters.includes(n.type))
     : notifications.filter(n => n.isUnread);
 
   const stats = [
@@ -130,16 +130,9 @@ const Notifications = () => {
 
   const handleFilterClick = (type) => {
     if (!type) return;
-    
-    const newFilter = activeFilter === type ? null : type;
-    setActiveFilter(newFilter);
-    
-    if (newFilter) {
-      const count = notifications.filter(n => n.type === type).length;
-      if (count === 0) {
-        showSuccess(`No ${type} notifications found`);
-      }
-    }
+    setActiveFilters(prev => 
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
   };
 
   const handleClearAll = () => {
@@ -154,7 +147,7 @@ const Notifications = () => {
   const handleConfirmClearAll = () => {
     setDeletedNotifications([...deletedNotifications, ...notifications]);
     setNotifications([]);
-    setActiveFilter(null);
+    setActiveFilters([]);
     setShowClearAllConfirm(false);
     showSuccess('All notifications cleared');
   };
@@ -201,7 +194,7 @@ const Notifications = () => {
           {stats.map((stat, idx) => (
             <div 
               key={idx} 
-              className={`stat-card ${activeFilter === stat.type ? 'active' : ''} ${stat.count === 0 ? 'disabled' : ''}`}
+              className={`stat-card ${activeFilters.includes(stat.type) ? 'active' : ''} ${stat.count === 0 ? 'disabled' : ''}`}
               onClick={() => stat.count > 0 && handleFilterClick(stat.type)}
               style={{ cursor: stat.count === 0 ? 'not-allowed' : 'pointer' }}
             >
@@ -215,11 +208,13 @@ const Notifications = () => {
         </div>
       )}
 
-      {/* Active Filter Badge */}
-      {activeFilter && (
+      {/* Active Filter Badge – show when one or more filters selected */}
+      {activeFilters.length > 0 && (
         <div className="active-filter-badge">
-          <span>Showing: {activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} notifications</span>
-          <button onClick={() => setActiveFilter(null)} className="clear-filter-btn">
+          <span>
+            Showing: {activeFilters.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')} notifications
+          </span>
+          <button onClick={() => setActiveFilters([])} className="clear-filter-btn">
             {Icons.x} Clear filter
           </button>
         </div>
@@ -235,11 +230,11 @@ const Notifications = () => {
       ) : !hasFilteredNotifications ? (
         <div className="empty-state">
           <div className="empty-icon">{Icons.info}</div>
-          {activeFilter ? (
+          {activeFilters.length > 0 ? (
             <>
-              <h3>No {activeFilter} notifications</h3>
-              <p>There are no {activeFilter} notifications to display.</p>
-              <button className="reset-filter-btn" onClick={() => setActiveFilter(null)}>
+              <h3>No matching notifications</h3>
+              <p>There are no notifications for {activeFilters.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(', ')}.</p>
+              <button className="reset-filter-btn" onClick={() => setActiveFilters([])}>
                 View all notifications
               </button>
             </>

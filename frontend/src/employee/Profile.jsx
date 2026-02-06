@@ -18,7 +18,6 @@ const LockIcon = () => (
   </svg>
 );
 
-
 const UserIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -29,20 +28,6 @@ const UserIcon = () => (
 const ShieldIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-  </svg>
-);
-
-const EyeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-    <circle cx="12" cy="12" r="3"></circle>
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-    <line x1="1" y1="1" x2="23" y2="23"></line>
   </svg>
 );
 
@@ -91,8 +76,8 @@ const Profile = () => {
   const [otpVerified, setOtpVerified] = useState(false);
   const [changeToken, setChangeToken] = useState('');
   const [otpMessage, setOtpMessage] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [preferences, setPreferences] = useState({
     emailNotifications: false,
     pushNotifications: false
@@ -100,9 +85,7 @@ const Profile = () => {
   const [joinedDate] = useState('January 15, 2020');
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
-  const [showTermsModal, setShowTermsModal] = useState(false);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  
+  const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
   // Alert modal states
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -159,9 +142,13 @@ const fetchProfile = async () => {
     fetchProfile();
   }, []);
 
-  // Get user initials - show "U" for User
+  // Profile avatar: first letter of logged-in user's first name
   const getInitials = () => {
-    return 'U';
+    const first = (formData.firstName || '').trim();
+    if (first) return first.charAt(0).toUpperCase();
+    const last = (formData.lastName || '').trim();
+    if (last) return last.charAt(0).toUpperCase();
+    return 'E';
   };
 
   // Get full name - remove "User" from display
@@ -186,9 +173,8 @@ const fetchProfile = async () => {
         else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'middleName':
-        if (!value.trim()) error = 'Middle name is required';
-        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
-        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        if (value.trim() && !/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length > 0 && value.trim().length < 2) error = 'Must be at least 2 characters';
         break;
       case 'email': {
         const emailVal = value.trim();
@@ -363,139 +349,88 @@ const validateAddress = () => {
     }
   };
 
-  // Handle save
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!isEditing) {
       setIsEditing(true);
       return;
     }
-
-    // Validate all fields before showing terms modal
     const newErrors = {};
     ['firstName', 'lastName', 'middleName', 'email', 'phone'].forEach(field => {
       const error = validateField(field, formData[field]);
       if (error) newErrors[field] = error;
     });
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setTouched({
-        firstName: true,
-        lastName: true,
-        middleName: true,
-        email: true,
-        phone: true
-      });
+      setTouched({ firstName: true, lastName: true, middleName: true, email: true, phone: true });
       setAlertTitle('Validation Error');
       setAlertMessage('Please fix all validation errors before saving.');
       setShowAlertModal(true);
       return;
     }
-
-    // Show Terms and Conditions modal before saving
-    setHasScrolledToBottom(false); // Reset scroll state when modal opens
-    setShowTermsModal(true);
-  };
-
-  // Check if content is already at bottom when modal opens
-  useEffect(() => {
-    if (showTermsModal) {
-      // Small delay to ensure DOM is rendered
-      setTimeout(() => {
-        const modalBody = document.querySelector('.terms-modal-body');
-        if (modalBody) {
-          const isAtBottom = modalBody.scrollHeight - modalBody.scrollTop <= modalBody.clientHeight + 10;
-          setHasScrolledToBottom(isAtBottom);
-        }
-      }, 100);
-    }
-  }, [showTermsModal]);
-
-// Handle accept terms and save
-const handleAcceptTermsAndSave = async () => {
-  if (!hasScrolledToBottom) {
-    return;
-  }
-
-  // Validate address fields first
-  const addressErrors = validateAddress();
-  
-  if (Object.keys(addressErrors).length > 0) {
-    setErrors({ ...errors, ...addressErrors });
-    setTouched({ 
-      ...touched, 
-      region: true, 
-      province: true, 
-      city_municipality: true, 
-      barangay: true 
-    });
-    setShowTermsModal(false);
-    setAlertTitle('Validation Error');
-    setAlertMessage('Please fill in all required address fields');
-    setShowAlertModal(true);
-    return;
-  }
-
-    setShowTermsModal(false);
-    setHasScrolledToBottom(false); // Reset for next time
-  
-  try {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      setAlertTitle('Error');
-      setAlertMessage("Not logged in");
+    const addressErrors = validateAddress();
+    if (Object.keys(addressErrors).length > 0) {
+      setErrors(prev => ({ ...prev, ...addressErrors }));
+      setTouched(prev => ({ ...prev, region: true, province: true, city_municipality: true, barangay: true }));
+      setAlertTitle('Validation Error');
+      setAlertMessage('Please fill in all required address fields');
       setShowAlertModal(true);
       return;
     }
+    setShowSaveConfirmModal(true);
+  };
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        middle_name: formData.middleName,
-        contact: formData.phone,
-        region: formData.address.region,
-        province: formData.address.province,
-        city_municipality: formData.address.city_municipality,
-        barangay: formData.address.barangay,
-        street_address: formData.address.street_address
-      })
-      .eq('auth_id', user.id);
-
-    if (error) throw error;
-
-    setSaveSuccess(true);
-    setIsEditing(false);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleConfirmSave = async () => {
+    setShowSaveConfirmModal(false);
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setAlertTitle('Error');
+        setAlertMessage('Not logged in');
+        setShowAlertModal(true);
+        return;
+      }
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          middle_name: formData.middleName,
+          contact: formData.phone,
+          region: formData.address.region,
+          province: formData.address.province,
+          city_municipality: formData.address.city_municipality,
+          barangay: formData.address.barangay,
+          street_address: formData.address.street_address
+        })
+        .eq('auth_id', user.id);
+      if (error) throw error;
+      setSaveSuccess(true);
+      setIsEditing(false);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      console.error("Update error:", err);
+      console.error('Update error:', err);
       setAlertTitle('Error');
-      setAlertMessage("Update failed: " + err.message);
+      setAlertMessage('Update failed: ' + err.message);
       setShowAlertModal(true);
     } finally {
-    setLoading(false);
-  }
-};
+      setLoading(false);
+    }
+  };
 
   // Backend API base URL
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Send OTP for password change
   const handleSendOTP = async () => {
     if (!formData.email) {
       setAlertTitle('Validation Error');
-      setAlertMessage("Email is required to send OTP");
+      setAlertMessage('Email is required to send OTP');
       setShowAlertModal(true);
       return;
     }
-
     try {
-      setLoading(true);
+      setPasswordLoading(true);
       setOtpMessage('');
-
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
@@ -504,151 +439,102 @@ const handleAcceptTermsAndSave = async () => {
         setShowAlertModal(true);
         return;
       }
-
       const response = await fetch(`${API_BASE_URL}/api/profile/send-otp`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify({}),
       });
-
       const data = await response.json();
-
       if (data.success) {
         setOtpSent(true);
         setOtpVerified(false);
-        setOtpMessage(data.message || 'OTP sent to your email. Check terminal for code.');
-        // Show OTP in toast notification if available
-        if (data.otp) {
-          setToastMessage('Verification Code Sent to your email');
-          setToastType('success');
-          setShowToast(true);
-          // Auto-hide toast after 5 seconds
-          setTimeout(() => {
-            setShowToast(false);
-          }, 5000);
-        }
+        setOtpMessage(data.message || 'OTP sent to your email. Enter the code below.');
       } else {
         setAlertTitle('Error');
         setAlertMessage(data.message || 'Failed to send OTP');
         setShowAlertModal(true);
       }
     } catch (error) {
-      console.error("Send OTP error:", error);
+      console.error('Send OTP error:', error);
       setAlertTitle('Error');
-      setAlertMessage("Failed to connect to server. Please try again.");
+      setAlertMessage('Failed to connect to server. Please try again.');
       setShowAlertModal(true);
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
-  // Verify OTP
   const handleVerifyOTP = async () => {
     if (!passwordData.otp || passwordData.otp.length !== 6) {
-      setPasswordErrors(prev => ({
-        ...prev,
-        otp: 'Please enter a valid 6-digit OTP'
-      }));
+      setPasswordErrors(prev => ({ ...prev, otp: 'Please enter a valid 6-digit OTP' }));
       return;
     }
-
     try {
-      setLoading(true);
+      setPasswordLoading(true);
       setPasswordErrors(prev => ({ ...prev, otp: '' }));
-
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
         setPasswordErrors(prev => ({ ...prev, otp: 'Session expired. Please login again.' }));
         return;
       }
-
       const response = await fetch(`${API_BASE_URL}/api/profile/verify-otp`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ 
-          otp: passwordData.otp.trim() 
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({ otp: passwordData.otp.trim() }),
       });
-
       const data = await response.json();
-
       if (data.success) {
         setOtpVerified(true);
         setChangeToken(data.changeToken);
-        setOtpMessage('OTP verified successfully! You can now change your password.');
+        setOtpMessage('Code verified. Enter your new password below.');
       } else {
-        setPasswordErrors(prev => ({
-          ...prev,
-          otp: data.message || 'Invalid OTP'
-        }));
+        setPasswordErrors(prev => ({ ...prev, otp: data.message || 'Invalid OTP' }));
       }
     } catch (error) {
-      console.error("Verify OTP error:", error);
-      setPasswordErrors(prev => ({
-        ...prev,
-        otp: 'Failed to verify OTP. Please try again.'
-      }));
+      console.error('Verify OTP error:', error);
+      setPasswordErrors(prev => ({ ...prev, otp: 'Failed to verify OTP. Please try again.' }));
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
-  // Handle password change (after OTP verification)
   const handleChangePassword = async () => {
-    // Validate all fields
     if (!otpVerified) {
       setAlertTitle('Validation Error');
-      setAlertMessage("Please verify OTP first");
+      setAlertMessage('Please verify OTP first');
       setShowAlertModal(true);
       return;
     }
-
     if (!passwordData.newPassword || !passwordData.confirmPassword) {
       setAlertTitle('Validation Error');
-      setAlertMessage("Please fill in new password and confirm password");
+      setAlertMessage('Please fill in new password and confirm password');
       setShowAlertModal(true);
       return;
     }
-
-    // Validate new password
-    const passwordErrors = validatePassword(passwordData.newPassword);
-    if (passwordErrors.length > 0) {
+    const pwdErrors = validatePassword(passwordData.newPassword);
+    if (pwdErrors.length > 0) {
       setPasswordTouched({ newPassword: true, confirmPassword: true });
       setPasswordErrors({
-        newPassword: passwordErrors.join(', '),
+        newPassword: pwdErrors.join(', '),
         confirmPassword: passwordData.newPassword !== passwordData.confirmPassword ? 'Passwords do not match' : '',
         otp: ''
       });
       setAlertTitle('Validation Error');
-      setAlertMessage("Please fix password validation errors");
+      setAlertMessage('Please fix password validation errors');
       setShowAlertModal(true);
       return;
     }
-
-    // Validate password match
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordTouched({ newPassword: true, confirmPassword: true });
-      setPasswordErrors({
-        newPassword: '',
-        confirmPassword: 'Passwords do not match',
-        otp: ''
-      });
+      setPasswordErrors({ newPassword: '', confirmPassword: 'Passwords do not match', otp: '' });
       setAlertTitle('Validation Error');
-      setAlertMessage("Passwords do not match");
+      setAlertMessage('Passwords do not match');
       setShowAlertModal(true);
       return;
     }
-
     try {
-      setLoading(true);
-
+      setPasswordLoading(true);
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) {
@@ -657,45 +543,45 @@ const handleAcceptTermsAndSave = async () => {
         setShowAlertModal(true);
         return;
       }
-
       const response = await fetch(`${API_BASE_URL}/api/profile/change-password`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ 
-          changeToken,
-          newPassword: passwordData.newPassword
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({ changeToken, newPassword: passwordData.newPassword }),
       });
-
       const data = await response.json();
-
       if (data.success) {
-        setAlertTitle('Success');
-        setAlertMessage("Password changed successfully!");
-        setShowAlertModal(true);
-        // Reset all password-related state
+        const newPassword = passwordData.newPassword;
+        setOtpMessage('');
         setPasswordData({ newPassword: '', confirmPassword: '', otp: '' });
         setPasswordErrors({ newPassword: '', confirmPassword: '', otp: '' });
         setPasswordTouched({ newPassword: false, confirmPassword: false, otp: false });
         setOtpSent(false);
         setOtpVerified(false);
         setChangeToken('');
-        setOtpMessage('');
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: newPassword
+        });
+        if (signInError) {
+          setAlertTitle('Success');
+          setAlertMessage('Password changed successfully. Please refresh the page or log in again to change password again.');
+        } else {
+          setAlertTitle('Success');
+          setAlertMessage('Password changed successfully. You can change it again anytime.');
+        }
+        setShowAlertModal(true);
       } else {
         setAlertTitle('Error');
         setAlertMessage(data.message || 'Failed to change password');
         setShowAlertModal(true);
       }
     } catch (error) {
-      console.error("Password change error:", error);
+      console.error('Password change error:', error);
       setAlertTitle('Error');
-      setAlertMessage("Failed to connect to server. Please try again.");
+      setAlertMessage('Failed to connect to server. Please try again.');
       setShowAlertModal(true);
     } finally {
-      setLoading(false);
+      setPasswordLoading(false);
     }
   };
 
@@ -726,7 +612,7 @@ const handleAcceptTermsAndSave = async () => {
                 <p className="user-email">{formData.email}</p>
                 <div className="role-badge">
                   <ShieldIcon />
-                  <span>COLLECTOR</span>
+                  <span>Collector</span>
                 </div>
                 <p className="joined-date">Joined {joinedDate}</p>
               </div>
@@ -737,7 +623,7 @@ const handleAcceptTermsAndSave = async () => {
             <div className="section-header-row">
               <h3>Personal Information</h3>
               {!isEditing && (
-                <button className="edit-link" onClick={() => setIsEditing(true)}>
+                <button type="button" className="edit-btn" onClick={() => setIsEditing(true)}>
                   Edit Information
                 </button>
               )}
@@ -761,7 +647,7 @@ const handleAcceptTermsAndSave = async () => {
               </div>
 
               <div className={`form-group ${touched.middleName && errors.middleName ? 'has-error' : ''}`}>
-                <label>Middle Name *</label>
+                <label>Middle Name</label>
                 <input
                   type="text"
                   className={`form-input ${touched.middleName && errors.middleName ? 'error' : ''}`}
@@ -793,8 +679,8 @@ const handleAcceptTermsAndSave = async () => {
               </div>
 
               {/* Address Section */}
-              <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
-                <h4 style={{ marginBottom: '1.25rem', marginTop: '0.5rem', color: '#374151', fontSize: '1rem', fontWeight: '600' }}>Address Information</h4>
+              <div className="address-subsection">
+                <h4 className="address-section-title">Address Information</h4>
                 <AddressDropdowns
                   value={formData.address}
                   onChange={(newAddress) => setFormData({ ...formData, address: newAddress })}
@@ -820,6 +706,7 @@ const handleAcceptTermsAndSave = async () => {
                 )}
               </div>
             </div>
+            
 
             {isEditing && (
               <div className="action-buttons">
@@ -841,89 +728,28 @@ const handleAcceptTermsAndSave = async () => {
 
           {/* Bottom Sections: Password & Preferences */}
           <div className="bottom-sections">
-          {/* Change Password Section */}
+            {/* Change Password Section */}
           <div className="password-section">
             <div className="section-title">
               <LockIcon />
               <h3>Change Password</h3>
             </div>
             <div className="password-form">
+              {passwordLoading && (
+                <div className="password-inline-loading">
+                  {!otpSent ? 'Sending OTP...' : !otpVerified ? 'Verifying code...' : 'Saving...'}
+                </div>
+              )}
               {!otpSent ? (
                 <>
-                  <div className="form-group">
-                    <label>Type New Password</label>
-                    <div className="password-input-wrapper">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        className={`form-input ${passwordTouched.newPassword && passwordErrors.newPassword ? 'error' : ''}`}
-                        value={passwordData.newPassword}
-                        onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                        onBlur={() => handlePasswordBlur('newPassword')}
-                        placeholder="••••••••••••"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        tabIndex={-1}
-                      >
-                        {showNewPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </button>
-                    </div>
-                    {passwordTouched.newPassword && passwordErrors.newPassword && (
-                      <div className="error-message">
-                        {passwordErrors.newPassword}
-                      </div>
-                    )}
-                  </div>
-                  <div className="form-group">
-                    <label>Confirm New Password</label>
-                    <div className="password-input-wrapper">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        className={`form-input ${passwordTouched.confirmPassword && passwordErrors.confirmPassword ? 'error' : ''}`}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                        onBlur={() => handlePasswordBlur('confirmPassword')}
-                        placeholder="••••••••••••"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </button>
-                    </div>
-                    {passwordTouched.confirmPassword && passwordErrors.confirmPassword && (
-                      <div className="error-message">
-                        {passwordErrors.confirmPassword}
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    className="change-password-btn" 
-                    onClick={handleSendOTP}
-                    disabled={loading}
-                  >
-                    {loading ? 'Sending...' : 'Send OTP Code'}
+                  <p className="password-step-hint">We&apos;ll send a verification code to your email. Click below to receive it.</p>
+                  <button type="button" className="change-password-btn" onClick={handleSendOTP} disabled={passwordLoading}>
+                    Send OTP Code
                   </button>
                 </>
               ) : !otpVerified ? (
                 <>
-                  {otpMessage && (
-                    <div className="otp-message" style={{ 
-                      padding: '10px', 
-                      marginBottom: '15px', 
-                      backgroundColor: '#e3f2fd', 
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      color: '#1976d2'
-                    }}>
-                      {otpMessage}
-                    </div>
-                  )}
+                  {otpMessage && <div className="otp-message">{otpMessage}</div>}
                   <div className="form-group">
                     <label>Enter Verification Code (OTP)</label>
                     <input
@@ -939,278 +765,72 @@ const handleAcceptTermsAndSave = async () => {
                       placeholder="000000"
                       maxLength="6"
                     />
-                    {passwordTouched.otp && passwordErrors.otp && (
-                      <div className="error-message">
-                        {passwordErrors.otp}
-                      </div>
-                    )}
+                    {passwordTouched.otp && passwordErrors.otp && <div className="error-message">{passwordErrors.otp}</div>}
                   </div>
-                  <button 
-                    className="change-password-btn" 
-                    onClick={handleVerifyOTP}
-                    disabled={loading || passwordData.otp.length !== 6}
-                  >
-                    {loading ? 'Verifying...' : 'Verify OTP'}
+                  <button type="button" className="change-password-btn" onClick={handleVerifyOTP} disabled={passwordLoading || passwordData.otp.length !== 6}>
+                    Verify OTP
                   </button>
-                  <button 
-                    className="otp-link" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setOtpSent(false);
-                      setPasswordData({ ...passwordData, otp: '' });
-                      setPasswordErrors(prev => ({ ...prev, otp: '' }));
-                      setOtpMessage('');
-                    }}
-                    style={{ 
-                      display: 'block', 
-                      marginTop: '10px', 
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      color: '#10b981',
-                      textDecoration: 'none'
-                    }}
-                  >
+                  <button type="button" className="otp-link" onClick={(e) => { e.preventDefault(); setOtpSent(false); setPasswordData({ ...passwordData, otp: '' }); setPasswordErrors(prev => ({ ...prev, otp: '' })); setOtpMessage(''); }}>
                     Cancel / Request New OTP
                   </button>
                 </>
               ) : (
                 <>
-                  {otpMessage && (
-                    <div className="otp-message" style={{ 
-                      padding: '10px', 
-                      marginBottom: '15px', 
-                      backgroundColor: '#e8f5e9', 
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      color: '#2e7d32'
-                    }}>
-                      {otpMessage}
-                    </div>
-                  )}
+                  {otpMessage && <div className="otp-message otp-message-success">{otpMessage}</div>}
                   <div className="form-group">
-                    <label>Type New Password</label>
-                    <div className="password-input-wrapper">
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        className={`form-input ${passwordTouched.newPassword && passwordErrors.newPassword ? 'error' : ''}`}
-                        value={passwordData.newPassword}
-                        onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                        onBlur={() => handlePasswordBlur('newPassword')}
-                        placeholder="••••••••••••"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        tabIndex={-1}
-                      >
-                        {showNewPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </button>
-                    </div>
-                    {passwordTouched.newPassword && passwordErrors.newPassword && (
-                      <div className="error-message">
-                        {passwordErrors.newPassword}
-                      </div>
-                    )}
+                    <label>New Password</label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className={`form-input ${passwordTouched.newPassword && passwordErrors.newPassword ? 'error' : ''}`}
+                      value={passwordData.newPassword}
+                      onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                      onBlur={() => handlePasswordBlur('newPassword')}
+                      placeholder="••••••••••••"
+                    />
+                    {passwordTouched.newPassword && passwordErrors.newPassword && <div className="error-message">{passwordErrors.newPassword}</div>}
                   </div>
                   <div className="form-group">
                     <label>Confirm New Password</label>
-                    <div className="password-input-wrapper">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        className={`form-input ${passwordTouched.confirmPassword && passwordErrors.confirmPassword ? 'error' : ''}`}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                        onBlur={() => handlePasswordBlur('confirmPassword')}
-                        placeholder="••••••••••••"
-                      />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </button>
-                    </div>
-                    {passwordTouched.confirmPassword && passwordErrors.confirmPassword && (
-                      <div className="error-message">
-                        {passwordErrors.confirmPassword}
-                      </div>
-                    )}
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className={`form-input ${passwordTouched.confirmPassword && passwordErrors.confirmPassword ? 'error' : ''}`}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                      onBlur={() => handlePasswordBlur('confirmPassword')}
+                      placeholder="••••••••••••"
+                    />
+                    {passwordTouched.confirmPassword && passwordErrors.confirmPassword && <div className="error-message">{passwordErrors.confirmPassword}</div>}
                   </div>
-                  <button 
-                    className="change-password-btn" 
-                    onClick={handleChangePassword}
-                    disabled={loading}
-                  >
-                    {loading ? 'Changing...' : 'Change Password'}
+                  <div className="form-group password-show-checkbox">
+                    <label className="checkbox-label">
+                      <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+                      <span>Show password</span>
+                    </label>
+                  </div>
+                  <button type="button" className="change-password-btn" onClick={handleChangePassword} disabled={passwordLoading}>
+                    Save Changes
                   </button>
                 </>
               )}
             </div>
           </div>
+
         </div>
         </div>
       </div>
 
-      {/* Terms and Conditions Modal */}
-      {showTermsModal && (
-        <div className="terms-modal-overlay" onClick={() => setShowTermsModal(false)}>
-          <div className="terms-modal-content" onClick={(e) => e.stopPropagation()}>
+      {showSaveConfirmModal && (
+        <div className="terms-modal-overlay" onClick={() => setShowSaveConfirmModal(false)}>
+          <div className="terms-modal-content terms-modal-compact" onClick={(e) => e.stopPropagation()}>
             <div className="terms-modal-header">
-              <h2>Terms and Conditions & Privacy Policy</h2>
-              <button className="terms-close-btn" onClick={() => setShowTermsModal(false)}>×</button>
+              <h2>Confirm Save</h2>
             </div>
-            
-            <div 
-              className="terms-modal-body"
-              onScroll={(e) => {
-                const element = e.target;
-                const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10; // 10px threshold
-                setHasScrolledToBottom(isAtBottom);
-              }}
-            >
-              {/* Terms and Conditions Card */}
-              <div className="terms-card">
-                <h3 className="terms-card-title">Terms and Conditions</h3>
-                <div className="terms-card-content">
-                  <div className="terms-section">
-                    <h4>1. Acceptance of Terms</h4>
-                    <p>By creating an account and using Automatic Garbage Sorting System services, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use our services.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>2. Account Registration</h4>
-                    <p>You must provide accurate and complete information during registration. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>3. Use of Services</h4>
-                    <ul>
-                      <li>You agree to use our services only for lawful purposes</li>
-                      <li>You will not attempt to interfere with or disrupt our systems</li>
-                      <li>You will not share your account with unauthorized users</li>
-                      <li>You will comply with all applicable laws and regulations</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>4. Data Privacy</h4>
-                    <p>We collect and process your personal data in accordance with our Privacy Policy. Your farm data is encrypted and stored securely. We will never sell your personal information to third parties.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>5. Service Availability</h4>
-                    <p>While we strive for 99.9% uptime, we cannot guarantee uninterrupted service. We reserve the right to perform maintenance and updates that may temporarily affect service availability.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>6. Warranty and Liability</h4>
-                    <p>Hardware comes with manufacturer warranty as specified in your package. We are not liable for Bin damages resulting from sensor malfunction, incorrect data interpretation, or force majeure events.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>7. Payment Terms</h4>
-                    <p>All hardware purchases are one-time payments. Subscription fees (if applicable) are billed monthly or annually. Refunds are available within 30 days of purchase for unused hardware in original condition.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>8. Changes to Terms</h4>
-                    <p>We may update these terms from time to time. Continued use of our services after changes constitutes acceptance of the modified terms.</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Privacy Policy Card */}
-              <div className="terms-card">
-                <h3 className="terms-card-title">Privacy Policy</h3>
-                <div className="terms-card-content">
-                  <div className="terms-section">
-                    <h4>1. Information We Collect</h4>
-                    <p>We collect information you provide directly to us, including your first name, middle name, last name, email address and complete address (region, province, city/municipality, barangay, and street address). We also collect data related to your role, account status, and activities within the Automatic Garbage Sorting System.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>2. How We Use Your Information</h4>
-                    <p>We use the information we collect to:</p>
-                    <ul>
-                      <li>Provide, maintain, and improve our services</li>
-                      <li>Monitor and analyze trends, usage, and activities</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>3. Data Sharing and Disclosure</h4>
-                    <p>We do not sell your personal information. We may share your information with:</p>
-                    <ul>
-                      <li>Service providers who perform services on our behalf</li>
-                      <li>Professional advisors such as lawyers and accountants</li>
-                      <li>Law enforcement when required by law</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>4. Data Security</h4>
-                    <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>5. Data Retention</h4>
-                    <p>We retain your personal information for as long as necessary to provide our services and comply with legal obligations. Sensor data is retained for up to 5 years to enable historical analysis and trending.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>6. Your Rights</h4>
-                    <p>You have the right to:</p>
-                    <ul>
-                      <li>Access and receive a copy of your personal information</li>
-                      <li>Correct inaccurate or incomplete information</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>7. Cookies and Tracking</h4>
-                    <p>We use cookies and similar tracking technologies to collect information about your browsing activities and to remember your preferences. You can control cookies through your browser settings.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>8. Third-Party Services</h4>
-                    <p>Our services may contain links to third-party websites or integrate with third-party services. We are not responsible for the privacy practices of these third parties.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>9. Children's Privacy</h4>
-                    <p>Our services are not directed to individuals under 18. We do not knowingly collect personal information from children.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>10. Changes to Privacy Policy</h4>
-                    <p>We may update this privacy policy from time to time. We will notify you of material changes by email or through our services.</p>
-                  </div>
-                  
-                  <div className="terms-section">
-                    <h4>11. Contact Us</h4>
-                    <p>For privacy-related questions or to exercise your rights, contact us at karlandreiroyo86@gmail.com.</p>
-                  </div>
-                </div>
-              </div>
+            <div className="terms-modal-body" style={{ padding: '20px', textAlign: 'center' }}>
+              <p style={{ fontSize: '16px', color: '#374151' }}>Are you sure you want to save these changes to your information?</p>
             </div>
-            
             <div className="terms-modal-footer">
-              <button className="terms-cancel-btn" onClick={() => {
-                setShowTermsModal(false);
-                setHasScrolledToBottom(false);
-              }}>
-                Cancel
-              </button>
-              <button 
-                className="terms-accept-btn" 
-                onClick={handleAcceptTermsAndSave}
-                disabled={!hasScrolledToBottom}
-              >
-                Done / Accept
-              </button>
+              <button type="button" className="terms-cancel-btn" onClick={() => setShowSaveConfirmModal(false)}>Cancel</button>
+              <button type="button" className="terms-accept-btn" onClick={handleConfirmSave}>Save Changes</button>
             </div>
           </div>
         </div>
@@ -1219,10 +839,9 @@ const handleAcceptTermsAndSave = async () => {
       {/* Alert Modal */}
       {showAlertModal && (
         <div className="terms-modal-overlay" onClick={() => setShowAlertModal(false)}>
-          <div className="terms-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="terms-modal-content terms-modal-compact" onClick={(e) => e.stopPropagation()}>
             <div className="terms-modal-header">
               <h2>{alertTitle}</h2>
-              <button className="terms-close-btn" onClick={() => setShowAlertModal(false)}>×</button>
             </div>
             <div className="terms-modal-body" style={{ padding: '20px', textAlign: 'center' }}>
               <div style={{ marginBottom: '20px' }}>

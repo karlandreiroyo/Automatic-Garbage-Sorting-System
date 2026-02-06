@@ -10,13 +10,18 @@
   --bg-section: #F3F4F6;
 }
 
-/* Container */
+/* Container – match Collection History .history-page spacing; fills content-body (no green gap) */
 .profile-container {
   width: 100%;
-  height: 100vh;
-  padding: 2.5rem 3rem;
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  outline: none;
+  outline-offset: 0;
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: #fff;
+  background: #f9fafb;
   color: var(--text-primary);
   position: relative;
   overflow: hidden;
@@ -25,30 +30,33 @@
   box-sizing: border-box;
 }
 
-/* Header */
+/* Header – match Collection History .history-header-section */
 .profile-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .profile-header h1 {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
+  line-height: 1.25;
 }
 
 .profile-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  margin: 0;
+  margin: 0 0 0.75rem 0;
 }
 
-/* Profile Content Grid */
+/* Profile Content Grid – match Collection History .history-list gap */
 .profile-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: 0;
   flex: 1;
   overflow: hidden;
   position: relative;
@@ -58,9 +66,10 @@
 .profile-summary-card {
   background: white;
   border-radius: 12px;
-  padding: 2.5rem;
+  padding: 1rem 1.25rem;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  outline: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1.5px solid rgba(0, 0, 0, 0.14);
   width: 100%;
   flex-shrink: 0;
   overflow: visible;
@@ -75,28 +84,27 @@
 .bottom-sections {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  gap: 0.75rem;
 }
 
 .profile-main-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0.75rem;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
   padding-right: 0;
-  padding-bottom: 2rem;
+  padding-bottom: 0;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
 }
 
-
 .profile-top-section {
   display: flex;
   align-items: center;
-  gap: 3rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -158,7 +166,7 @@
 }
 
 .user-name {
-  font-size: 1.4rem;
+  font-size: clamp(1.15rem, 2.5vw, 1.4rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -169,7 +177,7 @@
 }
 
 .user-email {
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 1.5vw, 0.95rem);
   color: var(--text-secondary);
   margin: 0;
   word-wrap: break-word;
@@ -202,13 +210,14 @@
   margin: 0;
 }
 
-/* Information Section */
+/* Information Section – match Collection History card spacing */
 .info-section {
   background: #b7efc5;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1rem 1.25rem;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  outline: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1.5px solid rgba(0, 0, 0, 0.14);
   min-height: fit-content;
   width: 100%;
   box-sizing: border-box;
@@ -218,38 +227,55 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .section-header-row h3 {
-  font-size: 1.1rem;
+  font-size: clamp(1rem, 2vw, 1.1rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
 }
 
-.edit-link {
-  background: none;
-  border: none;
-  color: var(--green-dark);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s;
+.address-subsection {
+  grid-column: 1 / -1;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
 }
 
-.edit-link:hover {
-  color: var(--green-text);
-  text-decoration: underline;
+.address-section-title {
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.edit-btn {
+  background: var(--green-dark);
+  border: none;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.edit-btn:hover {
+  background: var(--green-text);
+  transform: translateY(-1px);
 }
 
 /* Personal Info Grid */
 .personal-info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  margin-bottom: 0;
   width: 100%;
 }
 
@@ -265,17 +291,17 @@
 }
 
 .form-group label {
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 1.5vw, 0.85rem);
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .form-input {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0.875rem 1rem;
+  padding: 0.6rem 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 0.9rem;
@@ -340,8 +366,8 @@
 /* Action Buttons */
 .action-buttons {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .cancel-btn {
@@ -418,7 +444,9 @@
 .password-section {
   background: var(--bg-section);
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1rem 1.25rem;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  outline: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -426,11 +454,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .section-title h3 {
-  font-size: 1.1rem;
+  font-size: clamp(1rem, 2vw, 1.1rem);
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -443,7 +471,7 @@
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
 }
 
 .change-password-btn {
@@ -466,6 +494,9 @@
 }
 
 .otp-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
   background: none;
   border: none;
   color: var(--green-text);
@@ -473,7 +504,6 @@
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0.5rem 0;
-  text-align: left;
   transition: color 0.2s;
 }
 
@@ -482,11 +512,70 @@
   text-decoration: underline;
 }
 
+.password-inline-loading {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #e3f2fd;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1976d2;
+}
+
+.password-step-hint {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.otp-message {
+  padding: 10px;
+  margin-bottom: 15px;
+  background: #e3f2fd;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1976d2;
+}
+
+.otp-message-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.password-show-checkbox {
+  margin-bottom: 0;
+}
+
+.password-show-checkbox .checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.password-show-checkbox .checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green-text);
+  cursor: pointer;
+}
+
+.change-password-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Preferences Section */
 .preferences-section {
   background: var(--bg-section);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  outline: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -588,206 +677,59 @@
 }
 
 @media (max-width: 1024px) {
-  .profile-content {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .bottom-sections {
-    grid-template-columns: 1fr;
-  }
-
-  .personal-info-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 1024px) {
-  .profile-header {
-    text-align: center;
-    padding-left: 50px;
-    padding-right: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .profile-header h1 {
-    text-align: center;
-    width: 100%;
-  }
-  
-  .profile-subtitle {
-    text-align: center;
-    width: 100%;
-  }
+  .profile-content { display: flex; flex-direction: column; }
+  .bottom-sections { grid-template-columns: 1fr; gap: 0.75rem; }
+  .personal-info-grid { grid-template-columns: 1fr; }
+  .profile-header { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .profile-header h1, .profile-subtitle { text-align: center; width: 100%; }
 }
 
 @media (max-width: 768px) {
-  .profile-container {
-    padding: 1rem;
-  }
-  
-  .profile-header {
-    text-align: center;
-    padding-left: 50px;
-    padding-right: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .profile-header h1 {
-    text-align: center;
-    width: 100%;
-  }
-  
-  .profile-subtitle {
-    text-align: center;
-    width: 100%;
-  }
+  .profile-header { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .profile-header h1, .profile-subtitle { text-align: center; width: 100%; }
+  .profile-content, .profile-main-content { gap: 0.75rem; }
+  .profile-summary-card { padding: 1rem 1.25rem; }
+  .profile-top-section { flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
+  .profile-info-middle { align-items: center; text-align: center; width: 100%; }
+  .user-name { font-size: 1.2rem; text-align: center; word-wrap: break-word; overflow-wrap: break-word; }
+  .user-email { font-size: 0.9rem; text-align: center; word-wrap: break-word; overflow-wrap: break-word; }
+  .role-badge { margin: 0 auto; }
+  .joined-date { text-align: center; }
+  .avatar-circle { width: 100px; height: 100px; font-size: 2rem; }
+  .info-section, .password-section, .preferences-section { padding: 1rem 1.25rem; }
+  .personal-info-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .section-header-row { margin-bottom: 0.75rem; }
+  .address-subsection { margin-top: 0.75rem; }
+  .address-section-title { margin-bottom: 0.75rem; }
+}
 
-  .profile-summary-card {
-    padding: 1.5rem;
-  }
-
-  .profile-top-section {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 1rem;
-  }
-
-  .profile-info-middle {
-    align-items: center;
-    text-align: center;
-    width: 100%;
-  }
-
-  .user-name {
-    font-size: 1.2rem;
-    text-align: center;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .user-email {
-    font-size: 0.9rem;
-    text-align: center;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .role-badge {
-    margin: 0 auto;
-  }
-
-  .joined-date {
-    text-align: center;
-  }
-
-  .avatar-circle {
-    width: 100px;
-    height: 100px;
-    font-size: 2rem;
-  }
-
-  .info-section,
-  .password-section,
-  .preferences-section {
-    padding: 1.25rem;
-  }
-
-  .personal-info-grid {
-    gap: 0.75rem;
-  }
+@media (max-width: 700px) {
+  .profile-container { padding: 1rem 1.5rem; }
+  .profile-header { margin-bottom: 0.75rem; }
+  .profile-content, .profile-main-content { gap: 0.75rem; }
+  .bottom-sections { gap: 0.75rem; }
 }
 
 @media (max-width: 480px) {
-  .profile-header {
-    text-align: center;
-    padding-left: 50px;
-    padding-right: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .profile-header h1 {
-    font-size: 1.5rem;
-    text-align: center;
-    width: 100%;
-  }
-  
-  .profile-subtitle {
-    text-align: center;
-    width: 100%;
-    font-size: 0.9rem;
-  }
-
-  .profile-summary-card {
-    padding: 1rem;
-  }
-
-  .profile-top-section {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.75rem;
-  }
-
-  .profile-info-middle {
-    align-items: center;
-    text-align: center;
-    width: 100%;
-  }
-
-  .user-name {
-    font-size: 1.1rem;
-    text-align: center;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .user-email {
-    font-size: 0.85rem;
-    text-align: center;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .role-badge {
-    margin: 0 auto;
-    font-size: 0.8rem;
-    padding: 5px 12px;
-  }
-
-  .joined-date {
-    text-align: center;
-    font-size: 0.8rem;
-  }
-
-  .avatar-circle {
-    width: 80px;
-    height: 80px;
-    font-size: 1.8rem;
-  }
-
-  .section-header-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .cancel-btn,
-  .save-btn,
-  .change-password-btn {
-    width: 100%;
-  }
+  .profile-container { padding: 1rem 1.5rem; }
+  .profile-header { margin-bottom: 0.75rem; }
+  .profile-header h1 { font-size: 1.5rem; }
+  .profile-subtitle { font-size: 0.9rem; }
+  .profile-summary-card { padding: 1rem 1.25rem; }
+  .profile-top-section { gap: 0.5rem; }
+  .user-name { font-size: 1.1rem; }
+  .user-email { font-size: 0.85rem; }
+  .role-badge { margin: 0 auto; font-size: 0.8rem; padding: 5px 12px; }
+  .joined-date { font-size: 0.8rem; }
+  .avatar-circle { width: 80px; height: 80px; font-size: 1.8rem; }
+  .info-section, .password-section, .preferences-section { padding: 1rem 1.25rem; }
+  .personal-info-grid { gap: 0.75rem; }
+  .section-header-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .action-buttons { flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+  .cancel-btn, .save-btn, .change-password-btn { width: 100%; }
+  .terms-modal-overlay { padding: 0.5rem; }
+  .terms-modal-header, .terms-modal-footer { padding: 0.5rem 0.75rem; }
+  .terms-modal-body { padding: 0.75rem; }
 }
 
 /* Terms and Conditions Modal */
@@ -802,7 +744,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 0.75rem;
   overflow-y: auto;
   pointer-events: none;
 }
@@ -814,8 +756,9 @@
 .terms-modal-content {
   background: white;
   border-radius: 16px;
-  width: 100%;
-  max-width: 900px;
+  width: fit-content;
+  min-width: 280px;
+  max-width: min(400px, 95vw);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -823,18 +766,22 @@
   overflow: hidden;
 }
 
+.terms-modal-content.terms-modal-compact {
+  max-width: min(380px, 95vw);
+}
+
 .terms-modal-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 1rem;
   border-bottom: 2px solid var(--border-color);
   background: linear-gradient(135deg, var(--green-text) 0%, var(--green-dark) 100%);
   color: white;
 }
 
 .terms-modal-header h2 {
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 3vw, 1.25rem);
   font-weight: 700;
   margin: 0;
   color: white;
@@ -863,12 +810,12 @@
 }
 
 .terms-modal-body {
-  padding: 2rem;
+  padding: 1rem;
   overflow-y: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 /* Terms Card */
@@ -974,8 +921,8 @@
 .terms-modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem 2rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-top: 2px solid var(--border-color);
   background: var(--bg-gray);
 }

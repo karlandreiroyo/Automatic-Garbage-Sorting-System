@@ -27,7 +27,10 @@
   font-family: 'Segoe UI', Roboto, sans-serif;
   color: var(--text-primary);
   background: linear-gradient(135deg, #F9FAFB 0%, #EFF6FF 50%, #ECFDF5 100%);
-  min-height: 100vh;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .welcome-banner {

@@ -297,7 +297,7 @@ const Accounts = () => {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
               error = 'Email cannot end with @ or a period';
             } else if (!emailRegex.test(emailVal)) {
-              error = 'Invalid domain format (e.g., .com, .ph)';
+              error = 'Invalid domain format (e.g., .com)';
             }
           }
         }
@@ -319,7 +319,7 @@ const Accounts = () => {
           if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
             error = 'Email cannot end with @ or a period';
           } else if (!emailRegex.test(emailVal)) {
-            error = 'Invalid domain format (e.g., .com, .ph)';
+            error = 'Invalid domain format (e.g., .com)';
           }
         }
         break;
