@@ -1,4 +1,4 @@
-# Password Hashing Guide (Supabase)
+.# Password Hashing Guide (Supabase)
 
 This guide explains how to store passwords as hashes in your database and how to fix old accounts that still have plain-text passwords. **Supabase** does not hash values for you inside the table; you hash in your app (or in a one-time script) and then store the hash.
 

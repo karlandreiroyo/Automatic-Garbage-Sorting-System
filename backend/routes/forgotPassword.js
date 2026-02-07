@@ -25,66 +25,55 @@ router.post('/send-code', async (req, res) => {
     let user = null;
 
     if (isEmail) {
-      // Find user by email (case-insensitive search)
+      // Find user by primary email OR verified backup (second) email (case-insensitive)
       email = emailOrMobile.trim().toLowerCase();
       
-      console.log('Searching for user with email:', email);
+      console.log('Searching for user with email or backup email:', email);
       
-      // Try multiple search methods
       let userData = null;
       let userError = null;
       
-      // Method 1: Try exact match first (most reliable)
+      // Method 1: Look up by primary email
       let result = await supabase
         .from('users')
-        .select('id, email, auth_id, status')
-        .eq('email', email)
+        .select('id, email, auth_id, status, second_email, second_email_verified')
+        .ilike('email', email)
         .maybeSingle();
-      
-      console.log('Exact match result:', result);
       
       if (result.data) {
         userData = result.data;
-        console.log('User found with exact match:', userData);
-      } else {
-        // Method 2: Try case-insensitive search
+        console.log('User found by primary email:', userData.email);
+      }
+      
+      // Method 2: If not found, look up by verified backup (second) email
+      if (!userData) {
         result = await supabase
           .from('users')
-          .select('id, email, auth_id, status')
-          .ilike('email', email);
+          .select('id, email, auth_id, status, second_email, second_email_verified')
+          .eq('second_email_verified', true)
+          .ilike('second_email', email)
+          .maybeSingle();
         
-        console.log('Case-insensitive match result:', result);
-        
-        if (result.data && result.data.length > 0) {
-          userData = result.data[0];
-          console.log('User found with case-insensitive match:', userData);
+        if (result.data) {
+          userData = result.data;
+          console.log('User found by verified backup email:', userData.second_email);
         } else {
-          // Method 3: Try without .maybeSingle() to see all users
-          const allUsers = await supabase
-            .from('users')
-            .select('id, email, auth_id, status')
-            .limit(100);
-          
-          console.log('All users in database:', allUsers.data?.map(u => u.email));
           userError = result.error || 'User not found';
         }
       }
 
       if (!userData) {
-        // Last resort: Try searching all users to see what emails exist
         const { data: allUsers } = await supabase
           .from('users')
           .select('email')
           .limit(100);
-        
         const emailList = allUsers?.map(u => u.email).join(', ') || 'none';
-        console.error('User lookup failed for email:', email);
-        console.error('Available emails in database:', emailList);
+        console.error('User lookup failed for email/backup email:', email);
         console.error('Error details:', userError);
         
         return res.status(404).json({ 
           success: false, 
-          message: `User not found with email: ${email}. Please make sure the account was created in the admin panel.` 
+          message: 'No account found with this email or backup email. Please check the address or contact your administrator.' 
         });
       }
       
@@ -343,20 +332,30 @@ router.post('/resend-code', async (req, res) => {
 
     if (isEmail) {
       email = emailOrMobile.trim().toLowerCase();
-      const { data: userData, error: userError } = await supabase
+      // Look up by primary email first, then by verified backup (second) email
+      let result = await supabase
         .from('users')
-        .select('id, email, auth_id, status')
+        .select('id, email, auth_id, status, second_email, second_email_verified')
         .ilike('email', email)
-        .single();
+        .maybeSingle();
 
-      if (userError || !userData) {
+      if (!result.data) {
+        result = await supabase
+          .from('users')
+          .select('id, email, auth_id, status, second_email, second_email_verified')
+          .eq('second_email_verified', true)
+          .ilike('second_email', email)
+          .maybeSingle();
+      }
+
+      if (result.error || !result.data) {
         return res.status(404).json({ 
           success: false, 
-          message: 'User not found with this email' 
+          message: 'No account found with this email or backup email.' 
         });
       }
 
-      user = userData;
+      user = result.data;
     } else {
       // Phone-based resend has been removed
       return res.status(400).json({ 

@@ -321,12 +321,12 @@ const Forgot = () => {
             <h2>Reset Password</h2>
             {error && <div className="error-message">{error}</div>}
             <p className="subtitle">
-              Enter your email
+              Enter your email or backup email
             </p>
 
             <input
-              type="text"
-              placeholder="Email"
+              type="email"
+              placeholder="Email or backup email"
               value={emailOrMobile}
               onChange={(e) => {
                 setEmailOrMobile(e.target.value);

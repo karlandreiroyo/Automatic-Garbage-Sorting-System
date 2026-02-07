@@ -4,6 +4,7 @@
   max-width: 100%;
   margin: 0;
   animation: fadeInUp 0.4s ease-out forwards;
+  overflow: visible;
 }
 
 @keyframes fadeInUp {
@@ -47,11 +48,13 @@
   margin-bottom: 20px;
   width: 100%;
   box-sizing: border-box;
+  overflow: visible;
 }
 
 .stats-grid > * {
   min-width: 0;
   max-width: 100%;
+  overflow: visible;
 }
 
 /* Card: icon + label + value all in one horizontal row; icon and content centered */
@@ -145,6 +148,7 @@
 .admin-dash-container .stat-card-wrapper.stat-card-employees-dropdown {
   position: relative;
   min-width: 0;
+  overflow: visible;
 }
 
 .admin-dash-container .stat-card-dropdown-role {
@@ -182,7 +186,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  z-index: 50;
+  z-index: 9999;
   max-height: 280px;
   overflow: auto;
 }

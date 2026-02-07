@@ -68,6 +68,19 @@ const SuperAdminDash = ({ onNavigateTo }) => {
     fetchDashboardData();
   }, []);
 
+  // Real-time: refetch dashboard when users table changes (new collector/admin, status change, etc.)
+  useEffect(() => {
+    const channel = supabase
+      .channel('superadmin-dashboard-users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     fetchWasteDistribution(selectedDate);
   }, [selectedDate]);
@@ -100,22 +113,22 @@ const fetchDashboardData = async () => {
     
     if (binsError) throw binsError;
     
-    // Fetch users to get employee counts and collector list (names for dropdown)
+    // Fetch users to get employee counts and lists (count all by role to match Supabase, including PENDING)
     const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('id, role, status, first_name, last_name');
 
     if (usersError) throw usersError;
 
-    const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
+    const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
+    const adminUsers = usersData?.filter(u => u.role === 'ADMIN') || [];
     const admins = adminUsers.length;
     setAdminsList(adminUsers);
-    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
-    const totalEmployees = activeEmployees.length;
-    setEmployeesList(activeEmployees);
+    const allEmployees = usersData || [];
+    const totalEmployees = allEmployees.length;
+    setEmployeesList(allEmployees);
 
     // Fetch waste items for statistics (overall - not date-specific)
     const { data: itemsData, error: itemsError } = await supabase
@@ -423,21 +436,51 @@ const fetchWasteDistribution = async (dateString) => {
           </div>
           {employeesDropdownOpen && (
             <div className="stat-card-dropdown">
-              <div className="stat-card-dropdown-title">All Employees</div>
-              <ul className="stat-card-dropdown-list">
-                {employeesList.length === 0 ? (
-                  <li className="stat-card-dropdown-item empty">No employees</li>
-                ) : (
-                  employeesList.map((emp) => {
-                    const roleLabel = emp.role === 'SUPERVISOR' ? 'Superadmin' : emp.role === 'ADMIN' ? 'Admin' : 'Collector';
-                    return (
-                      <li key={emp.id || `${emp.first_name}-${emp.last_name}-${emp.role}`} className="stat-card-dropdown-item">
-                        {[emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Unnamed'} <span className="stat-card-dropdown-role">({roleLabel})</span>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
+              {(() => {
+                const collectors = employeesList.filter(e => e.role === 'COLLECTOR');
+                const admins = employeesList.filter(e => e.role === 'ADMIN');
+                const superAdmins = employeesList.filter(e => e.role === 'SUPERVISOR' || e.role === 'SUPERADMIN');
+                return (
+                  <>
+                    <div className="stat-card-dropdown-title">All Collectors</div>
+                    <ul className="stat-card-dropdown-list">
+                      {collectors.length === 0 ? (
+                        <li className="stat-card-dropdown-item empty">No collectors</li>
+                      ) : (
+                        collectors.map((emp) => (
+                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-collector`} className="stat-card-dropdown-item">
+                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                    <div className="stat-card-dropdown-title">All Admins</div>
+                    <ul className="stat-card-dropdown-list">
+                      {admins.length === 0 ? (
+                        <li className="stat-card-dropdown-item empty">No admins</li>
+                      ) : (
+                        admins.map((emp) => (
+                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-admin`} className="stat-card-dropdown-item">
+                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                    <div className="stat-card-dropdown-title">All Super Admins</div>
+                    <ul className="stat-card-dropdown-list">
+                      {superAdmins.length === 0 ? (
+                        <li className="stat-card-dropdown-item empty">No super admins</li>
+                      ) : (
+                        superAdmins.map((emp) => (
+                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-superadmin`} className="stat-card-dropdown-item">
+                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
