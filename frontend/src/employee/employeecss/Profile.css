@@ -15,8 +15,6 @@
   width: 100%;
   max-width: 100%;
   flex: 1;
-  min-height: 0;
-  margin: 0;
   padding: 1rem 1.5rem;
   outline: none;
   outline-offset: 0;
@@ -56,7 +54,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-top: 0;
   flex: 1;
   overflow: hidden;
   position: relative;
@@ -210,7 +207,7 @@
   margin: 0;
 }
 
-/* Information Section – match Collection History card spacing */
+/* Information Section */
 .info-section {
   background: #b7efc5;
   border-radius: 12px;
@@ -220,7 +217,27 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   min-height: fit-content;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+}
+
+.info-section .section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -1rem -1.25rem 0.75rem -1.25rem;
+  padding: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background: var(--green-dark);
+  border-radius: 12px 12px 0 0;
+}
+
+.info-section .section-header-row h3 {
+  font-size: clamp(1rem, 2vw, 1.1rem);
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
 }
 
 .section-header-row {
@@ -245,6 +262,15 @@
   margin-bottom: 0;
 }
 
+.info-section .address-section-title {
+  margin: 0 -1.25rem 0.75rem -1.25rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--green-text);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .address-section-title {
   margin-bottom: 0.75rem;
   margin-top: 0;
@@ -265,24 +291,52 @@
   transition: background 0.2s, transform 0.15s;
 }
 
+.info-section .section-header-row .edit-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.info-section .section-header-row .edit-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 .edit-btn:hover {
   background: var(--green-text);
   transform: translateY(-1px);
 }
 
-/* Personal Info Grid */
+/* Personal Info Grid – name row (equal-width flex) then address; maximize horizontal space */
 .personal-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   margin-bottom: 0;
   width: 100%;
+  box-sizing: border-box;
 }
 
-.personal-info-grid .form-input {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
+/* One row: First | Middle | Last – equal width, clear gap between each input box */
+.name-fields-row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 200%; /* Changed from 1px to 100% */
+  box-sizing: border-box;
+}
+
+.name-fields-row .form-group {
+  flex: 1; /* Simplified - each field takes equal space */
+  min-width: 0; /* Changed from 100px to 0 to allow proper flexbox sizing */
+  box-sizing: border-box;
+}
+
+/* Only the 3 name input boxes – longer */
+.name-fields-row input.form-input {
+  width: 100%; /* Changed from 1% to 100% */
+  box-sizing: border-box;
 }
 
 .form-group {
@@ -679,7 +733,7 @@
 @media (max-width: 1024px) {
   .profile-content { display: flex; flex-direction: column; }
   .bottom-sections { grid-template-columns: 1fr; gap: 0.75rem; }
-  .personal-info-grid { grid-template-columns: 1fr; }
+  .name-fields-row { flex-direction: column; }
   .profile-header { text-align: center; display: flex; flex-direction: column; align-items: center; }
   .profile-header h1, .profile-subtitle { text-align: center; width: 100%; }
 }
@@ -697,7 +751,8 @@
   .joined-date { text-align: center; }
   .avatar-circle { width: 100px; height: 100px; font-size: 2rem; }
   .info-section, .password-section, .preferences-section { padding: 1rem 1.25rem; }
-  .personal-info-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .personal-info-grid { gap: 0.75rem; }
+  .name-fields-row { flex-direction: column; gap: 0.75rem; }
   .section-header-row { margin-bottom: 0.75rem; }
   .address-subsection { margin-top: 0.75rem; }
   .address-section-title { margin-bottom: 0.75rem; }
@@ -756,10 +811,10 @@
 .terms-modal-content {
   background: white;
   border-radius: 16px;
-  width: fit-content;
+  width: min(720px, 92vw);
   min-width: 280px;
-  max-width: min(400px, 95vw);
-  max-height: 90vh;
+  max-width: min(720px, 92vw);
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -767,7 +822,8 @@
 }
 
 .terms-modal-content.terms-modal-compact {
-  max-width: min(380px, 95vw);
+  width: min(560px, 92vw);
+  max-width: min(560px, 92vw);
 }
 
 .terms-modal-header {
@@ -810,12 +866,12 @@
 }
 
 .terms-modal-body {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   overflow-y: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 /* Terms Card */
@@ -823,7 +879,7 @@
   background: white;
   border: 2px solid var(--border-color);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s;
 }
@@ -834,51 +890,51 @@
 }
 
 .terms-card-title {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--green-text);
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 1rem;
+  margin: 0 0 0.6rem 0;
+  padding-bottom: 0.5rem;
   border-bottom: 2px solid var(--green-bg);
 }
 
 .terms-card-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.5rem;
 }
 
 .terms-section {
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
   background: var(--bg-gray);
   border-radius: 8px;
   border-left: 4px solid var(--green-text);
 }
 
 .terms-section h4 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.35rem 0;
 }
 
 .terms-section p {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.45;
   margin: 0;
 }
 
 .terms-section ul {
-  margin: 0.5rem 0 0 0;
-  padding-left: 1.5rem;
+  margin: 0.25rem 0 0 0;
+  padding-left: 1.25rem;
   color: var(--text-secondary);
 }
 
 .terms-section li {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  margin-bottom: 0.25rem;
 }
 
 .terms-section li:last-child {
@@ -985,24 +1041,26 @@
   }
 
   .terms-modal-body {
-    padding: 1.5rem;
-    gap: 1.5rem;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
   }
 
   .terms-card {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
 
   .terms-card-title {
     font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem;
   }
 
   .terms-section {
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem;
   }
 
   .terms-section h4 {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .terms-section p,

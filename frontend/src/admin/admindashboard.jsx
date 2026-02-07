@@ -108,7 +108,29 @@ const AdminDashboard = ({ onLogout }) => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [termsCheckDone, setTermsCheckDone] = useState(false);
-  
+  // Logged-in user display name for header
+  const [currentUserName, setCurrentUserName] = useState('');
+
+  // Load logged-in user name for header
+  useEffect(() => {
+    const loadCurrentUserName = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        if (userRow) {
+          const name = [userRow.first_name, userRow.last_name].filter(Boolean).join(' ').trim();
+          setCurrentUserName(name || 'Admin');
+        }
+      } catch (_) {}
+    };
+    loadCurrentUserName();
+  }, []);
+
   // First-login: show Terms and Conditions for admin if not yet accepted (users.terms_accepted_at is null)
   useEffect(() => {
     if (termsCheckDone) return;
@@ -151,7 +173,10 @@ const AdminDashboard = ({ onLogout }) => {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ terms_accepted_at: new Date().toISOString() })
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          status: 'ACTIVE'
+        })
         .eq('id', currentUserId);
       if (error) throw error;
       setShowTermsModal(false);
@@ -263,7 +288,7 @@ const AdminDashboard = ({ onLogout }) => {
         <div className="mobile-header">
           <div className="mobile-logo">
             <img src={sidebarLogo} alt="Logo" />
-            <span>Admin Panel</span>
+            <span>{currentUserName || 'Admin Panel'}</span>
           </div>
           <button className="hamburger-btn" onClick={toggleSidebar}>
             {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
@@ -284,8 +309,8 @@ const AdminDashboard = ({ onLogout }) => {
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
             <div className="logo-text-stacked">
-              <h3>Admin Panel</h3>
-              <p>Management System</p>
+              <h3>{currentUserName || 'Admin Panel'}</h3>
+              <p>Admin</p>
             </div>
           </div>
         </div>

@@ -44,11 +44,11 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [formData, setFormData] = useState({ 
-  firstName: 'Employee',
-  middleName: 'User',
-  lastName: 'User',
-  email: 'employee@ecosort.com',
-  phone: 'employee@ecosort.com',
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  email: '',
+  phone: '',
   address: {
     region: '',
     province: '',
@@ -82,7 +82,7 @@ const Profile = () => {
     emailNotifications: false,
     pushNotifications: false
   });
-  const [joinedDate] = useState('January 15, 2020');
+  const [joinedDate, setJoinedDate] = useState('');
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
@@ -107,6 +107,11 @@ const fetchProfile = async () => {
       return;
     }
 
+    if (user.created_at) {
+      const d = new Date(user.created_at);
+      setJoinedDate(d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+    }
+
     const { data, error } = await supabase
       .from('users')
       .select('first_name, last_name, middle_name, email, contact, region, province, city_municipality, barangay, street_address')
@@ -117,11 +122,11 @@ const fetchProfile = async () => {
 
     if (data) {
       setFormData({
-        firstName: data.first_name || 'Employee',
-        middleName: data.middle_name || 'User',
-        lastName: data.last_name || 'User',
-        email: data.email || 'employee@ecosort.com',
-        phone: String(data.contact || 'employee@ecosort.com'),
+        firstName: data.first_name || '',
+        middleName: data.middle_name || '',
+        lastName: data.last_name || '',
+        email: data.email || '',
+        phone: String(data.contact || ''),
         address: {
           region: data.region || '',
           province: data.province || '',
@@ -614,7 +619,7 @@ const validateAddress = () => {
                   <ShieldIcon />
                   <span>Collector</span>
                 </div>
-                <p className="joined-date">Joined {joinedDate}</p>
+                <p className="joined-date">Joined {joinedDate || '—'}</p>
               </div>
             </div>
           </div>
@@ -630,52 +635,51 @@ const validateAddress = () => {
             </div>
 
             <div className="personal-info-grid">
-              <div className={`form-group ${touched.firstName && errors.firstName ? 'has-error' : ''}`}>
-                <label>First Name *</label>
-                <input
-                  type="text"
-                  className={`form-input ${touched.firstName && errors.firstName ? 'error' : ''}`}
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  onBlur={() => handleBlur('firstName')}
-                  disabled={!isEditing}
-                  placeholder="First Name"
-                />
-                {touched.firstName && errors.firstName && (
-                  <span className="error-message">{errors.firstName}</span>
-                )}
-              </div>
+              <div className="name-fields-row">
+                <div className={`form-group ${touched.firstName && errors.firstName ? 'has-error' : ''}`}>
+                  <label>First Name *</label>
+                  <input
+                    type="text"
+                    className={`form-input ${touched.firstName && errors.firstName ? 'error' : ''}`}
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    onBlur={() => handleBlur('firstName')}
+                    disabled={!isEditing}
+                  />
+                  {touched.firstName && errors.firstName && (
+                    <span className="error-message">{errors.firstName}</span>
+                  )}
+                </div>
 
-              <div className={`form-group ${touched.middleName && errors.middleName ? 'has-error' : ''}`}>
-                <label>Middle Name</label>
-                <input
-                  type="text"
-                  className={`form-input ${touched.middleName && errors.middleName ? 'error' : ''}`}
-                  value={formData.middleName}
-                  onChange={(e) => handleInputChange('middleName', e.target.value)}
-                  onBlur={() => handleBlur('middleName')}
-                  disabled={!isEditing}
-                  placeholder="Middle Name"
-                />
-                {touched.middleName && errors.middleName && (
-                  <span className="error-message">{errors.middleName}</span>
-                )}
-              </div>
+                <div className={`form-group ${touched.middleName && errors.middleName ? 'has-error' : ''}`}>
+                  <label>Middle Name</label>
+                  <input
+                    type="text"
+                    className={`form-input ${touched.middleName && errors.middleName ? 'error' : ''}`}
+                    value={formData.middleName}
+                    onChange={(e) => handleInputChange('middleName', e.target.value)}
+                    onBlur={() => handleBlur('middleName')}
+                    disabled={!isEditing}
+                  />
+                  {touched.middleName && errors.middleName && (
+                    <span className="error-message">{errors.middleName}</span>
+                  )}
+                </div>
 
-              <div className={`form-group ${touched.lastName && errors.lastName ? 'has-error' : ''}`}>
-                <label>Last Name *</label>
-                <input
-                  type="text"
-                  className={`form-input ${touched.lastName && errors.lastName ? 'error' : ''}`}
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  onBlur={() => handleBlur('lastName')}
-                  disabled={!isEditing}
-                  placeholder="Last Name"
-                />
-                {touched.lastName && errors.lastName && (
-                  <span className="error-message">{errors.lastName}</span>
-                )}
+                <div className={`form-group ${touched.lastName && errors.lastName ? 'has-error' : ''}`}>
+                  <label>Last Name *</label>
+                  <input
+                    type="text"
+                    className={`form-input ${touched.lastName && errors.lastName ? 'error' : ''}`}
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    onBlur={() => handleBlur('lastName')}
+                    disabled={!isEditing}
+                  />
+                  {touched.lastName && errors.lastName && (
+                    <span className="error-message">{errors.lastName}</span>
+                  )}
+                </div>
               </div>
 
               {/* Address Section */}
@@ -688,22 +692,6 @@ const validateAddress = () => {
                   errors={errors}
                   touched={touched}
                 />
-              </div>
-
-              <div className="form-group">
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  className={`form-input ${touched.email && errors.email ? 'error' : ''}`}
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  onBlur={() => handleBlur('email')}
-                  disabled={!isEditing}
-                  placeholder="Email Address"
-                />
-                {touched.email && errors.email && (
-                  <span className="error-message">{errors.email}</span>
-                )}
               </div>
             </div>
             
@@ -785,7 +773,6 @@ const validateAddress = () => {
                       value={passwordData.newPassword}
                       onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
                       onBlur={() => handlePasswordBlur('newPassword')}
-                      placeholder="••••••••••••"
                     />
                     {passwordTouched.newPassword && passwordErrors.newPassword && <div className="error-message">{passwordErrors.newPassword}</div>}
                   </div>
@@ -797,7 +784,6 @@ const validateAddress = () => {
                       value={passwordData.confirmPassword}
                       onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
                       onBlur={() => handlePasswordBlur('confirmPassword')}
-                      placeholder="••••••••••••"
                     />
                     {passwordTouched.confirmPassword && passwordErrors.confirmPassword && <div className="error-message">{passwordErrors.confirmPassword}</div>}
                   </div>

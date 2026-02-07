@@ -42,7 +42,7 @@ function Login({ setIsLoggedIn, setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  // const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLockedOut, setIsLockedOut] = useState(false);
@@ -359,14 +359,14 @@ function Login({ setIsLoggedIn, setUserRole }) {
             </div>
 
             <div className="options-row">
-              <label className="remember-me">
+              {/* <label className="remember-me">
                 <input 
                   type="checkbox" 
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
                 Remember me
-              </label>
+              </label> */}
               <span
                 className="forgot-password"
                 onClick={() => navigate('/forgot')}

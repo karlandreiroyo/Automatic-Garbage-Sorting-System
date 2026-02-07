@@ -47,7 +47,7 @@ const SuperAdminDash = ({ onNavigateTo }) => {
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
-    supervisor: 0,
+    admins: 0,
     totalEmployees: 0
   });
   
@@ -57,9 +57,9 @@ const SuperAdminDash = ({ onNavigateTo }) => {
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
   const collectorsDropdownRef = React.useRef(null);
-  const [superadminsList, setSuperadminsList] = useState([]);
-  const [superadminsDropdownOpen, setSuperadminsDropdownOpen] = useState(false);
-  const superadminsDropdownRef = React.useRef(null);
+  const [adminsList, setAdminsList] = useState([]);
+  const [adminsDropdownOpen, setAdminsDropdownOpen] = useState(false);
+  const adminsDropdownRef = React.useRef(null);
   const [employeesList, setEmployeesList] = useState([]);
   const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
   const employeesDropdownRef = React.useRef(null);
@@ -77,18 +77,18 @@ const SuperAdminDash = ({ onNavigateTo }) => {
       if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
         setCollectorsDropdownOpen(false);
       }
-      if (superadminsDropdownRef.current && !superadminsDropdownRef.current.contains(e.target)) {
-        setSuperadminsDropdownOpen(false);
+      if (adminsDropdownRef.current && !adminsDropdownRef.current.contains(e.target)) {
+        setAdminsDropdownOpen(false);
       }
       if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
         setEmployeesDropdownOpen(false);
       }
     };
-    if (collectorsDropdownOpen || superadminsDropdownOpen || employeesDropdownOpen) {
+    if (collectorsDropdownOpen || adminsDropdownOpen || employeesDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [collectorsDropdownOpen, superadminsDropdownOpen, employeesDropdownOpen]);
+  }, [collectorsDropdownOpen, adminsDropdownOpen, employeesDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
@@ -110,9 +110,9 @@ const fetchDashboardData = async () => {
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE') || [];
-    const supervisors = supervisorUsers.length;
-    setSuperadminsList(supervisorUsers);
+    const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
+    const admins = adminUsers.length;
+    setAdminsList(adminUsers);
     const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
     const totalEmployees = activeEmployees.length;
     setEmployeesList(activeEmployees);
@@ -131,26 +131,46 @@ const fetchDashboardData = async () => {
       ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
       : 0;
 
-    // Fetch recent activity
-    const { data: activityData, error: activityError } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(4);
+    // Get current superadmin (logged-in user) so recent activity shows only their actions
+    let currentSuperadminId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        currentSuperadminId = userRow?.id;
+      }
+    } catch (_) {}
 
-    if (activityError) throw activityError;
+    // Fetch recent activity: only actions performed by this superadmin (user_id = superadmin)
+    let formattedActivity = [];
+    if (currentSuperadminId) {
+      try {
+        const { data: activityData, error: activityError } = await supabase
+          .from('activity_logs')
+          .select('description, created_at')
+          .eq('user_id', currentSuperadminId)
+          .order('created_at', { ascending: false })
+          .limit(4);
 
-    const formattedActivity = activityData?.map(activity => ({
-      text: activity.description,
-      time: getTimeAgo(activity.created_at)
-    })) || [];
+        if (!activityError && activityData?.length) {
+          formattedActivity = activityData.map(activity => ({
+            text: activity.description,
+            time: getTimeAgo(activity.created_at)
+          }));
+        }
+      } catch (_) {}
+    }
 
     setStats({
       totalBins: binsData?.length || 0,
       overallItemsSorted,
       avgProcessingTime: avgTime,
       collectors,
-      supervisor: supervisors,
+      admins,
       totalEmployees
     });
 
@@ -349,33 +369,33 @@ const fetchWasteDistribution = async (dateString) => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
+        <div className="stat-card-wrapper stat-card-admins-dropdown" ref={adminsDropdownRef}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
             tabIndex={0}
-            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
-            aria-expanded={superadminsDropdownOpen}
-            aria-label="Superadmin count, click to view list"
+            onClick={() => setAdminsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdminsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={adminsDropdownOpen}
+            aria-label="Admins count, click to view list"
           >
             <div className="stat-icon-bg"><Icons.Supervisor /></div>
             <div className="stat-info">
-              <span className="stat-label">Superadmin</span>
-              <h2 className="stat-value">{stats.supervisor}</h2>
+              <span className="stat-label">Admins</span>
+              <h2 className="stat-value">{stats.admins}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
-          {superadminsDropdownOpen && (
+          {adminsDropdownOpen && (
             <div className="stat-card-dropdown">
-              <div className="stat-card-dropdown-title">All Superadmins</div>
+              <div className="stat-card-dropdown-title">All Admins</div>
               <ul className="stat-card-dropdown-list">
-                {superadminsList.length === 0 ? (
-                  <li className="stat-card-dropdown-item empty">No superadmins</li>
+                {adminsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No admins</li>
                 ) : (
-                  superadminsList.map((s) => (
-                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
-                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                  adminsList.map((a) => (
+                    <li key={a.id || `${a.first_name}-${a.last_name}`} className="stat-card-dropdown-item">
+                      {[a.first_name, a.last_name].filter(Boolean).join(' ') || 'Unnamed'}
                     </li>
                   ))
                 )}

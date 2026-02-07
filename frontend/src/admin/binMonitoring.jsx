@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import BinListCard from '../components/BinListCard';
 import './admincss/binMonitoring.css';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
@@ -19,6 +20,22 @@ import './admincss/binMonitoring.css';
  */
 const roundToTen = (level) => {
   return Math.round(level / 10) * 10;
+};
+
+/**
+ * Format last_update from Supabase for display (date/time, no "minutes ago")
+ * @param {string|null|undefined} isoString - ISO date string from DB
+ * @returns {string} Formatted string or "—" if missing
+ */
+const formatLastCollection = (isoString) => {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return '—';
+  }
 };
 
 // Icon Components for different waste categories
@@ -84,96 +101,6 @@ const getFillLevelColor = (fillLevel) => {
   if (fillLevel >= 30) return '#eab308'; // Yellow
   if (fillLevel >= 15) return '#f97316'; // Orange
   return '#ef4444'; // Red
-};
-
-/**
- * Bin List Card Component
- * Displays bin information in list view with system power and fill level
- * @param {Object} bin - Bin data object
- * @param {Function} onClick - Callback when bin is clicked
- * @param {boolean} isArchived - Whether bin is archived
- */
-const BinListCard = ({ bin, onClick, isArchived }) => {
-  /**
-   * Gets status text based on fill level
-   * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
-   * @returns {string} Status text
-   */
-  const getStatus = () => {
-    if (bin.fillLevel >= 90) return 'Full';
-    if (bin.fillLevel >= 75) return 'Almost Full';
-    if (bin.fillLevel >= 50) return 'Normal';
-    return 'Empty';
-  };
-
-  /**
-   * Gets CSS class for status badge based on fill level
-   * @returns {string} CSS class name
-   */
-  const getStatusClass = () => {
-    if (bin.fillLevel >= 90) return 'status-full';
-    if (bin.fillLevel >= 75) return 'status-almost-full';
-    if (bin.fillLevel >= 50) return 'status-normal';
-    return 'status-empty';
-  };
-
-  // Get color class based on category
-  const getColorClass = () => {
-    if (bin.category === 'Biodegradable') return 'green';
-    if (bin.category === 'Non-Biodegradable' || bin.category === 'Non Biodegradable') return 'red';
-    if (bin.category === 'Recyclable') return 'blue';
-    return 'lime'; // Default for Unsorted or others
-  };
-
-  // Get icon based on category - All bins use TrashIcon like Bin 2
-  const getCategoryIcon = () => {
-    return <TrashIcon />; // All bins use the same icon as Bin 2
-  };
-
-  return (
-    <div className={`bin-list-card ${getColorClass()} ${isArchived ? 'archived' : ''}`} onClick={onClick}>
-      {/* Colored Header Section */}
-      <div className="bin-list-header">
-        {/* Icon Circle */}
-        <div className="bin-list-icon-wrapper">
-          {getCategoryIcon()}
-          </div>
-        
-        {/* Bin Name */}
-        <h3 className="bin-list-category-name">{bin.name}</h3>
-      </div>
-
-      {/* White Body Section */}
-      <div className="bin-list-body">
-        <div className="bin-list-fill-info">
-          <div className="fill-level-section">
-          <span className="fill-level-label">Fill Level</span>
-            <span 
-              className="fill-percent" 
-              style={{ color: getFillLevelColor(bin.fillLevel) }}
-            >
-              {bin.fillLevel}%
-            </span>
-          </div>
-          <div className="fill-bar">
-            <div 
-              className="fill-progress" 
-              style={{ 
-                width: `${bin.fillLevel}%`,
-                backgroundColor: getFillLevelColor(bin.fillLevel)
-              }}
-            ></div>
-            </div>
-          <div className="bin-list-meta-info">
-            <div className="bin-list-info-row">
-              <span className="info-label">Last Collection</span>
-              <span className="info-value">{bin.lastUpdate}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 /**
@@ -474,7 +401,7 @@ const fetchBinData = async () => {
         fillLevel: 0, // Will be updated from IoT later
         systemPower: bin.system_power || 100,
         capacity: bin.capacity || '20kg',
-        lastUpdate: 'Just now',
+        lastUpdate: formatLastCollection(bin.last_update),
         category: 'Biodegradable',
         location: bin.location,
         assigned_collector_id: bin.assigned_collector_id,
@@ -563,13 +490,9 @@ const updateBinFillLevels = () => {
         ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
         : bin.fillLevel;
 
-      const minutesAgo = Math.floor(Math.random() * 3) + 1;
-      const updateTime = minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
-
       return {
         ...bin,
         fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
-        lastUpdate: updateTime,
         categoryBins: updatedCategoryBins
       };
     })
@@ -617,16 +540,17 @@ const updateBinFillLevels = () => {
         console.warn('Bins table may not exist:', error);
       }
 
-      // Update only the category bin for the selected bin
+      const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
           prevBins.map(bin =>
             bin.id === selectedBinId
               ? {
                   ...bin,
+                  lastUpdate: formattedNow,
                   categoryBins: bin.categoryBins.map(catBin =>
                     catBin.id === categoryBinId
-                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      ? { ...catBin, fillLevel: 0, lastCollection: formattedNow }
                       : catBin
                   )
                 }
@@ -636,16 +560,17 @@ const updateBinFillLevels = () => {
       }
     } catch (error) {
       console.error('Error draining category bin:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
           prevBins.map(bin =>
             bin.id === selectedBinId
               ? {
                   ...bin,
+                  lastUpdate: formattedNow,
                   categoryBins: bin.categoryBins.map(catBin =>
                     catBin.id === categoryBinId
-                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      ? { ...catBin, fillLevel: 0, lastCollection: formattedNow }
                       : catBin
                   )
                 }
@@ -674,17 +599,18 @@ const updateBinFillLevels = () => {
       }
 
       // Update the bin and all its category bins
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId
             ? {
                 ...bin,
                 fillLevel: 0,
-                lastUpdate: 'Just now',
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
@@ -692,18 +618,18 @@ const updateBinFillLevels = () => {
       );
     } catch (error) {
       console.error('Error draining list bin:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId
             ? {
                 ...bin,
                 fillLevel: 0,
-                lastUpdate: 'Just now',
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
@@ -755,42 +681,42 @@ await supabase.from('activity_logs').insert([{
         }
       }
 
-      // Update local state - only drain category bins for the selected bin
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === selectedBinId
             ? {
                 ...bin,
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
         )
       );
 
-      // Close the modal after successful drain
       setShowDrainAllModal(false);
     } catch (error) {
       console.error('Error draining all category bins:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === selectedBinId
             ? {
                 ...bin,
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
         )
       );
-      // Close the modal even if there's an error
       setShowDrainAllModal(false);
     }
 
@@ -1049,7 +975,7 @@ const handleAddBin = async (e) => {
       fillLevel: 0,
       systemPower: 100,
       capacity: newBinData.capacity,
-      lastUpdate: 'Just now',
+      lastUpdate: formatLastCollection(newBinData.last_update ?? new Date().toISOString()),
       category: 'Biodegradable',
       location: newBinData.location,
       assigned_collector_id: newBinData.assigned_collector_id,
@@ -1282,11 +1208,12 @@ const handleAddBin = async (e) => {
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
         {currentBins.map(bin => (
-          <BinListCard 
-            key={bin.id} 
-            bin={bin} 
+          <BinListCard
+            key={bin.id}
+            bin={bin}
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
+            assignedPosition="header"
           />
         ))}
       </div>

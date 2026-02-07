@@ -282,16 +282,17 @@ body, #root {
   display: flex; 
   flex-direction: column; 
   padding: 0; 
+  margin: 0; 
   background-color: #ffffff; 
   min-width: 0; 
   overflow-y: auto; 
   overflow-x: hidden; 
-  margin: 0;
 }
 
 .content-body { 
   padding: 0; 
   margin: 0; 
+  gap: 0; 
   width: 100%; 
   flex: 1; 
   display: flex; 
@@ -304,6 +305,7 @@ body, #root {
   flex: 1; 
   min-height: 0; 
   width: 100%; 
+  margin: 0; 
 }
 
 .dashboard-header { 

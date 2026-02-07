@@ -20,7 +20,6 @@ const TermsAndConditionsModal = ({ open, onAccept, onCancel }) => {
       <div className="terms-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="terms-modal-header">
           <h2>Terms and Conditions & Privacy Policy</h2>
-          <button className="terms-close-btn" onClick={onCancel} type="button">×</button>
         </div>
 
         <div

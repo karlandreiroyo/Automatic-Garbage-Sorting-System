@@ -62,7 +62,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
@@ -88,14 +88,25 @@
   flex-shrink: 0;
 }
 
-/* Superadmin dashboard: center icon and content inside each card */
+/* Superadmin dashboard: icon on the left, content next to it */
 .admin-dash-container .stat-card {
-  justify-content: center !important;
+  justify-content: flex-start !important;
   align-items: center !important;
 }
 
 .admin-dash-container .stat-info {
-  flex: 0 1 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-dash-container .stat-info .stat-label,
+.admin-dash-container .stat-info .stat-value {
+  text-align: center;
+  width: 100%;
 }
 
 .admin-dash-container .stat-card .stat-icon-bg {
@@ -128,9 +139,9 @@
   line-height: 1.1;
 }
 
-/* Collectors, Superadmins, and Total Employees card dropdown */
+/* Collectors, Admins, and Total Employees card dropdown */
 .admin-dash-container .stat-card-wrapper.stat-card-collectors-dropdown,
-.admin-dash-container .stat-card-wrapper.stat-card-superadmins-dropdown,
+.admin-dash-container .stat-card-wrapper.stat-card-admins-dropdown,
 .admin-dash-container .stat-card-wrapper.stat-card-employees-dropdown {
   position: relative;
   min-width: 0;
@@ -145,14 +156,15 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .admin-dash-container .stat-card-dropdown-caret {
   font-size: 0.75rem;
   color: #64748b;
-  margin-left: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
   transition: transform 0.2s ease;
 }
 
@@ -551,7 +563,7 @@
   }
   
   .admin-dash-container .stat-card {
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
   
   .stat-value {
@@ -628,7 +640,7 @@
   }
   
   .admin-dash-container .stat-card {
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
   
   .stat-icon-bg {
@@ -768,7 +780,7 @@
   }
   
   .admin-dash-container .stat-card {
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
   
   .stat-icon-bg {

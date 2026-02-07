@@ -135,19 +135,68 @@ const fetchDashboardData = async () => {
       ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
       : 0;
 
-    // Fetch recent activity
-    const { data: activityData, error: activityError } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(4);
+    // Get current admin (logged-in user) for recent activity filter
+    let currentAdminUser = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('id, first_name')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        currentAdminUser = userRow;
+      }
+    } catch (_) {}
 
-    if (activityError) throw activityError;
+    // Fetch recent activity: user_id = admin who performed; get admin name from users (user_id), collector name from users (added_user_id)
+    let formattedActivity = [];
+    if (currentAdminUser?.id) {
+      try {
+        const { data: activityData, error: activityError } = await supabase
+          .from('activity_logs')
+          .select(`
+            id, activity_type, description, created_at, user_id, added_user_id,
+            actor:users!activity_logs_user_id_fkey(first_name, last_name, middle_name),
+            added_user:users!activity_logs_added_user_id_fkey(first_name, last_name, middle_name)
+          `)
+          .eq('user_id', currentAdminUser.id)
+          .eq('activity_type', 'USER_ADDED')
+          .order('created_at', { ascending: false })
+          .limit(4);
 
-    const formattedActivity = activityData?.map(activity => ({
-      text: activity.description,
-      time: getTimeAgo(activity.created_at)
-    })) || [];
+        if (!activityError && activityData?.length) {
+          formattedActivity = activityData.map(activity => {
+            const adminName = activity.actor
+              ? [activity.actor.first_name, activity.actor.middle_name, activity.actor.last_name].filter(Boolean).join(' ').trim() || 'Admin'
+              : 'Admin';
+            const collectorName = activity.added_user
+              ? [activity.added_user.first_name, activity.added_user.middle_name, activity.added_user.last_name].filter(Boolean).join(' ').trim()
+              : (activity.description || 'a collector');
+            return {
+              text: `Admin ${adminName} Added ${collectorName}`,
+              time: getTimeAgo(activity.created_at)
+            };
+          });
+        }
+      } catch (_) {
+        // Fallback if added_user_id column or FKs don't exist yet
+        const { data: fallbackData } = await supabase
+          .from('activity_logs')
+          .select('id, description, created_at, user_id')
+          .eq('user_id', currentAdminUser.id)
+          .eq('activity_type', 'USER_ADDED')
+          .order('created_at', { ascending: false })
+          .limit(4);
+        if (fallbackData?.length) {
+          const adminName = currentAdminUser.first_name || 'Admin';
+          formattedActivity = fallbackData.map(activity => ({
+            text: `Admin ${adminName} Added ${activity.description || 'a collector'}`,
+            time: getTimeAgo(activity.created_at)
+          }));
+        }
+      }
+    }
 
     setStats({
       totalBins: binsData?.length || 0,

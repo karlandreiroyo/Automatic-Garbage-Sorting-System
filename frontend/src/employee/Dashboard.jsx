@@ -119,7 +119,10 @@ const Dashboard = ({ onLogout }) => {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ terms_accepted_at: new Date().toISOString() })
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          status: 'ACTIVE'
+        })
         .eq('id', currentUserId);
       if (error) throw error;
       setShowTermsModal(false);
@@ -280,13 +283,11 @@ const Dashboard = ({ onLogout }) => {
 
       {/* --- MAIN CONTENT --- */}
       <div className="main-content">
-        <div className="content-body">
           {activeTab === 'monitoring' && <BinMonitoring />}
           {activeTab === 'notifications' && <Notifications />}
           {activeTab === 'history' && <CollectionHistory />}
           {activeTab === 'profile' && <Profile />}
           {activeTab === 'about' && <About />}
-          </div>
       </div>
 
     </div>

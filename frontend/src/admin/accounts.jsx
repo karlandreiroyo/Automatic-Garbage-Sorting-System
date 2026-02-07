@@ -213,12 +213,16 @@ const Accounts = () => {
     setConfirmAction(() => async () => {
       try {
         setLoading(true);
-        const { error } = await supabase
-          .from('users')
-          .update({ status: newStatus })
-          .eq('id', user.id);
-
-        if (error) throw error;
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${API_BASE_URL}/api/accounts/user-status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, status: newStatus }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to update user status.');
+        }
 
         // ADD ACTIVITY LOGGING HERE
         const actionText = newStatus === 'INACTIVE' ? 'archived' : 'activated';
@@ -235,7 +239,7 @@ const Accounts = () => {
         showSuccessNotification(`Employee ${actionLabel}d successfully!`);
       } catch (error) {
         setAlertTitle('Error');
-        setAlertMessage('Error: ' + error.message);
+        setAlertMessage('Error: ' + (error.message || 'Failed to update user status.'));
         setShowAlertModal(true);
       } finally {
         setLoading(false);
@@ -585,6 +589,18 @@ const handleConfirmCreate = async () => {
   if (!pendingCreateData) return;
   try {
     setLoading(true);
+    let performedByUserId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        if (currentUser?.id) performedByUserId = currentUser.id;
+      }
+    } catch (_) {}
     const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -601,7 +617,9 @@ const handleConfirmCreate = async () => {
         province: pendingCreateData.address?.province || '',
         city_municipality: pendingCreateData.address?.city_municipality || '',
         barangay: pendingCreateData.address?.barangay || '',
-        street_address: pendingCreateData.address?.street_address || ''
+        street_address: pendingCreateData.address?.street_address || '',
+        performed_by_user_id: performedByUserId,
+        status: 'PENDING' // New accounts stay PENDING until user logs in and accepts terms
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -955,7 +973,7 @@ const handleCancelSave = () => {
           <div className="credentials-sent-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="credentials-sent-title">Account Created</h3>
             <p className="credentials-sent-message">
-              {credentialsSentToEmail && 'Credentials sent to email. Also check the terminal for username and password.'}
+              {credentialsSentToEmail && 'Credentials sent to email.'}
               {!credentialsSentToEmail && 'Account created. Email sending failed; check SMTP config. Check the terminal for username and password.'}
             </p>
             {emailError && (
@@ -1087,14 +1105,15 @@ const handleCancelSave = () => {
                   <label>Assign Bin *</label>
                   {(() => {
                     const q = binSearchQuery.trim().toLowerCase();
+                    const availableBinsAdd = bins.filter((bin) => !bin.assigned_collector_id);
                     const filteredBinsAdd = q
-                      ? bins.filter((bin) => {
+                      ? availableBinsAdd.filter((bin) => {
                           const name = (bin.name || '').toLowerCase();
                           const location = (bin.location || '').toLowerCase();
                           const idStr = String(bin.id || '').toLowerCase();
                           return name.includes(q) || location.includes(q) || idStr.includes(q);
                         })
-                      : bins;
+                      : availableBinsAdd;
                     return (
                   <div className="bin-select-wrapper" ref={binDropdownRef}>
                     <button
@@ -1142,7 +1161,6 @@ const handleCancelSave = () => {
                           onClick={() => { setFormData((p) => ({ ...p, assigned_bin_id: '' })); setTouched((t) => ({ ...t, assigned_bin_id: true })); setBinSelectOpen(false); setBinSearchQuery(''); }}
                           role="option"
                         >
-                          Select bin
                         </button>
                         {filteredBinsAdd.length > 0 ? (
                           filteredBinsAdd.map((bin) => (
