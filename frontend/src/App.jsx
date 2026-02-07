@@ -29,7 +29,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in when app loads
+  // Check if user is logged in when app loads; also ensure archived (INACTIVE) users cannot stay logged in
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -37,8 +37,28 @@ function App() {
       if (session) {
         const role = localStorage.getItem('userRole');
         if (role) {
-          setUserRole(role);
-          setIsLoggedIn(true);
+          // Verify user is still ACTIVE in users table (e.g. not archived by superadmin)
+          try {
+            const { data: userRow } = await supabase
+              .from('users')
+              .select('status')
+              .eq('auth_id', session.user.id)
+              .maybeSingle();
+            if (userRow && userRow.status === 'INACTIVE') {
+              await supabase.auth.signOut();
+              localStorage.removeItem('userRole');
+              localStorage.removeItem('userEmail');
+              localStorage.removeItem('userName');
+              setIsLoggedIn(false);
+              setUserRole(null);
+            } else {
+              setUserRole(role);
+              setIsLoggedIn(true);
+            }
+          } catch (_) {
+            setUserRole(role);
+            setIsLoggedIn(true);
+          }
         } else {
           // Session exists but no role in localStorage, sign out
           await supabase.auth.signOut();

@@ -1119,6 +1119,18 @@
   letter-spacing: -0.5px;
 }
 
+.bin-list-assigned-for {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.95;
+}
+
+.bin-list-assigned-for .assign-for-name {
+  font-weight: 600;
+}
+
 .bin-list-status-badge {
   position: absolute;
   top: 12px;
@@ -1155,7 +1167,7 @@
 
 /* White Body Section */
 .bin-list-body {
-  padding: 32px 28px;
+  padding: 32px 28px 32px 0;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1213,6 +1225,20 @@
   transition: width 0.5s ease;
 }
 
+.bin-list-description {
+  margin: 10px 0 0 0;
+  padding: 0;
+  font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+  line-height: 1.35;
+  color: #64748b;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+  min-height: 0;
+  text-align: center;
+}
+
 .bin-list-meta-info {
   display: flex;
   flex-direction: column;
@@ -1224,22 +1250,26 @@
 .bin-list-info-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 1rem;
-  gap: 10px;
-  padding: 12px 0;
+  align-items: flex-start;
+  font-size: 0.7rem;
+  gap: 8px;
+  padding: 8px 0;
+  min-width: 0;
 }
 
 .bin-list-info-row .info-label {
   color: #6b7280;
   font-weight: 500;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bin-list-info-row .info-value {
   color: #374151;
   font-weight: 700;
-  white-space: nowrap;
+  min-width: 0;
+  word-break: break-word;
+  text-align: right;
 }
 
 .bin-list-recent-btn {

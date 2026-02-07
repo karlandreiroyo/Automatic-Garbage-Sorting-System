@@ -12,19 +12,6 @@ const DecorativeShapes = () => (
   </div>
 );
 
-// Eye icon component
-const EyeIcon = ({ visible }) => (
-  visible ? (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </svg>
-  ) : (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.36 21.36 0 0 1 5.06-6.06M1 1l22 22"/>
-    </svg>
-  )
-);
 
 // Backend API base URL - adjust this to match your backend server
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -81,7 +68,7 @@ const Forgot = () => {
 
   const sendCode = async () => {
     if (!emailOrMobile.trim()) {
-      setError('Please enter your email or mobile number');
+      setError('Please enter your email');
       return;
     }
 
@@ -254,7 +241,7 @@ const Forgot = () => {
 
   const resendCode = async () => {
     if (!emailOrMobile.trim()) {
-      setError('Email or mobile number is required to resend code');
+      setError('Email is required to resend code');
       return;
     }
 
@@ -334,12 +321,12 @@ const Forgot = () => {
             <h2>Reset Password</h2>
             {error && <div className="error-message">{error}</div>}
             <p className="subtitle">
-              Enter your mobile number or email
+              Enter your email
             </p>
 
             <input
               type="text"
-              placeholder="Mobile number or email"
+              placeholder="Email"
               value={emailOrMobile}
               onChange={(e) => {
                 setEmailOrMobile(e.target.value);
@@ -375,7 +362,7 @@ const Forgot = () => {
 
             <input
               type="text"
-              placeholder="Enter 6-digit code"
+              placeholder="000000"
               value={code}
               onChange={(e) => {
                 setCode(e.target.value);
@@ -438,7 +425,6 @@ const Forgot = () => {
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 disabled={loading}
               >
-                <EyeIcon visible={showNewPassword} />
               </button>
             </div>
 
@@ -463,7 +449,6 @@ const Forgot = () => {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 disabled={loading}
               >
-                <EyeIcon visible={showConfirmPassword} />
               </button>
             </div>
 

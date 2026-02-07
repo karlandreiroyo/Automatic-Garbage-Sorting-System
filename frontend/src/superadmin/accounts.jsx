@@ -162,19 +162,29 @@ const Accounts = () => {
     setConfirmAction(() => async () => {
       try {
         setLoading(true);
-        const { error } = await supabase
-          .from('users')
-          .update({ status: newStatus })
-          .eq('id', user.id);
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${API_BASE_URL}/api/accounts/user-status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, status: newStatus }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to update user status.');
+        }
 
-        if (error) throw error;
-
-        // ADD ACTIVITY LOGGING HERE
+        // Log activity: who did it = current superadmin (user_id)
+        let currentUserId = null;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+          currentUserId = u?.id;
+        }
         const actionText = newStatus === 'INACTIVE' ? 'archived' : 'activated';
         await supabase.from('activity_logs').insert([{
           activity_type: newStatus === 'INACTIVE' ? 'USER_ARCHIVED' : 'USER_ACTIVATED',
           description: `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ${user.first_name} ${user.last_name}`,
-          user_id: user.id
+          user_id: currentUserId
         }]);
         
         setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
@@ -184,7 +194,7 @@ const Accounts = () => {
         showSuccessNotification(`Employee ${actionLabel}d successfully!`);
       } catch (error) {
         setAlertTitle('Error');
-        setAlertMessage('Error: ' + error.message);
+        setAlertMessage('Error: ' + (error.message || 'Failed to update user status.'));
         setShowAlertModal(true);
       } finally {
         setLoading(false);
@@ -257,7 +267,7 @@ const Accounts = () => {
           if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
             error = 'Email cannot end with @ or a period';
           } else if (!emailRegex.test(emailVal)) {
-            error = 'Invalid domain format (e.g., .com, .ph)';
+            error = 'Invalid domain format (e.g., .com)';
           }
         }
         break;
@@ -290,7 +300,7 @@ const Accounts = () => {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
               error = 'Email cannot end with @ or a period';
             } else if (!emailRegex.test(emailVal)) {
-              error = 'Invalid domain format (e.g., .com, .ph)';
+              error = 'Invalid domain format (e.g., .com)';
             }
           }
         }
@@ -564,6 +574,13 @@ const handleConfirmCreate = async () => {
 
   try {
     setLoading(true);
+    // Current superadmin user id for activity_log (who added this admin)
+    let performedByUserId = null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+      performedByUserId = u?.id;
+    }
     // Use same backend as Admin (add collector): creates auth user, users row, sends credentials, sends second-email verification if backup provided
     const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
       method: 'POST',
@@ -580,7 +597,9 @@ const handleConfirmCreate = async () => {
         province: pendingCreateData.address?.province || '',
         city_municipality: pendingCreateData.address?.city_municipality || '',
         barangay: pendingCreateData.address?.barangay || '',
-        street_address: pendingCreateData.address?.street_address || ''
+        street_address: pendingCreateData.address?.street_address || '',
+        status: 'PENDING', // New accounts stay PENDING until user logs in and accepts terms
+        performed_by_user_id: performedByUserId
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -667,11 +686,17 @@ const handleConfirmSave = async () => {
 
     if (error) throw error;
 
-    // ADD ACTIVITY LOGGING HERE
+    // Log activity: who did it = current superadmin (user_id)
+    let currentUserId = null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+      currentUserId = u?.id;
+    }
     await supabase.from('activity_logs').insert([{
       activity_type: 'USER_UPDATED',
       description: `Updated ${pendingSaveData.first_name} ${pendingSaveData.last_name}'s information`,
-      user_id: pendingSaveData.id
+      user_id: currentUserId
     }]);
 
     setEditingUser(null);

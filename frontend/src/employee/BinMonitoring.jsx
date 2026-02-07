@@ -76,6 +76,40 @@ const BinMonitoring = () => {
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
+  const [assignedBinLocationText, setAssignedBinLocationText] = useState("");
+
+  // Fetch current employee's assigned bin location(s)
+  useEffect(() => {
+    const loadAssignedBinLocation = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+        const { data: userRow, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        if (userError || !userRow) return;
+        const { data: assignedBins, error: binsError } = await supabase
+          .from('bins')
+          .select('id, name, location')
+          .eq('assigned_collector_id', userRow.id)
+          .eq('status', 'ACTIVE');
+        if (binsError || !assignedBins?.length) return;
+        const locations = assignedBins
+          .map((b) => (b.location && b.location.trim()) ? b.location.trim() : (b.name || 'Unspecified location'))
+          .filter(Boolean);
+        if (locations.length === 0) return;
+        const text = locations.length === 1
+          ? `Located at ${locations[0]}`
+          : `Located at ${locations.join(', ')}`;
+        setAssignedBinLocationText(text);
+      } catch {
+        // ignore
+      }
+    };
+    loadAssignedBinLocation();
+  }, []);
 
   // Fetch bin data from database and aggregate category bins
   useEffect(() => {
@@ -314,6 +348,11 @@ const BinMonitoring = () => {
         <div className="header-titles">
           <h1>Bin Monitoring</h1>
           <p>Monitor bin fill levels</p>
+          {assignedBinLocationText && (
+            <div className="assigned-bin-location-card">
+              <span>{assignedBinLocationText}</span>
+            </div>
+          )}
         </div>
       </div>
 

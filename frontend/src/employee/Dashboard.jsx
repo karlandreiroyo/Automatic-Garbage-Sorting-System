@@ -42,10 +42,40 @@ const Dashboard = ({ onLogout }) => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [termsCheckDone, setTermsCheckDone] = useState(false);
+  const [employeeName, setEmployeeName] = useState('');
 
   // Mobile Responsive States (Matching Admin Dashboard)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Load logged-in employee name from users table (or localStorage fallback)
+  useEffect(() => {
+    const loadEmployeeName = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          const fallback = localStorage.getItem('userName');
+          setEmployeeName(fallback || '');
+          return;
+        }
+        const { data: userRow, error } = await supabase
+          .from('users')
+          .select('first_name, last_name, middle_name')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        if (!error && userRow) {
+          const parts = [userRow.first_name, userRow.middle_name, userRow.last_name].filter(Boolean);
+          const fullName = parts.length ? parts.join(' ').trim() : '';
+          setEmployeeName(fullName || localStorage.getItem('userName') || '');
+        } else {
+          setEmployeeName(localStorage.getItem('userName') || '');
+        }
+      } catch {
+        setEmployeeName(localStorage.getItem('userName') || '');
+      }
+    };
+    loadEmployeeName();
+  }, []);
 
   // First-login: show Terms and Conditions for collector if not yet accepted (users.terms_accepted_at is null)
   useEffect(() => {
@@ -59,7 +89,7 @@ const Dashboard = ({ onLogout }) => {
         }
         const { data: userRow, error } = await supabase
           .from('users')
-          .select('id, terms_accepted_at')
+          .select('id, role, terms_accepted_at')
           .eq('auth_id', session.user.id)
           .maybeSingle();
         if (error) {
@@ -68,7 +98,8 @@ const Dashboard = ({ onLogout }) => {
           return;
         }
         setTermsCheckDone(true);
-        if (userRow && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
+        // Only show terms for COLLECTOR role if not accepted
+        if (userRow && userRow.role === 'COLLECTOR' && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
           setCurrentUserId(userRow.id);
           setShowTermsModal(true);
         }
@@ -88,7 +119,10 @@ const Dashboard = ({ onLogout }) => {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ terms_accepted_at: new Date().toISOString() })
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          status: 'ACTIVE'
+        })
         .eq('id', currentUserId);
       if (error) throw error;
       setShowTermsModal(false);
@@ -134,7 +168,12 @@ const Dashboard = ({ onLogout }) => {
       <TermsAndConditionsModal
         open={showTermsModal}
         onAccept={handleAcceptTermsFirstLogin}
-        onCancel={() => setShowTermsModal(false)}
+        onCancel={() => {
+          // If user cancels on first login, sign them out
+          if (onLogout) {
+            onLogout();
+          }
+        }}
       />
       
       {/* --- LOGOUT MODAL --- */}
@@ -161,7 +200,7 @@ const Dashboard = ({ onLogout }) => {
         <div className="mobile-header">
           <div className="mobile-logo">
             <img src={sidebarLogo} alt="Logo" />
-            <span>Sorting System</span>
+            <span>{employeeName || 'Employee'}</span>
           </div>
           <button className="hamburger-btn" onClick={toggleSidebar}>
             {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
@@ -196,8 +235,8 @@ const Dashboard = ({ onLogout }) => {
 
           {/* Text at Bottom */}
           <div className="logo-text-vertical">
-            <h3>Sorting System</h3>
-            <p>Waste Management</p>
+            <h3>{employeeName || 'Employee'}</h3>
+            <p>Collector</p>
           </div>
         </div>
 
@@ -244,13 +283,11 @@ const Dashboard = ({ onLogout }) => {
 
       {/* --- MAIN CONTENT --- */}
       <div className="main-content">
-        <div className="content-body">
           {activeTab === 'monitoring' && <BinMonitoring />}
           {activeTab === 'notifications' && <Notifications />}
           {activeTab === 'history' && <CollectionHistory />}
           {activeTab === 'profile' && <Profile />}
           {activeTab === 'about' && <About />}
-        </div>
       </div>
 
     </div>

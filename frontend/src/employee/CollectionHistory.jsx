@@ -76,7 +76,7 @@ const SearchIcon = () => (
 );
 
 const CollectionHistory = () => {
-  const [filter, setFilter] = useState('All');
+  const [activeFilters, setActiveFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
@@ -88,23 +88,17 @@ const CollectionHistory = () => {
     { id: 4, type: 'Non-Biodegradable', date: 'Jan 14, 2025', time: '11:20 AM', collector: 'Charize', weight: '52.1 kg', status: 'Completed' },
     { id: 5, type: 'Non-Biodegradable', date: 'Jan 13, 2025', time: '09:30 AM', collector: 'Kim', weight: '45.2 kg', status: 'Completed' },
     { id: 6, type: 'Recyclable', date: 'Jan 14, 2025', time: '10:15 AM', collector: 'Carlo', weight: '32.8 kg', status: 'Completed' },
+    { id: 7, type: 'Unsorted', date: 'Jan 16, 2025', time: '08:00 AM', collector: 'Kelly', weight: '18.0 kg', status: 'Completed' },
   ];
 
-  // Valid filter options
-  const validFilters = ['All', 'Biodegradable', 'Non-Biodegradable', 'Recyclable'];
-  const safeFilter = validFilters.includes(filter) ? filter : 'All';
+  // Filter types (no "All" – multi-select like Notifications). Includes Unsorted.
+  const filterTypes = ['Biodegradable', 'Non-Biodegradable', 'Recyclable', 'Unsorted'];
 
-  // Filter logic
+  // Filter logic: no filters = show all; one or more = show items matching any selected type
   const filteredList = useMemo(() => {
-    let result = [...historyData];
-
-    // Apply type filter
-    if (safeFilter !== 'All') {
-      result = result.filter(item => item.type === safeFilter);
-    }
-
-    return result;
-  }, [safeFilter, historyData]);
+    if (activeFilters.length === 0) return [...historyData];
+    return historyData.filter(item => activeFilters.includes(item.type));
+  }, [activeFilters, historyData]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -174,18 +168,18 @@ const CollectionHistory = () => {
     if (!type || typeof type !== 'string') {
       return <div className="list-icon icon-red"><AlertIcon /></div>;
     }
+    if (type === 'Unsorted') return <div className="list-icon icon-yellow"><AlertIcon /></div>;
     if (type.includes('Non')) return <div className="list-icon icon-red"><TrashIcon /></div>;
     if (type.includes('Recyclable')) return <div className="list-icon icon-blue"><RecycleIcon /></div>;
     return <div className="list-icon icon-green"><LeafIcon /></div>;
   };
 
   // Event handlers
-  const handleFilterChange = (newFilter) => {
-    if (!validFilters.includes(newFilter)) {
-      console.error('Invalid filter:', newFilter);
-      return;
-    }
-    setFilter(newFilter);
+  const handleFilterClick = (type) => {
+    if (!filterTypes.includes(type)) return;
+    setActiveFilters(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
     setCurrentPage(1);
   };
 
@@ -196,8 +190,8 @@ const CollectionHistory = () => {
     }
   };
 
-  const handleClearAllFilters = () => {
-    setFilter('All');
+  const handleClearFilters = () => {
+    setActiveFilters([]);
     setCurrentPage(1);
   };
 
@@ -259,23 +253,33 @@ const CollectionHistory = () => {
         </div>
       )}
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs – type only, multi-select like Notifications */}
       <div className="filter-tabs">
-        {validFilters.map(tab => (
-          <button 
-            key={tab} 
-            className={`filter-btn ${safeFilter === tab ? 'active' : ''}`} 
-            onClick={() => handleFilterChange(tab)}
+        {filterTypes.map(type => (
+          <button
+            key={type}
+            className={`filter-btn ${activeFilters.includes(type) ? 'active' : ''}`}
+            onClick={() => handleFilterClick(type)}
           >
-            {tab}
-            {tab !== 'All' && (
-              <span className="filter-count">
-                ({historyData.filter(item => item.type === tab).length})
-              </span>
-            )}
+            {type}
+            <span className="filter-count">
+              ({historyData.filter(item => item.type === type).length})
+            </span>
           </button>
         ))}
       </div>
+
+      {/* Active filter badge – inline, like Notifications */}
+      {activeFilters.length > 0 && (
+        <div className="active-filter-badge">
+          <span>
+            Showing: {activeFilters.join(', ')} collections
+          </span>
+          <button type="button" onClick={handleClearFilters} className="clear-filter-btn">
+            Clear filter
+          </button>
+        </div>
+      )}
 
       {/* Content Area */}
       {!hasData ? (
@@ -288,17 +292,17 @@ const CollectionHistory = () => {
           <p>There are no collection records available at the moment.</p>
         </div>
       ) : !hasFilteredResults ? (
-        // No results state
+        // No results state (filters active but no match)
         <div className="empty-state-container">
           <div className="empty-icon-large">
             <SearchIcon />
           </div>
-          <h3>No Results Found</h3>
+          <h3>No matching collections</h3>
           <p>
-            No {safeFilter} collections found
+            There are no collections for {activeFilters.join(', ')}.
           </p>
-          <button className="reset-btn" onClick={handleClearAllFilters}>
-            Clear all filters
+          <button type="button" className="reset-btn" onClick={handleClearFilters}>
+            View all collections
           </button>
         </div>
       ) : (
@@ -334,7 +338,7 @@ const CollectionHistory = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className={`pagination pagination-${safeFilter.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-')}`}>
+            <div className="pagination">
               <button 
                 className="page-btn nav-btn" 
                 onClick={() => handlePageChange(safePage - 1)}

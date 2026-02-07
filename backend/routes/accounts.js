@@ -11,6 +11,9 @@ const { generateSecondEmailToken, secondEmailTokens } = require('../utils/verifi
 const EMAIL_REGEX = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const SPECIAL = '!@#$%^&*';
 
+/** In-memory store: auth_id -> plain password, for resend-credentials only. Not persisted. */
+const employeePlainPasswords = new Map();
+
 /**
  * Generate 8-char password from first/last name: 1 cap, 1 special, 1 number.
  * @param {string} firstName
@@ -138,7 +141,8 @@ router.post('/verify-email', async (req, res) => {
  */
 router.post('/create-employee', async (req, res) => {
   try {
-    const { first_name, last_name, middle_name, email, role, password: providedPassword, region, province, city_municipality, barangay, street_address } = req.body;
+    const { first_name, last_name, middle_name, email, role, password: providedPassword, region, province, city_municipality, barangay, street_address, performed_by_user_id } = req.body;
+    // Ignore req.body.status: new accounts are always PENDING until user accepts terms
     // Frontend may send backup_email or second_email (send both for reliability)
     const second_email = (req.body.second_email ?? req.body.backup_email ?? '').trim() || null;
 
@@ -208,25 +212,24 @@ router.post('/create-employee', async (req, res) => {
       throw authError;
     }
 
-    const { error: dbError } = await supabase.from('users').insert([
-      {
-        auth_id: authData.user.id,
-        email: emailVal,
-        second_email: secondEmailVal || null,
-        second_email_verified: false, // Will be set to true when user clicks Accept
-        role,
-        first_name: String(first_name).trim(),
-        last_name: String(last_name).trim(),
-        middle_name: String(middle_name || '').trim() || '', // empty string if not provided (DB may have NOT NULL)
-        region: String(region).trim(),
-        province: String(province).trim(),
-        city_municipality: String(city_municipality).trim(),
-        barangay: String(barangay).trim(),
-        street_address: String(street_address || '').trim() || null,
-        status: 'ACTIVE',
-        pass_hash: password,
-      },
-    ]);
+    const newUserPayload = {
+      auth_id: authData.user.id,
+      email: emailVal,
+      second_email: secondEmailVal || null,
+      second_email_verified: false,
+      role,
+      first_name: String(first_name).trim(),
+      last_name: String(last_name).trim(),
+      middle_name: String(middle_name || '').trim() || '',
+      region: String(region).trim(),
+      province: String(province).trim(),
+      city_municipality: String(city_municipality).trim(),
+      barangay: String(barangay).trim(),
+      street_address: String(street_address || '').trim() || null,
+      pass_hash: password,
+    };
+    newUserPayload.status = 'PENDING';
+    const { data: newUserRow, error: dbError } = await supabase.from('users').insert([newUserPayload]).select('id').single();
 
     if (dbError) {
       try {
@@ -234,6 +237,8 @@ router.post('/create-employee', async (req, res) => {
       } catch (_) {}
       throw dbError;
     }
+
+    employeePlainPasswords.set(authData.user.id, password);
 
     const fullName = [first_name, middle_name, last_name].filter(Boolean).join(' ');
     const username = emailVal;
@@ -314,8 +319,9 @@ router.post('/create-employee', async (req, res) => {
       await supabase.from('activity_logs').insert([
         {
           activity_type: 'USER_ADDED',
-          description: `Added ${first_name} ${last_name} as ${role}`,
-          user_id: null,
+          description: [first_name, middle_name, last_name].filter(Boolean).join(' ').trim(),
+          user_id: performed_by_user_id || null,
+          added_user_id: newUserRow?.id || null,
         },
       ]);
     } catch (logErr) {
@@ -370,7 +376,8 @@ router.post('/create-employee', async (req, res) => {
 /**
  * POST /api/accounts/resend-credentials-email
  * Body: { email }
- * Resends credentials (regenerated password) to email.
+ * Resends credentials to email. Sends the same plain password as at creation when available;
+ * otherwise generates a new temporary password, updates Auth, and sends that.
  */
 router.post('/resend-credentials-email', async (req, res) => {
   try {
@@ -382,7 +389,7 @@ router.post('/resend-credentials-email', async (req, res) => {
 
     const { data: user, error: userErr } = await supabase
       .from('users')
-      .select('id, auth_id, email, first_name, last_name, middle_name, contact, pass_hash')
+      .select('id, auth_id, email, first_name, last_name, middle_name, contact')
       .ilike('email', emailVal)
       .limit(1)
       .maybeSingle();
@@ -391,7 +398,16 @@ router.post('/resend-credentials-email', async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    const password = user.pass_hash || generatePasswordFromName(user.first_name, user.last_name);
+    let password = employeePlainPasswords.get(user.auth_id);
+    if (!password) {
+      password = generatePasswordFromName(user.first_name, user.last_name);
+      const { error: updateErr } = await supabase.auth.admin.updateUserById(user.auth_id, { password });
+      if (updateErr) {
+        console.error('Resend: failed to set new password in Auth', updateErr);
+        return res.status(500).json({ success: false, message: 'Could not reset password for resend.' });
+      }
+      employeePlainPasswords.set(user.auth_id, password);
+    }
 
     const fullName = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ');
     const mailResult = await sendNewEmployeeCredentialsEmail({
@@ -415,6 +431,44 @@ router.post('/resend-credentials-email', async (req, res) => {
 
 // SMS resend endpoint removed - using email only
 // router.post('/resend-credentials-sms', ...) - REMOVED
+
+/**
+ * PATCH /api/accounts/user-status
+ * Body: { userId, status } where status is 'ACTIVE' or 'INACTIVE'
+ * Updates the user's status in the database (bypasses RLS via service role).
+ * Used when superadmin/admin archives or activates a user so the DB actually updates.
+ */
+router.patch('/user-status', async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId is required.' });
+    }
+    if (status !== 'ACTIVE' && status !== 'INACTIVE') {
+      return res.status(400).json({ success: false, message: 'status must be ACTIVE or INACTIVE.' });
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update({ status })
+      .eq('id', userId)
+      .select('id, status')
+      .maybeSingle();
+
+    if (error) {
+      console.error('user-status update error:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Failed to update user status.' });
+    }
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    return res.status(200).json({ success: true, data: { id: data.id, status: data.status } });
+  } catch (e) {
+    console.error('user-status error:', e);
+    return res.status(500).json({ success: false, message: e.message || 'Failed to update user status.' });
+  }
+});
 
 /**
  * GET /api/accounts/verify-second-email
