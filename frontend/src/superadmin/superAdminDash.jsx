@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import './admincss/adminDash.css';
+import './superadmincss/adminDash.css';
 
 // SVG Icons matching the photo
 const Icons = {
@@ -41,23 +41,19 @@ const Icons = {
   )
 };
 
-const AdminDash = ({ onNavigateTo }) => {
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+const SuperAdminDash = ({ onNavigateTo }) => {
   const [stats, setStats] = useState({
     totalBins: 0,
-    totalBinsAll: 0,
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
-    collectorsAll: 0,
-    admin: 0,
-    adminAll: 0,
-    totalEmployees: 0,
-    totalEmployeesAll: 0
+    admins: 0,
+    totalEmployees: 0
   });
   
   const [distribution, setDistribution] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
   const collectorsDropdownRef = React.useRef(null);
@@ -96,44 +92,35 @@ const AdminDash = ({ onNavigateTo }) => {
 
 const fetchDashboardData = async () => {
   try {
-    // Fetch active bins and all bins (for breakdown)
+    // Fetch total bins
     const { data: binsData, error: binsError } = await supabase
       .from('bins')
       .select('*')
       .eq('status', 'ACTIVE');
+    
     if (binsError) throw binsError;
-    const { data: allBinsData } = await supabase.from('bins').select('id');
-    const totalBinsAll = Number(allBinsData?.length) || 0;
-    const activeBins = Number(binsData?.length) || 0;
-
-    // Fetch users to get employee counts and lists for dropdowns
+    
+    // Fetch users to get employee counts and collector list (names for dropdown)
     const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('role, status');
+      .select('id, role, status, first_name, last_name');
 
     if (usersError) throw usersError;
 
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const collectorsAll = usersData?.filter(u => u.role === 'COLLECTOR')?.length || 0;
     const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
-    const adminCount = adminUsers.length;
+    const admins = adminUsers.length;
     setAdminsList(adminUsers);
-    const adminAll = usersData?.filter(u => u.role === 'ADMIN')?.length || 0;
     const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
     const totalEmployees = activeEmployees.length;
     setEmployeesList(activeEmployees);
-    const totalEmployeesAll = usersData?.length || 0;
 
-    // Fetch waste items for statistics
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+    // Fetch waste items for statistics (overall - not date-specific)
     const { data: itemsData, error: itemsError } = await supabase
       .from('waste_items')
-      .select('*, bins(name)')
-      .gte('created_at', today.toISOString());
+      .select('*, bins(name)');
 
     if (itemsError) throw itemsError;
 
@@ -143,6 +130,81 @@ const fetchDashboardData = async () => {
     const avgTime = itemsData?.length > 0
       ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
       : 0;
+
+    // Get current superadmin (logged-in user) so recent activity shows only their actions
+    let currentSuperadminId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
+        currentSuperadminId = userRow?.id;
+      }
+    } catch (_) {}
+
+    // Fetch recent activity: only actions performed by this superadmin (user_id = superadmin)
+    let formattedActivity = [];
+    if (currentSuperadminId) {
+      try {
+        const { data: activityData, error: activityError } = await supabase
+          .from('activity_logs')
+          .select('description, created_at')
+          .eq('user_id', currentSuperadminId)
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (!activityError && activityData?.length) {
+          formattedActivity = activityData.map(activity => ({
+            text: activity.description,
+            time: getTimeAgo(activity.created_at)
+          }));
+        }
+      } catch (_) {}
+    }
+
+    setStats({
+      totalBins: binsData?.length || 0,
+      overallItemsSorted,
+      avgProcessingTime: avgTime,
+      collectors,
+      admins,
+      totalEmployees
+    });
+
+    setRecentActivity(formattedActivity);
+
+    // Fetch initial waste distribution for today
+    fetchWasteDistribution(selectedDate);
+
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    // Keep your existing fallback values
+  }
+};
+
+const fetchWasteDistribution = async (dateString) => {
+  try {
+    // Parse the selected date
+    const selectedDateObj = new Date(dateString);
+    selectedDateObj.setHours(0, 0, 0, 0);
+    const startOfDay = selectedDateObj.toISOString();
+    
+    // End of selected day
+    const endOfDay = new Date(selectedDateObj);
+    endOfDay.setHours(23, 59, 59, 999);
+    const endOfDayISO = endOfDay.toISOString();
+    
+    // Fetch waste items for the selected date
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('waste_items')
+      .select('*, bins(name)')
+      .gte('created_at', startOfDay)
+      .lte('created_at', endOfDayISO);
+
+    if (itemsError) throw itemsError;
 
     // Create distribution data by category
     const categoryCounts = {
@@ -163,60 +225,12 @@ const fetchDashboardData = async () => {
       count
     }));
 
-    // Fetch recent activity
-    const { data: activityData, error: activityError } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(4);
-
-    if (activityError) throw activityError;
-
-    const formattedActivity = activityData?.map(activity => ({
-      text: activity.description,
-      time: getTimeAgo(activity.created_at)
-    })) || [];
-
-    setStats({
-      totalBins: activeBins,
-      totalBinsAll,
-      overallItemsSorted,
-      avgProcessingTime: avgTime,
-      collectors,
-      collectorsAll,
-      admin: adminCount,
-      adminAll,
-      totalEmployees,
-      totalEmployeesAll
-    });
-
     setDistribution(distributionArray);
-    setRecentActivity(formattedActivity);
-
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    // Keep your existing fallback values
+    console.error('Error fetching waste distribution:', error);
+    setDistribution([]);
   }
 };
-
-  const fetchWasteDistribution = async (dateStr) => {
-    try {
-      const start = new Date(dateStr + 'T00:00:00.000Z');
-      const end = new Date(dateStr + 'T23:59:59.999Z');
-      const { data: itemsData } = await supabase
-        .from('waste_items')
-        .select('category')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
-      const categoryCounts = { 'Biodegradable': 0, 'Non-Bio': 0, 'Recycle': 0, 'Unsorted': 0 };
-      itemsData?.forEach(item => {
-        if (categoryCounts.hasOwnProperty(item.category)) categoryCounts[item.category]++;
-      });
-      setDistribution(Object.entries(categoryCounts).map(([name, count]) => ({ name, count })));
-    } catch (err) {
-      console.error('Error fetching waste distribution:', err);
-    }
-  };
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();
@@ -276,25 +290,18 @@ const fetchDashboardData = async () => {
 
       <div className="stats-grid">
         <div
-          className="stat-card stat-card-link stat-card-bins"
-          style={{ order: 1 }}
+          className="stat-card stat-card-link"
           role="button"
           tabIndex={0}
           onClick={() => onNavigateTo?.('bins')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
           aria-label="Go to Bin Monitoring"
+          style={{ order: 1 }}
         >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
-          <div className="stat-card-bins-center">
-            <div className="stat-info">
-              <span className="stat-label">Total Bins</span>
-              <h2 className="stat-value">{Number(stats.totalBinsAll) || 0}</h2>
-            </div>
-          </div>
-          <div className="stat-breakdown-side">
-            <span className="stat-breakdown-active">{Number(stats.totalBins) || 0}</span>
-            <span className="stat-breakdown-sep"> · </span>
-            <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalBinsAll) || 0) - (Number(stats.totalBins) || 0))}</span>
+          <div className="stat-info">
+            <span className="stat-label">Total Bins</span>
+            <h2 className="stat-value">{stats.totalBins}</h2>
           </div>
         </div>
 
@@ -343,17 +350,26 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.Collector /></div>
             <div className="stat-info">
               <span className="stat-label">Collectors</span>
-              <h2 className="stat-value">{Number(stats.collectorsAll) || 0}</h2>
+              <h2 className="stat-value">{stats.collectors}</h2>
             </div>
-            <div className="stat-card-right">
-              <div className="stat-breakdown-side">
-                <span className="stat-breakdown-active">{Number(stats.collectors) || 0}</span>
-                <span className="stat-breakdown-sep"> · </span>
-                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.collectorsAll) || 0) - (Number(stats.collectors) || 0))}</span>
-              </div>
-              <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
-            </div>
+            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
+          {collectorsDropdownOpen && (
+            <div className="stat-card-dropdown">
+              <div className="stat-card-dropdown-title">All Collectors</div>
+              <ul className="stat-card-dropdown-list">
+                {collectorsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No collectors</li>
+                ) : (
+                  collectorsList.map((c) => (
+                    <li key={c.id || `${c.first_name}-${c.last_name}`} className="stat-card-dropdown-item">
+                      {[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="stat-card-wrapper stat-card-admins-dropdown" ref={adminsDropdownRef} style={{ order: 5 }}>
@@ -364,21 +380,14 @@ const fetchDashboardData = async () => {
             onClick={() => setAdminsDropdownOpen((prev) => !prev)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdminsDropdownOpen((prev) => !prev); } }}
             aria-expanded={adminsDropdownOpen}
-            aria-label="Admin count, click to view list"
+            aria-label="Admins count, click to view list"
           >
             <div className="stat-icon-bg"><Icons.Supervisor /></div>
             <div className="stat-info">
-              <span className="stat-label">Admin</span>
-              <h2 className="stat-value">{Number(stats.adminAll) || 0}</h2>
+              <span className="stat-label">Admins</span>
+              <h2 className="stat-value">{stats.admins}</h2>
             </div>
-            <div className="stat-card-right">
-              <div className="stat-breakdown-side">
-                <span className="stat-breakdown-active">{Number(stats.admin) || 0}</span>
-                <span className="stat-breakdown-sep"> · </span>
-                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.adminAll) || 0) - (Number(stats.admin) || 0))}</span>
-              </div>
-              <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
-            </div>
+            <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
           {adminsDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -411,16 +420,9 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
             <div className="stat-info">
               <span className="stat-label">Total Employees</span>
-              <h2 className="stat-value">{Number(stats.totalEmployeesAll) || 0}</h2>
+              <h2 className="stat-value">{stats.totalEmployees}</h2>
             </div>
-            <div className="stat-card-right">
-              <div className="stat-breakdown-side">
-                <span className="stat-breakdown-active">{Number(stats.totalEmployees) || 0}</span>
-                <span className="stat-breakdown-sep"> · </span>
-                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalEmployeesAll) || 0) - (Number(stats.totalEmployees) || 0))}</span>
-              </div>
-              <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
-            </div>
+            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
           </div>
           {employeesDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -429,11 +431,14 @@ const fetchDashboardData = async () => {
                 {employeesList.length === 0 ? (
                   <li className="stat-card-dropdown-item empty">No employees</li>
                 ) : (
-                  employeesList.map((e) => (
-                    <li key={e.id || `${e.first_name}-${e.last_name}`} className="stat-card-dropdown-item">
-                      {[e.first_name, e.last_name].filter(Boolean).join(' ') || 'Unnamed'} ({e.role || '—'})
-                    </li>
-                  ))
+                  employeesList.map((emp) => {
+                    const roleLabel = emp.role === 'SUPERVISOR' ? 'Superadmin' : emp.role === 'ADMIN' ? 'Admin' : 'Collector';
+                    return (
+                      <li key={emp.id || `${emp.first_name}-${emp.last_name}-${emp.role}`} className="stat-card-dropdown-item">
+                        {[emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Unnamed'} <span className="stat-card-dropdown-role">({roleLabel})</span>
+                      </li>
+                    );
+                  })
                 )}
               </ul>
             </div>
@@ -443,7 +448,57 @@ const fetchDashboardData = async () => {
 
       <div className="main-charts-layout">
         <div className="chart-card-full distribution-section">
-  <h3 className="section-title">Today's Waste Distribution</h3>
+  <div className="distribution-header">
+    <h3 className="section-title">Waste Distribution</h3>
+    <div className="date-selector-container">
+      <button 
+        className="date-nav-btn" 
+        onClick={() => {
+          const prevDate = new Date(selectedDate);
+          prevDate.setDate(prevDate.getDate() - 1);
+          setSelectedDate(prevDate.toISOString().split('T')[0]);
+        }}
+        title="Previous Day"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+        max={new Date().toISOString().split('T')[0]}
+        className="date-input"
+      />
+      <button 
+        className="date-nav-btn date-nav-btn-next" 
+        onClick={() => {
+          const nextDate = new Date(selectedDate);
+          nextDate.setDate(nextDate.getDate() + 1);
+          const today = new Date().toISOString().split('T')[0];
+          if (nextDate.toISOString().split('T')[0] <= today) {
+            setSelectedDate(nextDate.toISOString().split('T')[0]);
+          }
+        }}
+        disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+        title="Next Day"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+      {selectedDate !== new Date().toISOString().split('T')[0] && (
+        <button 
+          className="date-today-btn" 
+          onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+          title="Go to Today"
+        >
+          Today
+        </button>
+      )}
+    </div>
+  </div>
   <div className="visual-chart-area">
     <div className="y-axis-labels">
       {calculateYAxisLabels().map((label, index) => (
@@ -468,7 +523,7 @@ const fetchDashboardData = async () => {
         ))
       ) : (
         <div style={{ textAlign: 'center', width: '100%', padding: '20px', color: '#666' }}>
-          No data available for today
+          No data available for {new Date(selectedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       )}
     </div>
@@ -497,4 +552,4 @@ const fetchDashboardData = async () => {
   );
 };
 
-export default AdminDash;
+export default SuperAdminDash;

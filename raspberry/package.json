@@ -1,0 +1,13 @@
+{
+  "name": "agss-raspberry",
+  "version": "1.0.0",
+  "description": "Small app on Raspberry Pi to send sensor data to the backend (Node.js + Supabase)",
+  "main": "raspberry.js",
+  "dependencies": {
+    "dotenv": "^16.0.0"
+  },
+  "scripts": {
+    "start": "node raspberry.js",
+    "send-once": "node raspberry.js --once"
+  }
+}

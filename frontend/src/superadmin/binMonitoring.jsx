@@ -8,7 +8,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import './admincss/binMonitoring.css';
+import BinListCard from '../components/BinListCard';
+import './superadmincss/binMonitoring.css';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
@@ -19,6 +20,30 @@ import './admincss/binMonitoring.css';
  */
 const roundToTen = (level) => {
   return Math.round(level / 10) * 10;
+};
+
+/**
+ * Format last_update from Supabase for display (date/time, no "minutes ago")
+ * @param {string|null|undefined} isoString - ISO date string from DB
+ * @returns {string} Formatted string or "—" if missing
+ */
+const formatLastCollection = (isoString) => {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return '—';
+  }
+};
+
+/** Get current superadmin user id for activity_logs (who performed the action). */
+const getCurrentSuperadminUserId = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return null;
+  const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+  return u?.id ?? null;
 };
 
 // Icon Components for different waste categories
@@ -84,96 +109,6 @@ const getFillLevelColor = (fillLevel) => {
   if (fillLevel >= 30) return '#eab308'; // Yellow
   if (fillLevel >= 15) return '#f97316'; // Orange
   return '#ef4444'; // Red
-};
-
-/**
- * Bin List Card Component
- * Displays bin information in list view with system power and fill level
- * @param {Object} bin - Bin data object
- * @param {Function} onClick - Callback when bin is clicked
- * @param {Function} onDrain - Callback when drain button is clicked
- */
-const BinListCard = ({ bin, onClick }) => {
-  /**
-   * Gets status text based on fill level
-   * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
-   * @returns {string} Status text
-   */
-  const getStatus = () => {
-    if (bin.fillLevel >= 90) return 'Full';
-    if (bin.fillLevel >= 75) return 'Almost Full';
-    if (bin.fillLevel >= 50) return 'Normal';
-    return 'Empty';
-  };
-
-  /**
-   * Gets CSS class for status badge based on fill level
-   * @returns {string} CSS class name
-   */
-  const getStatusClass = () => {
-    if (bin.fillLevel >= 90) return 'status-full';
-    if (bin.fillLevel >= 75) return 'status-almost-full';
-    if (bin.fillLevel >= 50) return 'status-normal';
-    return 'status-empty';
-  };
-
-  // Get color class based on category
-  const getColorClass = () => {
-    if (bin.category === 'Biodegradable') return 'green';
-    if (bin.category === 'Non-Biodegradable' || bin.category === 'Non Biodegradable') return 'red';
-    if (bin.category === 'Recyclable') return 'blue';
-    return 'lime'; // Default for Unsorted or others
-  };
-
-  // Get icon based on category - All bins use TrashIcon like Bin 2
-  const getCategoryIcon = () => {
-    return <TrashIcon />; // All bins use the same icon as Bin 2
-  };
-
-  return (
-    <div className={`bin-list-card ${getColorClass()}`} onClick={onClick}>
-      {/* Colored Header Section */}
-      <div className="bin-list-header">
-        {/* Icon Circle */}
-        <div className="bin-list-icon-wrapper">
-          {getCategoryIcon()}
-          </div>
-        
-        {/* Bin Name */}
-        <h3 className="bin-list-category-name">{bin.name}</h3>
-      </div>
-
-      {/* White Body Section */}
-      <div className="bin-list-body">
-        <div className="bin-list-fill-info">
-          <div className="fill-level-section">
-          <span className="fill-level-label">Fill Level</span>
-            <span 
-              className="fill-percent" 
-              style={{ color: getFillLevelColor(bin.fillLevel) }}
-            >
-              {bin.fillLevel}%
-            </span>
-          </div>
-          <div className="fill-bar">
-            <div 
-              className="fill-progress" 
-              style={{ 
-                width: `${bin.fillLevel}%`,
-                backgroundColor: getFillLevelColor(bin.fillLevel)
-              }}
-            ></div>
-            </div>
-          <div className="bin-list-meta-info">
-            <div className="bin-list-info-row">
-              <span className="info-label">Last Collection</span>
-              <span className="info-value">{bin.lastUpdate}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 /**
@@ -273,20 +208,29 @@ const BinDetailCard = ({ bin, onDrain }) => {
  * Main Bin Monitoring Component
  * Manages two views: list view and detail view
  * Handles bin data fetching, draining operations, and navigation
+ * @param {Object} props - openArchiveFromSidebar: open archive view when true; onViewedArchiveFromSidebar: callback to clear sidebar request; onArchiveViewChange: callback(isArchive) when archive view toggles; requestExitArchiveView: when true, exit archive view; onExitedArchiveView: callback to clear exit request
  */
-const BinMonitoring = () => {
+const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onArchiveViewChange, requestExitArchiveView, onExitedArchiveView }) => {
   // State to track current view ('list' or 'detail')
   const [view, setView] = useState('list');
   // State to track which bin is currently selected for detail view
   const [selectedBinId, setSelectedBinId] = useState(null);
+  // State to control Search Bin dropdown visibility
+  const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
+  // State for selected bins (for archiving)
+  const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
+  const [showArchiveCheckboxesOnCards, setShowArchiveCheckboxesOnCards] = useState(false);
+  const [awaitingArchiveConfirm, setAwaitingArchiveConfirm] = useState(false);
+  // State for bin search term
+  const [binSearchTerm, setBinSearchTerm] = useState('');
+  // State to track if we're viewing archived bins
+  const [isArchiveView, setIsArchiveView] = useState(false);
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
-  // selectedBinsForArchive kept for filter logic (admin: no dropdown, so always show all bins)
-  const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
-  const [binSearchTerm, setBinSearchTerm] = useState('');
-  const [isArchiveView, setIsArchiveView] = useState(false);
+  // State for unarchive confirmation modal
   const [showUnarchiveModal, setShowUnarchiveModal] = useState(false);
   const [binToUnarchive, setBinToUnarchive] = useState(null);
+  // State for archive confirmation modal
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -294,8 +238,7 @@ const BinMonitoring = () => {
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: '',
-  assigned_collector_id: ''
+  location: ''
 });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
@@ -306,6 +249,13 @@ const BinMonitoring = () => {
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
+
+  // Collection history (Recent button on detail view)
+  const [showCollectionHistoryInline, setShowCollectionHistoryInline] = useState(false);
+  const [collectionHistoryBin, setCollectionHistoryBin] = useState(null);
+  const [collectionHistoryCategory, setCollectionHistoryCategory] = useState(null);
+  const [collectionHistoryItems, setCollectionHistoryItems] = useState([]);
+  const [loadingCollectionHistory, setLoadingCollectionHistory] = useState(false);
   
 const fetchCollectors = async () => {
   try {
@@ -349,7 +299,70 @@ const [collectors, setCollectors] = useState([]);
     }, 300);
   };
 
-  // Fetch bin data on component mount and set up real-time updates
+  const openCollectionHistory = async (bin, categoryBinOrFilter, showOnPage = false) => {
+    const mainBin = bin && bin.id && typeof bin.id === 'number' ? bin : null;
+    const categoryLabel = categoryBinOrFilter && typeof categoryBinOrFilter === 'object' ? categoryBinOrFilter.category : (categoryBinOrFilter || null);
+    const binToUse = mainBin || bin;
+    setCollectionHistoryBin(binToUse);
+    setCollectionHistoryCategory(categoryLabel);
+    if (showOnPage) setShowCollectionHistoryInline(true);
+    setLoadingCollectionHistory(true);
+    setCollectionHistoryItems([]);
+    try {
+      let query = supabase
+        .from('waste_items')
+        .select('id, category, processing_time, created_at')
+        .eq('bin_id', binToUse.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (categoryLabel) {
+        const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
+        query = query.eq('category', dbCategory);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      setCollectionHistoryItems(data || []);
+    } catch (err) {
+      console.error('Error fetching collection history:', err);
+      setCollectionHistoryItems([]);
+    } finally {
+      setLoadingCollectionHistory(false);
+    }
+  };
+
+  const closeCollectionHistory = () => {
+    setShowCollectionHistoryInline(false);
+    setCollectionHistoryBin(null);
+    setCollectionHistoryCategory(null);
+    setCollectionHistoryItems([]);
+  };
+
+  // Open archive view when requested from sidebar
+  useEffect(() => {
+    if (openArchiveFromSidebar) {
+      setIsArchiveView(true);
+      setView('list');
+      setCurrentPage(1);
+      onViewedArchiveFromSidebar?.();
+    }
+  }, [openArchiveFromSidebar, onViewedArchiveFromSidebar]);
+
+  // Notify parent when archive view changes (for sidebar: know when to exit on trigger click)
+  useEffect(() => {
+    onArchiveViewChange?.(isArchiveView);
+  }, [isArchiveView, onArchiveViewChange]);
+
+  // Exit archive view when user clicks "Bin Monitoring" in sidebar while in archive view
+  useEffect(() => {
+    if (requestExitArchiveView) {
+      setIsArchiveView(false);
+      setView('list');
+      setCurrentPage(1);
+      onExitedArchiveView?.();
+    }
+  }, [requestExitArchiveView, onExitedArchiveView]);
+
+  // Fetch bin data on component mount and when archive view toggles
   useEffect(() => {
   fetchBinData();
   fetchCollectors(); // Add this line
@@ -372,6 +385,7 @@ const [collectors, setCollectors] = useState([]);
    */
 const fetchBinData = async () => {
   try {
+    const statusFilter = isArchiveView ? 'INACTIVE' : 'ACTIVE';
     const { data, error } = await supabase
       .from('bins')
       .select(`
@@ -383,7 +397,7 @@ const fetchBinData = async () => {
           middle_name
         )
       `)
-      .eq('status', 'ACTIVE')
+      .eq('status', statusFilter)
       .order('id', { ascending: true });
 
     if (error) throw error;
@@ -395,7 +409,7 @@ const fetchBinData = async () => {
         fillLevel: 0, // Will be updated from IoT later
         systemPower: bin.system_power || 100,
         capacity: bin.capacity || '20kg',
-        lastUpdate: 'Just now',
+        lastUpdate: formatLastCollection(bin.last_update),
         category: 'Biodegradable',
         location: bin.location,
         assigned_collector_id: bin.assigned_collector_id,
@@ -484,13 +498,9 @@ const updateBinFillLevels = () => {
         ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
         : bin.fillLevel;
 
-      const minutesAgo = Math.floor(Math.random() * 3) + 1;
-      const updateTime = minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
-
       return {
         ...bin,
         fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
-        lastUpdate: updateTime,
         categoryBins: updatedCategoryBins
       };
     })
@@ -500,17 +510,26 @@ const updateBinFillLevels = () => {
   /**
    * Handles bin click to navigate to detail view
    * Sets the selected bin ID to show that bin's category bins
+   * For archived bins, shows unarchive confirmation instead
    * @param {Object} bin - The clicked bin object
    */
   const handleBinClick = (bin) => {
-    setSelectedBinId(bin.id);
-    setView('detail');
+    if (isArchiveView) {
+      // Show unarchive confirmation for archived bins
+      setBinToUnarchive(bin);
+      setShowUnarchiveModal(true);
+    } else {
+      // Navigate to detail view for active bins
+      setSelectedBinId(bin.id);
+      setView('detail');
+    }
   };
 
   /**
    * Handles back button click to return to list view
    */
   const handleBack = () => {
+    setShowCollectionHistoryInline(false);
     setView('list');
   };
 
@@ -532,16 +551,17 @@ const updateBinFillLevels = () => {
         console.warn('Bins table may not exist:', error);
       }
 
-      // Update only the category bin for the selected bin
+      const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
           prevBins.map(bin =>
             bin.id === selectedBinId
               ? {
                   ...bin,
+                  lastUpdate: formattedNow,
                   categoryBins: bin.categoryBins.map(catBin =>
                     catBin.id === categoryBinId
-                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      ? { ...catBin, fillLevel: 0, lastCollection: formattedNow }
                       : catBin
                   )
                 }
@@ -551,16 +571,17 @@ const updateBinFillLevels = () => {
       }
     } catch (error) {
       console.error('Error draining category bin:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
           prevBins.map(bin =>
             bin.id === selectedBinId
               ? {
                   ...bin,
+                  lastUpdate: formattedNow,
                   categoryBins: bin.categoryBins.map(catBin =>
                     catBin.id === categoryBinId
-                      ? { ...catBin, fillLevel: 0, lastCollection: 'Just now' }
+                      ? { ...catBin, fillLevel: 0, lastCollection: formattedNow }
                       : catBin
                   )
                 }
@@ -588,18 +609,18 @@ const updateBinFillLevels = () => {
         console.warn('Bins table may not exist:', error);
       }
 
-      // Update the bin and all its category bins
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId
             ? {
                 ...bin,
                 fillLevel: 0,
-                lastUpdate: 'Just now',
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
@@ -607,18 +628,18 @@ const updateBinFillLevels = () => {
       );
     } catch (error) {
       console.error('Error draining list bin:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === binId
             ? {
                 ...bin,
                 fillLevel: 0,
-                lastUpdate: 'Just now',
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
@@ -626,11 +647,13 @@ const updateBinFillLevels = () => {
       );
     }
     // After updating local state, add:
-await supabase.from('activity_logs').insert([{
-  activity_type: 'BIN_DRAINED',
-  description: `Drained ${bins.find(b => b.id === binId)?.name || 'Bin'}`,
-  bin_id: binId
-}]);
+    const userId = await getCurrentSuperadminUserId();
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'BIN_DRAINED',
+      description: `Drained ${bins.find(b => b.id === binId)?.name || 'Bin'}`,
+      bin_id: binId,
+      user_id: userId
+    }]);
   };
 
   /**
@@ -670,51 +693,53 @@ await supabase.from('activity_logs').insert([{
         }
       }
 
-      // Update local state - only drain category bins for the selected bin
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === selectedBinId
             ? {
                 ...bin,
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
         )
       );
 
-      // Close the modal after successful drain
       setShowDrainAllModal(false);
     } catch (error) {
       console.error('Error draining all category bins:', error);
-      // Still update local state even if database update fails
+      const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
           bin.id === selectedBinId
             ? {
                 ...bin,
+                lastUpdate: formattedNow,
                 categoryBins: bin.categoryBins.map(catBin => ({
                   ...catBin,
                   fillLevel: 0,
-                  lastCollection: 'Just now'
+                  lastCollection: formattedNow
                 }))
               }
             : bin
         )
       );
-      // Close the modal even if there's an error
       setShowDrainAllModal(false);
     }
 
       // After closing the modal, add:
       const selectedBin = bins.find(b => b.id === selectedBinId);
-        await supabase.from('activity_logs').insert([{
-          activity_type: 'BIN_DRAINED_ALL',
-          description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
-          bin_id: selectedBinId
+      const userId = await getCurrentSuperadminUserId();
+      await supabase.from('activity_logs').insert([{
+        activity_type: 'BIN_DRAINED_ALL',
+        description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
+        bin_id: selectedBinId,
+        user_id: userId
       }]);
 
   };
@@ -782,6 +807,65 @@ await supabase.from('activity_logs').insert([{
   if (view === 'detail' && selectedBin) {
     return (
       <div className="bin-monitoring-container">
+        {/* Unarchive Confirmation Modal */}
+        {showUnarchiveModal && binToUnarchive && (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <div className="modal-icon-wrapper">
+                <AlertIcon />
+              </div>
+              <h3>Unarchive Bin?</h3>
+              <p>Are you sure you want to unarchive {binToUnarchive.name}? This will restore it to the active bins list.</p>
+              <div className="modal-actions">
+                <button className="btn-modal btn-cancel" onClick={() => {
+                  setShowUnarchiveModal(false);
+                  setBinToUnarchive(null);
+                }}>
+                  No, Cancel
+                </button>
+                <button className="btn-modal btn-confirm" onClick={async () => {
+                  try {
+                    setLoading(true);
+                    // Unarchive the bin
+                    const { error } = await supabase
+                      .from('bins')
+                      .update({ status: 'ACTIVE' })
+                      .eq('id', binToUnarchive.id);
+                    
+                    if (error) throw error;
+                    
+                    // Log activity
+                    const userId = await getCurrentSuperadminUserId();
+                    await supabase.from('activity_logs').insert([{
+                      activity_type: 'BIN_UNARCHIVED',
+                      description: `Unarchived ${binToUnarchive.name}`,
+                      bin_id: binToUnarchive.id,
+                      user_id: userId
+                    }]);
+                    
+                    // Remove from local state
+                    setBins(prevBins => prevBins.filter(b => b.id !== binToUnarchive.id));
+                    setShowUnarchiveModal(false);
+                    setBinToUnarchive(null);
+                    showSuccessNotification(`${binToUnarchive.name} unarchived successfully!`);
+                  } catch (error) {
+                    console.error('Error unarchiving bin:', error);
+                    setAlertTitle('Error');
+                    setAlertMessage('Error unarchiving bin: ' + error.message);
+                    setShowAlertModal(true);
+                    setShowUnarchiveModal(false);
+                    setBinToUnarchive(null);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}>
+                  {loading ? 'Unarchiving...' : 'Yes, Unarchive'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Drain All Confirmation Modal */}
         {showDrainAllModal && (
           <div className="modal-overlay">
@@ -810,6 +894,14 @@ await supabase.from('activity_logs').insert([{
             <p>Monitor bin fill levels</p>
           </div>
           <div className="header-actions">
+            <button
+              type="button"
+              className="action-btn recent-btn"
+              onClick={() => openCollectionHistory(selectedBin, null, true)}
+              aria-label={`View collection history for ${selectedBin?.name}`}
+            >
+              Recent
+            </button>
             <button className="action-btn back-btn" onClick={handleBack}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -829,15 +921,46 @@ await supabase.from('activity_logs').insert([{
             />
           ))}
         </div>
+
+        {/* Collection History section (shown on page when Recent is clicked) */}
+        {showCollectionHistoryInline && collectionHistoryBin && (
+          <div className="collection-history-inline">
+            <div className="collection-history-inline-header">
+              <h3>Collection History – {collectionHistoryBin.name}{collectionHistoryCategory ? ` (${collectionHistoryCategory})` : ''}</h3>
+              <button type="button" className="collection-history-inline-close" onClick={() => setShowCollectionHistoryInline(false)} aria-label="Hide collection history">×</button>
+            </div>
+            {loadingCollectionHistory ? (
+              <div className="collection-history-inline-loading">Loading collection history...</div>
+            ) : collectionHistoryItems.length === 0 ? (
+              <div className="collection-history-inline-empty">No collection history for this bin yet.</div>
+            ) : (
+              <div className="collection-history-inline-list-wrap">
+                <ul className="collection-history-inline-list">
+                  {collectionHistoryItems.map((item) => (
+                    <li key={item.id} className="collection-history-inline-item">
+                      <span className="collection-history-inline-date">
+                        {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                      </span>
+                      <span className="collection-history-inline-category">{item.category || 'Unsorted'}</span>
+                      {item.processing_time != null && (
+                        <span className="collection-history-inline-time">{item.processing_time}s</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
 
-  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all. Then filter by search (superadmin logic: multiple bin numbers e.g. "4, 9, 10").
-  const binsBySelection = selectedBinsForArchive.length > 0
+  // When archive checkboxes are on cards, always show all bins (filtered by search) so the user can search e.g. "1" then "10" to select bin 1 and bin 10. Otherwise, when Search Bin dropdown selection is used, show only selected bins when any are selected.
+  const binsBySelection = selectedBinsForArchive.length > 0 && !showArchiveCheckboxesOnCards
     ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
     : bins;
-  // Search by bin number(s) only: "4, 9, 10" or "4 9 10" shows bins with those numbers (same as superadmin)
+  // Search by bin number(s) only: "4, 9, 10" or "4 9 10" shows bins with those numbers
   const searchTerms = binSearchTerm
     .split(/[\s,]+/)
     .map(s => s.trim())
@@ -851,7 +974,7 @@ await supabase.from('activity_logs').insert([{
         return searchTerms.some(term => binNum === parseInt(term, 10));
       });
 
-  // Calculate pagination (same as superadmin: at least 1 page)
+  // Calculate pagination from displayBins
   const totalPages = Math.max(1, Math.ceil(displayBins.length / binsPerPage));
   const indexOfLastBin = currentPage * binsPerPage;
   const indexOfFirstBin = indexOfLastBin - binsPerPage;
@@ -874,13 +997,6 @@ await supabase.from('activity_logs').insert([{
   // Handle Add Bin form submission
 const handleAddBin = async (e) => {
   e.preventDefault();
-  
-  if (!binFormData.assigned_collector_id) {
-    setAlertTitle('Validation Error');
-    setAlertMessage('Please select a collector to assign to this bin.');
-    setShowAlertModal(true);
-    return;
-  }
 
   if (!binFormData.location || !binFormData.location.trim()) {
     setAlertTitle('Validation Error');
@@ -907,44 +1023,33 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database
+    // Insert into database (no assigned collector on add)
     const { data: newBinData, error } = await supabase
       .from('bins')
       .insert([{
         name: newBinName,
         location: binFormData.location.trim(),
         capacity: '20kg', // Default capacity
-        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
         system_power: 100,
         status: 'ACTIVE'
       }])
-      .select(`
-        *,
-        assigned_collector:users!bins_assigned_collector_id_fkey(
-          id,
-          first_name,
-          last_name,
-          middle_name
-        )
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
 
-    // Create new bin object for local state
+    // Create new bin object for local state (unassigned on add)
     const newBin = {
       id: newBinData.id,
       name: newBinData.name,
       fillLevel: 0,
       systemPower: 100,
       capacity: newBinData.capacity,
-      lastUpdate: 'Just now',
+      lastUpdate: formatLastCollection(newBinData.last_update ?? new Date().toISOString()),
       category: 'Biodegradable',
       location: newBinData.location,
-      assigned_collector_id: newBinData.assigned_collector_id,
-      assigned_collector_name: newBinData.assigned_collector 
-        ? `${newBinData.assigned_collector.first_name} ${newBinData.assigned_collector.middle_name || ''} ${newBinData.assigned_collector.last_name}`.trim()
-        : 'Unassigned',
+      assigned_collector_id: newBinData.assigned_collector_id || null,
+      assigned_collector_name: 'Unassigned',
       categoryBins: [
         {
           id: `bio-${newBinData.id}`,
@@ -989,16 +1094,17 @@ const handleAddBin = async (e) => {
     setBins(prev => [...prev, newBin]);
 
     // Log activity
+    const userId = await getCurrentSuperadminUserId();
     await supabase.from('activity_logs').insert([{
       activity_type: 'BIN_ADDED',
       description: `Added ${newBinData.name} at ${newBinData.location}`,
-      bin_id: newBinData.id
+      bin_id: newBinData.id,
+      user_id: userId
     }]);
 
     // Reset form
     setBinFormData({
-      location: '',
-      assigned_collector_id: ''
+      location: ''
     });
 
     // Close modal
@@ -1017,6 +1123,167 @@ const handleAddBin = async (e) => {
   // Render list view (default) - Shows main bins (Bin 1, Bin 2, etc.)
   return (
     <div className="bin-monitoring-container">
+      {/* Unarchive Confirmation Modal */}
+      {showUnarchiveModal && binToUnarchive && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-icon-wrapper">
+              <AlertIcon />
+            </div>
+            <h3>Unarchive Bin?</h3>
+            <p>Are you sure you want to unarchive {binToUnarchive.name}? This will restore it to the active bins list.</p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => {
+                setShowUnarchiveModal(false);
+                setBinToUnarchive(null);
+              }}>
+                No, Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={async () => {
+                try {
+                  setLoading(true);
+                  // Unarchive the bin
+                  const { error } = await supabase
+                    .from('bins')
+                    .update({ status: 'ACTIVE' })
+                    .eq('id', binToUnarchive.id);
+                  
+                  if (error) throw error;
+                  
+                  // Log activity
+                  const userId = await getCurrentSuperadminUserId();
+                  await supabase.from('activity_logs').insert([{
+                    activity_type: 'BIN_UNARCHIVED',
+                    description: `Unarchived ${binToUnarchive.name}`,
+                    bin_id: binToUnarchive.id,
+                    user_id: userId
+                  }]);
+                  
+                  // Remove from local state
+                  setBins(prevBins => prevBins.filter(b => b.id !== binToUnarchive.id));
+                  setShowUnarchiveModal(false);
+                  setBinToUnarchive(null);
+                  showSuccessNotification(`${binToUnarchive.name} unarchived successfully!`);
+                } catch (error) {
+                  console.error('Error unarchiving bin:', error);
+                  setAlertTitle('Error');
+                  setAlertMessage('Error unarchiving bin: ' + error.message);
+                  setShowAlertModal(true);
+                  setShowUnarchiveModal(false);
+                  setBinToUnarchive(null);
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                {loading ? 'Unarchiving...' : 'Yes, Unarchive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Confirmation Modal */}
+      {showArchiveModal && (() => {
+        // Get bin names for selected bins
+        const selectedBinNames = bins
+          .filter(bin => selectedBinsForArchive.includes(bin.id))
+          .map(bin => bin.name)
+          .join(', ');
+        
+        return (
+          <div className="modal-overlay">
+            <div className="modal-box">
+              <div className="modal-icon-wrapper">
+                <AlertIcon />
+              </div>
+              <h3>{isArchiveView ? 'Unarchive Bins?' : 'Archive Bins?'}</h3>
+              <p>Are you sure you want to {isArchiveView ? 'unarchive' : 'archive'} {selectedBinNames}? {isArchiveView ? 'They will be restored to the active bins list.' : 'They will be moved to the archive.'}</p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => {
+                setShowArchiveModal(false);
+                setAwaitingArchiveConfirm(false);
+              }}>
+                No, Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={async () => {
+                try {
+                  setLoading(true);
+                  if (isArchiveView) {
+                    // Unarchive selected bins
+                    const { error } = await supabase
+                      .from('bins')
+                      .update({ status: 'ACTIVE' })
+                      .in('id', selectedBinsForArchive);
+                    
+                    if (error) throw error;
+                    
+                    // Log activity
+                    const userId = await getCurrentSuperadminUserId();
+                    for (const binId of selectedBinsForArchive) {
+                      const bin = bins.find(b => b.id === binId);
+                      await supabase.from('activity_logs').insert([{
+                        activity_type: 'BIN_UNARCHIVED',
+                        description: `Unarchived ${bin?.name || 'Bin'}`,
+                        bin_id: binId,
+                        user_id: userId
+                      }]);
+                    }
+                    
+                    // Remove unarchived bins from local state (they'll appear in active view)
+                    setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
+                    setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
+                    setIsBinDropdownOpen(false);
+                    setShowArchiveModal(false);
+                    showSuccessNotification(`${selectedBinsForArchive.length} bin(s) unarchived successfully!`);
+                  } else {
+                    // Archive selected bins
+                    const { error } = await supabase
+                      .from('bins')
+                      .update({ status: 'INACTIVE' })
+                      .in('id', selectedBinsForArchive);
+                    
+                    if (error) throw error;
+                    
+                    // Log activity
+                    const userId = await getCurrentSuperadminUserId();
+                    for (const binId of selectedBinsForArchive) {
+                      const bin = bins.find(b => b.id === binId);
+                      await supabase.from('activity_logs').insert([{
+                        activity_type: 'BIN_ARCHIVED',
+                        description: `Archived ${bin?.name || 'Bin'}`,
+                        bin_id: binId,
+                        user_id: userId
+                      }]);
+                    }
+                    
+                    // Remove archived bins from local state
+                    setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
+                    setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
+                    setIsBinDropdownOpen(false);
+                    setShowArchiveModal(false);
+                    showSuccessNotification(`${selectedBinsForArchive.length} bin(s) archived successfully!`);
+                  }
+                } catch (error) {
+                  console.error(`Error ${isArchiveView ? 'unarchiving' : 'archiving'} bins:`, error);
+                  setAlertTitle('Error');
+                  setAlertMessage(`Error ${isArchiveView ? 'unarchiving' : 'archiving'} bins: ` + error.message);
+                  setShowAlertModal(true);
+                  setShowArchiveModal(false);
+                  setAwaitingArchiveConfirm(false);
+                } finally {
+                  setLoading(false);
+                }
+              }}>
+                {loading ? (isArchiveView ? 'Unarchiving...' : 'Archiving...') : (isArchiveView ? 'Yes, Unarchive' : 'Yes, Archive')}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
       {/* Success Notification Toast */}
       {showNotification && (
         <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
@@ -1049,23 +1316,6 @@ const handleAddBin = async (e) => {
         required
       />
     </div>
-    
-    <div className="form-group">
-      <label>Assigned Collector *</label>
-      <select 
-        name="assigned_collector_id" 
-        value={binFormData.assigned_collector_id} 
-        onChange={handleBinInputChange}
-        required
-      >
-        <option value="">Select Collector</option>
-        {collectors.map(collector => (
-          <option key={collector.id} value={collector.id}>
-            {collector.first_name} {collector.middle_name ? collector.middle_name + ' ' : ''}{collector.last_name}
-          </option>
-        ))}
-      </select>
-    </div>
   </div>
   
   <div className="modal-footer">
@@ -1081,49 +1331,175 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header - no Search Bin dropdown in admin */}
+      {/* List View Header - title left, search + Archive + Add Bin right */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-      </div>
-
-      {/* Search bar - multiple bin numbers e.g. "4, 9, 10" (same as superadmin) */}
-      <div className="bin-search-bar-above-cards">
-        <div className="bin-search-input-inner">
-          <input
-            type="text"
-            className="bin-search-input"
-            placeholder="Search by bin # (e.g. 4, 9, 10)"
-            value={binSearchTerm}
-            onChange={(e) => setBinSearchTerm(e.target.value)}
-            aria-label="Search bins"
-          />
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
+        <div className="bin-header-right-column">
+        <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+        <div className="bin-search-bar-above-cards">
+          <div className="bin-search-input-inner">
+            <input
+              type="text"
+              className="bin-search-input"
+              placeholder="Search by bin # (e.g. 4, 9, 10)"
+              value={binSearchTerm}
+              onChange={(e) => setBinSearchTerm(e.target.value)}
+              aria-label="Search bins"
+            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="bin-search-icon"
+            >
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
         </div>
-      </div>
-
-      {/* Add Bin Button - below search bar, shows on all pages */}
-      <div>
-        <button className="add-bin-header-button" onClick={() => setShowAddBinModal(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14"/>
+        <button
+          type="button"
+          className={`bin-archive-button bin-archive-button-inline ${isArchiveView ? 'bin-unarchive-button' : ''} ${awaitingArchiveConfirm ? 'bin-archive-button-confirm' : ''}`}
+          onClick={() => {
+            if (!showArchiveCheckboxesOnCards) {
+              setShowArchiveCheckboxesOnCards(true);
+              setAwaitingArchiveConfirm(true);
+              return;
+            }
+            if (selectedBinsForArchive.length === 0) {
+              setShowArchiveCheckboxesOnCards(false);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            if (awaitingArchiveConfirm) {
+              setShowArchiveModal(true);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            setAwaitingArchiveConfirm(true);
+          }}
+          disabled={loading}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {isArchiveView ? (
+              <>
+                <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
+                <path d="M21 9l-9-6-9 6"/>
+                <path d="M12 3v12"/>
+              </>
+            ) : (
+              <>
+                <polyline points="21 8 21 21 3 21 3 8"/>
+                <rect x="1" y="3" width="22" height="5"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+              </>
+            )}
           </svg>
-          Add Bin
+          {showArchiveCheckboxesOnCards
+              ? (selectedBinsForArchive.length === 0
+                  ? 'Return'
+                  : (isArchiveView ? 'Confirm? (Click to Unarchive)' : 'Confirm? (Click to Archive)'))
+              : (isArchiveView ? 'Unarchive' : 'Archive')}
         </button>
+        {!isArchiveView && (
+          <button
+            type="button"
+            className="bin-add-bin-button-inline"
+            onClick={() => setShowAddBinModal(true)}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add Bin
+          </button>
+        )}
+        </div>
+        {showArchiveCheckboxesOnCards && (
+          <div className="bin-select-all-row bin-select-all-below-search">
+            <button
+              type="button"
+              className="bin-select-all-btn"
+              onClick={() => {
+                const ids = displayBins.map(b => b.id);
+                setSelectedBinsForArchive(prev => {
+                  const next = new Set(prev);
+                  ids.forEach(id => next.add(id));
+                  return [...next];
+                });
+              }}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="bin-unselect-all-btn"
+              onClick={() => setSelectedBinsForArchive([])}
+            >
+              Unselect all
+            </button>
+            {selectedBinsForArchive.length > 0 && (
+              <div className="bin-selected-summary bin-selected-summary-inline">
+                <span className="bin-selected-count">
+                  {selectedBinsForArchive.length} bin{selectedBinsForArchive.length !== 1 ? 's' : ''} selected:
+                </span>
+                <span className="bin-selected-names">
+                  {bins
+                    .filter(b => selectedBinsForArchive.includes(b.id))
+                    .map(b => b.name)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        </div>
       </div>
 
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
         {currentBins.map(bin => (
-          <BinListCard 
-            key={bin.id} 
-            bin={bin} 
-            onClick={() => handleBinClick(bin)} 
+          <BinListCard
+            key={bin.id}
+            bin={bin}
+            onClick={() => handleBinClick(bin)}
+            isArchived={isArchiveView}
+            assignedPosition="header"
+            showArchiveCheckbox={showArchiveCheckboxesOnCards}
+            isSelectedForArchive={selectedBinsForArchive.includes(bin.id)}
+            onArchiveCheckboxChange={(e) => {
+              e.stopPropagation();
+              if (e.target.checked) {
+                setSelectedBinsForArchive(prev => [...prev, bin.id]);
+              } else {
+                setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
+              }
+            }}
           />
         ))}
       </div>
@@ -1131,6 +1507,14 @@ const handleAddBin = async (e) => {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination-container">
+          {currentPage > 1 && (
+            <button 
+              className="pagination-btn pagination-first"
+              onClick={() => handlePageChange(1)}
+            >
+              First Page
+            </button>
+          )}
           <button 
             className="pagination-btn pagination-prev"
             onClick={() => handlePageChange(currentPage - 1)}
@@ -1157,6 +1541,14 @@ const handleAddBin = async (e) => {
           >
             Next
           </button>
+          {currentPage < totalPages && (
+            <button 
+              className="pagination-btn pagination-last"
+              onClick={() => handlePageChange(totalPages)}
+            >
+              Last Page
+            </button>
+          )}
         </div>
       )}
 
