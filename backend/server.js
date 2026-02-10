@@ -64,6 +64,8 @@ const loginVerificationRoutes = require('./routes/loginVerification');
 const healthRoutes = require('./routes/health');
 const securityAlertRoutes = require('./routes/securityAlert');
 const accountsRoutes = require('./routes/accounts');
+const hardwareRoutes = require('./routes/hardware');
+const collectorBinsRoutes = require('./routes/collectorBins');
 
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
@@ -72,11 +74,23 @@ app.use('/api/login', loginVerificationRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/security', securityAlertRoutes);
 app.use('/api/accounts', accountsRoutes);
+app.use('/api/hardware', hardwareRoutes);
+app.use('/api/collector-bins', collectorBinsRoutes);
+
+// Arduino serial (optional): npm install serialport; set ARDUINO_PORT=COM3 in .env
+try {
+  const { initHardware } = require('./utils/hardwareStore');
+  initHardware();
+} catch (e) {
+  // ignore if serialport not installed
+}
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Backend login server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
+  console.log(`Hardware API: http://localhost:${PORT}/api/hardware/status`);
+  console.log(`Collector bins: http://localhost:${PORT}/api/collector-bins`);
 });
 
 module.exports = app;
