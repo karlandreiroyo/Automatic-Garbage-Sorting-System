@@ -212,7 +212,7 @@
 .accuracy-icon svg {
   width: 28px;
   height: 28px;
-  stroke: #10b981;
+  stroke: currentColor;
 }
 
 .accuracy-content {
