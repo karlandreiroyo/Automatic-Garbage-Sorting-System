@@ -90,9 +90,33 @@ const CollectionHistory = () => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyData, setHistoryData] = useState([]);
+  const [recordedItems, setRecordedItems] = useState([]);
+  const [loadingRecordedItems, setLoadingRecordedItems] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const itemsPerPage = 4;
+
+  // Recorded items for Bin 2 (same as admin "Recorded Items – Bin 2" – waste_items from collector)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchRecorded = async () => {
+      setLoadingRecordedItems(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/collector-bins/recorded-items?bin_id=2`);
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (json.success && Array.isArray(json.data)) setRecordedItems(json.data);
+        else setRecordedItems([]);
+      } catch {
+        if (!cancelled) setRecordedItems([]);
+      } finally {
+        if (!cancelled) setLoadingRecordedItems(false);
+      }
+    };
+    fetchRecorded();
+    const interval = setInterval(fetchRecorded, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   // Real-time collection history from backend (bin drains from Bin Monitoring)
   useEffect(() => {
@@ -416,6 +440,33 @@ const CollectionHistory = () => {
           )}
         </>
       )}
+
+      {/* Recorded items – Bin 2 (waste_items history from collector) */}
+      <div className="recorded-items-section">
+        <h2 className="recorded-items-title">Recorded items – Bin 2</h2>
+        {loadingRecordedItems ? (
+          <p className="recorded-items-loading">Loading recorded items…</p>
+        ) : recordedItems.length === 0 ? (
+          <p className="recorded-items-empty">No recorded items for Bin 2 yet.</p>
+        ) : (
+          <ul className="recorded-items-list">
+            {recordedItems.map((item) => {
+              const d = item.created_at ? new Date(item.created_at) : null;
+              const dateStr = d ? d.toLocaleDateString() : '—';
+              const timeStr = d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+              const type = item.category ? normalizeType(item.category) : 'Unsorted';
+              return (
+                <li key={item.id} className="recorded-items-list-item">
+                  <span className="recorded-item-icon">{getTypeIcon(type)}</span>
+                  <span className="recorded-item-category">{type}</span>
+                  <span className="recorded-item-date">{dateStr}</span>
+                  <span className="recorded-item-time">{timeStr}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };

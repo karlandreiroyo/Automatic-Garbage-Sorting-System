@@ -24,6 +24,28 @@ router.get('/collection-history', (req, res) => {
   }
 });
 
+// Recorded items for collector's bin (Bin 2) – same data as admin "Recorded Items – Bin 2"
+router.get('/recorded-items', async (req, res) => {
+  try {
+    const binId = req.query.bin_id != null ? req.query.bin_id : 2;
+    const binIdVal = typeof binId === 'number' ? binId : (/^\d+$/.test(String(binId).trim()) ? parseInt(binId, 10) : 2);
+    const { data, error } = await supabase
+      .from('waste_items')
+      .select('id, category, processing_time, created_at')
+      .eq('bin_id', binIdVal)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) {
+      console.error('collector recorded-items error:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    res.json({ success: true, data: data || [] });
+  } catch (err) {
+    console.error('collector recorded-items route error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Log one or more bin drains (called when collector drains bins in Bin Monitoring)
 router.post('/collection-log', (req, res) => {
   try {
@@ -46,7 +68,9 @@ router.post('/waste-item', async (req, res) => {
       return res.status(400).json({ error: 'bin_id and category are required' });
     }
     // bin_id can be number (int8) or string (e.g. UUID)
-    const binIdVal = typeof bin_id === 'number' ? bin_id : (typeof bin_id === 'string' && /^\d+$/.test(String(bin_id).trim()) ? parseInt(bin_id, 10) : bin_id);
+    let binIdVal = typeof bin_id === 'number' ? bin_id : (typeof bin_id === 'string' && /^\d+$/.test(String(bin_id).trim()) ? parseInt(bin_id, 10) : bin_id);
+    // Collector uses bin 2; normalize bin_id 1 → 2 so waste_items match the collector bin
+    if (binIdVal === 1) binIdVal = 2;
     const row = {
       bin_id: binIdVal,
       category: String(category),

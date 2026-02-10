@@ -11,6 +11,8 @@ import { supabase } from '../supabaseClient';
 import BinListCard from '../components/BinListCard';
 import './admincss/binMonitoring.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
 /**
@@ -301,19 +303,29 @@ const [collectors, setCollectors] = useState([]);
     setLoadingCollectionHistory(true);
     setCollectionHistoryItems([]);
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('id, category, processing_time, created_at')
-        .eq('bin_id', binToUse.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      const params = new URLSearchParams({ bin_id: String(binToUse.id) });
       if (categoryLabel) {
         const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
-        query = query.eq('category', dbCategory);
+        params.set('category', dbCategory);
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      setCollectionHistoryItems(data || []);
+      const res = await fetch(`${API_BASE}/api/admin/recorded-items?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Recorded items API error:', json.message || res.statusText);
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      setCollectionHistoryItems(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       console.error('Error fetching collection history:', err);
       setCollectionHistoryItems([]);
