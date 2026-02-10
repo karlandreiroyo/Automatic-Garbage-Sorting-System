@@ -1,7 +1,8 @@
 /**
- * Waste Categories Component
- * Displays waste sorting statistics by category with time-based filtering
- * Shows: Biodegradable, Non-Biodegradable, Recycle, and Unsorted categories
+ * Super Admin Waste Categories
+ * Same UI and behavior as Admin Waste Categories; standalone code for Super Admin only.
+ * Displays waste sorting by category with Daily/Weekly/Monthly and date picker.
+ * Uses backend GET /api/admin/waste-categories (Supabase waste_items).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -65,16 +66,19 @@ const WasteCategories = () => {
     fetchWasteData();
   }, [timeFilter, selectedDate]);
 
-  /**
-   * Fetches waste items from backend (Supabase waste_items). Admin/superadmin only.
-   * Backend connects to Supabase so all actions (collector detections, etc.) are reflected here.
-   */
+  const EMPTY_CATEGORIES = [
+    { name: 'Biodegradable', count: 0, color: '#10b981', icon: 'leaf' },
+    { name: 'Non-Biodegradable', count: 0, color: '#ef4444', icon: 'trash' },
+    { name: 'Recycle', count: 0, color: '#f97316', icon: 'recycle' },
+    { name: 'Unsorted', count: 0, color: '#6b7280', icon: 'gear' }
+  ];
+
   const fetchWasteData = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setWasteData([]);
+        setWasteData(EMPTY_CATEGORIES);
         setTotalItems(0);
         return;
       }
@@ -85,32 +89,33 @@ const WasteCategories = () => {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         console.error('Waste categories API error:', json.message || res.statusText);
-        setWasteData([]);
+        setWasteData(EMPTY_CATEGORIES);
         setTotalItems(0);
         return;
       }
-      if (json.success && Array.isArray(json.wasteData)) {
+      if (json.success && Array.isArray(json.wasteData) && json.wasteData.length > 0) {
         setWasteData(json.wasteData);
         setTotalItems(json.totalItems ?? 0);
       } else {
-        setWasteData([]);
+        setWasteData(EMPTY_CATEGORIES);
         setTotalItems(0);
       }
     } catch (error) {
       console.error('Error fetching waste data:', error);
-      setWasteData([]);
+      setWasteData(EMPTY_CATEGORIES);
       setTotalItems(0);
     }
   };
 
-  /**
-   * Gets the maximum count from all categories
-   * Used to calculate progress bar percentages
-   */
-  const getMaxCount = () => {
-    if (wasteData.length === 0) return 1;
-    return Math.max(...wasteData.map(item => item.count), 1);
+  /** Display value by period: daily ÷ 1, weekly ÷ 7, monthly ÷ 30 (same as admin). */
+  const getDisplayValue = (rawCount) => {
+    if (timeFilter === 'daily') return rawCount;
+    if (timeFilter === 'weekly') return rawCount / 7;
+    return rawCount / 30;
   };
+
+  const displayTotalItems = timeFilter === 'daily' ? totalItems : timeFilter === 'weekly' ? totalItems / 7 : totalItems / 30;
+  const PROGRESS_BAR_SCALE = 10;
 
   /**
    * Gets the appropriate icon component based on category
@@ -136,11 +141,11 @@ const WasteCategories = () => {
       <div className="waste-categories-header">
         <div>
           <h1>Waste Categories</h1>
-          <p className="total-items-text">{totalItems} items sorted</p>
+          <p className="total-items-text">{Number(displayTotalItems.toFixed(1))} items sorted</p>
         </div>
       </div>
 
-      {/* Time Filter Buttons + Calendar (same as Data Analytics) */}
+      {/* Time Filter Buttons + Calendar (same as admin) */}
       <div className="time-filters">
         <div className="time-filters-left">
           <button
@@ -209,8 +214,8 @@ const WasteCategories = () => {
       {/* Category Cards Grid - Now optimized for 2 columns */}
       <div className="categories-grid">
         {wasteData.map((category, index) => {
-          const maxCount = getMaxCount();
-          const percentage = maxCount > 0 ? (category.count / maxCount) * 100 : 0;
+          const displayValue = getDisplayValue(category.count);
+          const percentage = Math.min(100, (displayValue / PROGRESS_BAR_SCALE) * 100);
           const progressColor = category.color === '#6b7280' ? '#4b5563' : category.color;
 
           return (
@@ -221,7 +226,7 @@ const WasteCategories = () => {
               <div className="category-content">
                 <h3 className="category-name">{category.name}</h3>
                 <div className="category-count">
-                  <span className="count-number">{category.count}</span>
+                  <span className="count-number">{Number(displayValue.toFixed(1))}</span>
                   <span className="count-label">items sorted</span>
                 </div>
                 <div className="progress-bar-container">
