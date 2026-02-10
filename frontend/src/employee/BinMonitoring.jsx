@@ -15,6 +15,30 @@ const roundToTen = (level) => {
   return Math.round(level / 10) * 10;
 };
 
+/** Format DB last_update (ISO string) to "Just now" / "5 minutes ago" etc. */
+const formatLastCollection = (iso) => {
+  if (!iso) return 'Just now';
+  const updateDate = new Date(iso);
+  const now = new Date();
+  const diffMinutes = Math.floor((now - updateDate) / (1000 * 60));
+  if (diffMinutes <= 0) return 'Just now';
+  if (diffMinutes === 1) return '1 minute ago';
+  if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  return diffHours === 1 ? '1h ago' : `${diffHours}h ago`;
+};
+
+/** Map DB category or bin name to our card id (Biodegradable, Non Biodegradable, Recyclable, Unsorted). */
+const categoryToCardId = (catOrName) => {
+  if (!catOrName) return null;
+  const s = String(catOrName).toLowerCase();
+  if (s.includes('bio') && !s.includes('non')) return 'Biodegradable';
+  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
+  if (s.includes('recycl')) return 'Recyclable';
+  if (s.includes('unsort')) return 'Unsorted';
+  return null;
+};
+
 // --- ICONS ---
 const LeafIcon = () => ( <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg> );
 const TrashIcon = () => ( <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> );
@@ -31,12 +55,23 @@ const getFillLevelColor = (fillLevel) => {
 };
 
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain, isSelected, onToggle }) => {
+const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain, isSelected, onToggle, showCheckbox }) => {
   const isEmpty = fillLevel === 0;
 
   return (
-    <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
+    <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`} onClick={showCheckbox ? onToggle : undefined}>
       <div className="bin-header">
+        {showCheckbox && (
+          <div className="bin-card-checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              className="bin-card-checkbox"
+              checked={!!isSelected}
+              onChange={() => onToggle?.()}
+              aria-label={`Select ${title}`}
+            />
+          </div>
+        )}
         <div className="icon-circle"><Icon /></div>
         <h3>{title}</h3>
       </div>
@@ -52,6 +87,16 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
         <div className="meta-info">
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
         </div>
+        <button
+          type="button"
+          className="bin-card-drain-btn"
+          disabled={isEmpty}
+          onClick={(e) => { e.stopPropagation(); onDrain?.(); }}
+          title={isEmpty ? 'Bin is already empty' : 'Drain this bin'}
+        >
+          <DrainAllIcon />
+          <span>Drain Bin</span>
+        </button>
       </div>
     </div>
   );
@@ -79,6 +124,7 @@ const BinMonitoring = () => {
   const [bins, setBins] = useState(INITIAL_BINS);
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
+  const [showDrainAllSelection, setShowDrainAllSelection] = useState(false); // when true: checkboxes on cards, header shows Return or Confirm
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
   const [assignedBinLocationText, setAssignedBinLocationText] = useState("");
   const [collectorName, setCollectorName] = useState("");
@@ -150,11 +196,33 @@ const BinMonitoring = () => {
         const parts = [userRow.first_name?.trim(), userRow.middle_name?.trim() !== 'EMPTY' && userRow.middle_name?.trim() !== 'NULL' ? userRow.middle_name?.trim() : null, userRow.last_name?.trim()].filter(Boolean);
         if (parts.length) setCollectorName(parts.join(' '));
         setCollectorInfo({ id: userRow.id, first_name: userRow.first_name, middle_name: userRow.middle_name, last_name: userRow.last_name });
-        const { data: assignedBins, error: binsError } = await supabase.from('bins').select('id, name, location').eq('assigned_collector_id', userRow.id).eq('status', 'ACTIVE');
+        const { data: assignedBins, error: binsError } = await supabase.from('bins').select('id, name, location, fill_level, last_update').eq('assigned_collector_id', userRow.id).eq('status', 'ACTIVE');
         if (binsError || !assignedBins?.length) return;
         setCollectorBins(assignedBins);
         const locations = assignedBins.map((b) => (b.location?.trim() || b.name || 'Unspecified')).filter(Boolean);
         if (locations.length) setAssignedBinLocationText(locations.length === 1 ? `Located at ${locations[0]}` : `Located at ${locations.join(', ')}`);
+
+        // Map DB bins to the 4 category cards (Bio, Non-Bio, Recycle, Unsorted) for accurate numbers from DB
+        const categoryOrder = ['Biodegradable', 'Non Biodegradable', 'Recyclable', 'Unsorted'];
+        const byCardId = {};
+        assignedBins.forEach((b) => {
+          const cardId = categoryToCardId(b.name) ?? categoryToCardId(b.category);
+          if (cardId) byCardId[cardId] = b;
+        });
+        // Fill by order if no category match (e.g. first 4 bins = Bio, Non-Bio, Recycle, Unsorted)
+        assignedBins.forEach((b, i) => {
+          const cardId = categoryOrder[i];
+          if (cardId && !byCardId[cardId]) byCardId[cardId] = b;
+        });
+        const fromDb = INITIAL_BINS.map((base) => {
+          const dbBin = byCardId[base.id];
+          const fillLevel = dbBin != null ? roundToTen(Number(dbBin.fill_level) || 0) : (base.fillLevel ?? 0);
+          const lastCollection = dbBin?.last_update ? formatLastCollection(dbBin.last_update) : (base.lastCollection ?? 'Just now');
+          const status = fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : 'Empty';
+          return { ...base, fillLevel, lastCollection, status, binId: dbBin?.id };
+        });
+        setBins(fromDb);
+        setHasPersistedBinState(true);
       } catch {}
     };
     load();
@@ -409,31 +477,46 @@ const BinMonitoring = () => {
   };
   
   const handleMainButtonAction = () => {
+    if (!showDrainAllSelection) {
+      setShowDrainAllSelection(true);
+      return;
+    }
+    if (selectedBins.length === 0) {
+      setShowDrainAllSelection(false);
+      setSelectedBins([]);
+      return;
+    }
     if (actionableBins.length > 0) {
       setConfirmModal({ show: true, binsToDrain: actionableBins });
     }
   };
 
   const performDrain = async () => {
-    const idsToDrain = confirmModal.binsToDrain.map(b => b.id);
-    
-    // Update database (if you have category_bins table)
+    const binsToDrain = confirmModal.binsToDrain;
+    const idsToDrain = binsToDrain.map(b => b.id);
+
+    // Update Supabase bins so numbers stay accurate in DB
     try {
-      // In a real system, you'd update the category_bins table
-      // For now, we'll just update local state
-      // await supabase.from('category_bins').update({ fill_level: 0 }).in('category', idsToDrain);
+      for (const bin of binsToDrain) {
+        if (bin.binId) {
+          await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', bin.binId);
+        }
+      }
     } catch (error) {
-      console.error('Error updating database:', error);
+      console.error('Error updating database on drain:', error);
     }
-    
-    setBins(prevBins => prevBins.map(bin => {
+
+    const updatedBins = binsRef.current.map(bin => {
       if (idsToDrain.includes(bin.id)) {
         return { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' };
       }
       return bin;
-    }));
+    });
+    setBins(updatedBins);
+    persistBinsToBackendAndStorage(updatedBins);
 
-    setSelectedBins([]); // Clear selection after action
+    setSelectedBins([]);
+    setShowDrainAllSelection(false);
     setConfirmModal({ show: false, binsToDrain: [] });
     setNotification("Draining Process Complete.");
     setTimeout(() => { setNotification(""); }, 3000);
@@ -452,9 +535,27 @@ const BinMonitoring = () => {
             </div>
           )}
         </div>
+        <div className="header-actions">
+          <button
+            type="button"
+            className={`drain-bin-header-btn ${showDrainAllSelection && selectedBins.length > 0 ? 'drain-bin-header-btn-confirm' : ''}`}
+            disabled={showDrainAllSelection && selectedBins.length > 0 && actionableBins.length === 0}
+            onClick={handleMainButtonAction}
+            title={
+              !showDrainAllSelection ? 'Show checkboxes to select bins to drain' :
+              selectedBins.length === 0 ? 'Return to normal view' :
+              actionableBins.length === 0 ? 'No filled bins selected' : `Drain ${actionableBins.length} selected bin(s)`
+            }
+          >
+            {!showDrainAllSelection && <DrainAllIcon />}
+            <span>
+              {!showDrainAllSelection ? 'Drain All' : selectedBins.length === 0 ? 'Return' : `Confirm (${actionableBins.length})`}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {selectedBins.length > actionableBins.length && actionableBins.length > 0 && (
+      {showDrainAllSelection && selectedBins.length > actionableBins.length && actionableBins.length > 0 && (
          <div className="notification-banner warning" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
            <span>ℹ️</span>
            <p>Note: {selectedBins.length - actionableBins.length} selected bin(s) are already empty and will be skipped.</p>
@@ -477,6 +578,7 @@ const BinMonitoring = () => {
             onToggle={() => handleToggleSelect(bin.id)}
             onDrain={() => handleDrainSingle(bin.id)}
             icon={bin.icon}
+            showCheckbox={showDrainAllSelection}
           />
         ))}
       </div>

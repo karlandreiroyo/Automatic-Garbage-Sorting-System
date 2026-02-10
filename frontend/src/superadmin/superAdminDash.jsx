@@ -47,8 +47,11 @@ const SuperAdminDash = ({ onNavigateTo }) => {
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
-    admins: 0,
-    totalEmployees: 0
+    collectorsAll: 0,
+    admin: 0,
+    adminsAll: 0,
+    totalEmployees: 0,
+    totalEmployeesAll: 0
   });
   
   const [distribution, setDistribution] = useState([]);
@@ -109,13 +112,16 @@ const fetchDashboardData = async () => {
 
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
     const collectors = collectorUsers.length;
+    const collectorsAll = usersData?.filter(u => u.role === 'COLLECTOR')?.length || 0;
     setCollectorsList(collectorUsers);
     const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
     const admins = adminUsers.length;
+    const adminsAll = usersData?.filter(u => u.role === 'ADMIN')?.length || 0;
     setAdminsList(adminUsers);
-    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
-    const totalEmployees = activeEmployees.length;
-    setEmployeesList(activeEmployees);
+    /* Total Employees = Collectors + Admin only (Superadmin never included) */
+    const totalEmployees = collectors + admins;
+    const totalEmployeesAll = collectorsAll + adminsAll;
+    setEmployeesList([...collectorUsers, ...adminUsers]);
 
     // Fetch waste items for statistics (overall - not date-specific)
     const { data: itemsData, error: itemsError } = await supabase
@@ -170,8 +176,11 @@ const fetchDashboardData = async () => {
       overallItemsSorted,
       avgProcessingTime: avgTime,
       collectors,
-      admins,
-      totalEmployees
+      collectorsAll,
+      admin: admins,
+      adminsAll,
+      totalEmployees,
+      totalEmployeesAll
     });
 
     setRecentActivity(formattedActivity);
@@ -206,18 +215,26 @@ const fetchWasteDistribution = async (dateString) => {
 
     if (itemsError) throw itemsError;
 
-    // Create distribution data by category
+    // Create distribution data by category (normalize DB values to match chart keys)
     const categoryCounts = {
       'Biodegradable': 0,
       'Non-Bio': 0,
       'Recycle': 0,
       'Unsorted': 0
     };
-    
+
+    const normalizeCategory = (cat) => {
+      if (!cat) return 'Unsorted';
+      const c = String(cat).trim().toLowerCase();
+      if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+      if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Bio';
+      if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
+      return 'Unsorted';
+    };
+
     itemsData?.forEach(item => {
-      if (categoryCounts.hasOwnProperty(item.category)) {
-        categoryCounts[item.category]++;
-      }
+      const key = normalizeCategory(item.category);
+      if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
     });
 
     const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
@@ -350,9 +367,16 @@ const fetchWasteDistribution = async (dateString) => {
             <div className="stat-icon-bg"><Icons.Collector /></div>
             <div className="stat-info">
               <span className="stat-label">Collectors</span>
-              <h2 className="stat-value">{stats.collectors}</h2>
+              <h2 className="stat-value">{Number(stats.collectorsAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.collectors) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.collectorsAll) || 0) - (Number(stats.collectors) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {collectorsDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -380,14 +404,21 @@ const fetchWasteDistribution = async (dateString) => {
             onClick={() => setAdminsDropdownOpen((prev) => !prev)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdminsDropdownOpen((prev) => !prev); } }}
             aria-expanded={adminsDropdownOpen}
-            aria-label="Admins count, click to view list"
+            aria-label="Admin count, click to view list"
           >
             <div className="stat-icon-bg"><Icons.Supervisor /></div>
             <div className="stat-info">
-              <span className="stat-label">Admins</span>
-              <h2 className="stat-value">{stats.admins}</h2>
+              <span className="stat-label">Admin</span>
+              <h2 className="stat-value">{Number(stats.adminsAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.admin) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.adminsAll) || 0) - (Number(stats.admin) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {adminsDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -420,9 +451,16 @@ const fetchWasteDistribution = async (dateString) => {
             <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
             <div className="stat-info">
               <span className="stat-label">Total Employees</span>
-              <h2 className="stat-value">{stats.totalEmployees}</h2>
+              <h2 className="stat-value">{Number(stats.totalEmployeesAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.totalEmployees) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalEmployeesAll) || 0) - (Number(stats.totalEmployees) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {employeesDropdownOpen && (
             <div className="stat-card-dropdown">

@@ -135,7 +135,7 @@ const fetchAnalyticsData = async () => {
 
     if (error) throw error;
 
-    // Calculate distribution from actual data
+    // Calculate distribution from actual data (normalize DB category values)
     if (data && data.length > 0) {
       const categoryCounts = {
         'Biodegradable': 0,
@@ -144,13 +144,19 @@ const fetchAnalyticsData = async () => {
         'Unsorted': 0
       };
 
+      const normalizeCategory = (cat) => {
+        if (!cat) return 'Unsorted';
+        const c = String(cat).trim().toLowerCase();
+        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
+        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
+        return 'Unsorted';
+      };
+
       data.forEach(item => {
-        const category = item.category || 'Unsorted';
-        if (categoryCounts.hasOwnProperty(category)) {
-          categoryCounts[category]++;
-        } else {
-          categoryCounts['Unsorted']++;
-        }
+        const key = normalizeCategory(item.category);
+        if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
+        else categoryCounts['Unsorted']++;
       });
 
       const total = data.length;
@@ -530,29 +536,31 @@ const calculateYAxisLabels = () => {
           </div>
         </div>
 
-{/* Daily Sorting Trend Bar Chart */}
+{/* Daily Sorting Trend Bar Chart - horizontal scroll when many bars */}
 <div className="chart-card">
   <h3 className="chart-title">Daily Sorting Trend</h3>
-  <div className="bar-chart-container">
-    <div className="bar-chart-y-axis">
-      {calculateYAxisLabels().map((label, index) => (
-        <span key={index} className="y-axis-label">{label}</span>
-      ))}
-    </div>
-    <div className="bar-chart-bars">
-      {dailyTrend.map((item, index) => (
-        <div key={index} className="bar-chart-item">
-          {item.value > 0 && (
-            <div
-              className="bar"
-              style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
-            >
-              <span className="bar-value">{item.value}</span>
-            </div>
-          )}
-          <span className="bar-label">{item.day}</span>
-        </div>
-      ))}
+  <div className="bar-chart-scroll-wrapper">
+    <div className="bar-chart-container">
+      <div className="bar-chart-y-axis">
+        {calculateYAxisLabels().map((label, index) => (
+          <span key={index} className="y-axis-label">{label}</span>
+        ))}
+      </div>
+      <div className="bar-chart-bars">
+        {dailyTrend.map((item, index) => (
+          <div key={index} className="bar-chart-item">
+            {item.value > 0 && (
+              <div
+                className="bar"
+                style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
+              >
+                <span className="bar-value">{item.value}</span>
+              </div>
+            )}
+            <span className="bar-label">{item.day}</span>
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 </div>

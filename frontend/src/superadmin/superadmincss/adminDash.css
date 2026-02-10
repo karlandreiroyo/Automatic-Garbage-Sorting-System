@@ -40,10 +40,10 @@
   width: 100%;
 }
 
-/* Stats Cards Section - desktop: 3 cols; tablet: 2 cols; mobile: 1 col (6 rows). Order: 1 Total Bins, 2 Overall Items Sorted, 3 Avg Time, 4 Collectors, 5 Admin, 6 Total Employees */
+/* Stats Cards Section - Row 1: Total Bins, Overall Items Sorted, Average Processing Time. Row 2: Collectors, Admin, Total Employees. */
 .stats-grid {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   grid-auto-flow: row;
   gap: 12px;
   margin-bottom: 20px;
@@ -160,12 +160,45 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Breakdown (active · inactive) on the right - same as admin dashboard */
+.admin-dash-container .stat-card .stat-card-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+  flex-shrink: 0;
+}
+
+.admin-dash-container .stat-card .stat-card-right .stat-breakdown-side {
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-dash-container .stat-breakdown-active {
+  color: #047857;
+  font-weight: 600;
+}
+
+.admin-dash-container .stat-breakdown-sep {
+  color: #94a3b8;
+}
+
+.admin-dash-container .stat-breakdown-inactive {
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .admin-dash-container .stat-card-dropdown-caret {
   font-size: 0.75rem;
   color: #64748b;
-  margin-left: auto;
+  margin-left: 0;
   flex-shrink: 0;
   transition: transform 0.2s ease;
 }
