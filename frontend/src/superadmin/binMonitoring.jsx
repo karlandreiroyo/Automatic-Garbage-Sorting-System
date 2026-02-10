@@ -1480,8 +1480,7 @@ const handleAddBin = async (e) => {
             )}
           </div>
         )}
-        </div>
-  )
+
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
         {currentBins.map(bin => (
@@ -1602,6 +1601,8 @@ const handleAddBin = async (e) => {
           </div>
         </div>
       )}
+    </div>
+  );
 };
 
 export default BinMonitoring;

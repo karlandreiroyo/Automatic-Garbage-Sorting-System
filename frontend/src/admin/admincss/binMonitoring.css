@@ -105,6 +105,63 @@
   flex-wrap: nowrap;
 }
 
+/* Right side of header: search + Add Bin in one row (same as superadmin) */
+.bin-header-right-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.bin-monitoring-header .bin-search-and-archive-row.bin-search-and-archive-in-header {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-bar-above-cards {
+  width: 320px;
+  max-width: 400px;
+  display: flex;
+  align-items: stretch;
+  height: 44px;
+  margin-bottom: 0;
+}
+
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-input-inner,
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-input {
+  height: 44px;
+  min-height: 44px;
+}
+
+/* Add Bin button inline (same row as search) */
+.bin-add-bin-button-inline {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #047857;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bin-add-bin-button-inline:hover {
+  background: #065f46;
+}
+
 /* Style the h1 and p in bin-monitoring-header to make them visible */
 .bin-monitoring-header h1 {
   font-size: 1.75rem;
@@ -170,6 +227,34 @@
     align-items: center !important;
     text-align: center !important;
     width: 100%;
+  }
+  
+  .bin-header-right-column {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    align-items: stretch;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header {
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    gap: 10px;
+    justify-content: center;
+    align-items: stretch;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header .bin-search-bar-above-cards {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header .bin-add-bin-button-inline {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   
   .header-left-detail {

@@ -1128,40 +1128,44 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header - no Search Bin dropdown in admin */}
+      {/* List View Header - title left, search + Add Bin right (same layout as superadmin) */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-      </div>
-
-      {/* Search bar - multiple bin numbers e.g. "4, 9, 10" */}
-      <div className="bin-search-bar-above-cards">
-        <div className="bin-search-input-inner">
-          <input
-            type="text"
-            className="bin-search-input"
-            placeholder="Search by bin # (e.g. 4, 9, 10)"
-            value={binSearchTerm}
-            onChange={(e) => setBinSearchTerm(e.target.value)}
-            aria-label="Search bins"
-          />
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
+        <div className="bin-header-right-column">
+          <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+            <div className="bin-search-bar-above-cards">
+              <div className="bin-search-input-inner">
+                <input
+                  type="text"
+                  className="bin-search-input"
+                  placeholder="Search by bin # (e.g. 4, 9, 10)"
+                  value={binSearchTerm}
+                  onChange={(e) => setBinSearchTerm(e.target.value)}
+                  aria-label="Search bins"
+                />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              </div>
+            </div>
+            {!isArchiveView && (
+              <button
+                type="button"
+                className="bin-add-bin-button-inline"
+                onClick={() => setShowAddBinModal(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Bin
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Add Bin Button - below search bar */}
-      <div>
-        <button className="add-bin-header-button" onClick={() => setShowAddBinModal(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Add Bin
-        </button>
       </div>
 
       {/* Bin List Cards - Clickable to view details */}
