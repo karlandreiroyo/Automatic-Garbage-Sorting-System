@@ -209,8 +209,7 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [selectedBinId, setSelectedBinId] = useState(null);
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
-  // State for Search Bin dropdown
-  const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
+  // selectedBinsForArchive kept for filter logic (admin: no dropdown, so always show all bins)
   const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
   const [binSearchTerm, setBinSearchTerm] = useState('');
   const [isArchiveView, setIsArchiveView] = useState(false);
@@ -366,10 +365,10 @@ const [collectors, setCollectors] = useState([]);
   return () => clearInterval(interval);
 }, [isArchiveView]);
 
-  // Reset to page 1 when filter selection (Search Bin checkboxes) changes
+  // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBinsForArchive]);
+  }, [selectedBinsForArchive, binSearchTerm]);
 
   /**
    * Fetches bin data from Supabase database
@@ -883,13 +882,24 @@ await supabase.from('activity_logs').insert([{
     );
   }
 
-  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all
-  const displayBins = selectedBinsForArchive.length > 0
+  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all. Then filter by search (multiple bin numbers e.g. "4, 9, 10").
+  const binsBySelection = selectedBinsForArchive.length > 0
     ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
     : bins;
+  const searchTerms = binSearchTerm
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(s => /^\d+$/.test(s));
+  const displayBins = searchTerms.length === 0
+    ? binsBySelection
+    : binsBySelection.filter(bin => {
+        const binNumber = (bin.name || '').replace(/[^0-9]/g, '');
+        const binNum = binNumber ? parseInt(binNumber, 10) : NaN;
+        if (Number.isNaN(binNum)) return false;
+        return searchTerms.some(term => binNum === parseInt(term, 10));
+      });
 
-  // Calculate pagination
-  const totalPages = Math.ceil(displayBins.length / binsPerPage);
+  const totalPages = Math.max(1, Math.ceil(displayBins.length / binsPerPage));
   const indexOfLastBin = currentPage * binsPerPage;
   const indexOfFirstBin = indexOfLastBin - binsPerPage;
   const currentBins = displayBins.slice(indexOfFirstBin, indexOfLastBin);
@@ -1118,90 +1128,43 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header - Search Bin dropdown */}
+      {/* List View Header - title left, search + Add Bin right (same layout as superadmin) */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-        <div className="bin-search-dropdown-wrapper">
-          <button
-            className="add-bin-header-button"
-            onClick={() => {
-              setIsBinDropdownOpen((prev) => {
-                if (!prev) return true;
-                setBinSearchTerm('');
-                return false;
-              });
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 8h16" />
-              <path d="M4 16h16" />
-              <path d="M10 12h10" />
-            </svg>
-            Search Bin
-            <span className="bin-search-caret">▾</span>
-          </button>
-
-          {isBinDropdownOpen && (
-            <div className="bin-search-dropdown">
-              <div className="bin-search-input-wrapper">
-                <div className="bin-search-input-inner">
-                  <input
-                    type="text"
-                    className="bin-search-input"
-                    placeholder="Search Bin #"
-                    value={binSearchTerm}
-                    onChange={(e) => setBinSearchTerm(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                </div>
+        <div className="bin-header-right-column">
+          <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+            <div className="bin-search-bar-above-cards">
+              <div className="bin-search-input-inner">
+                <input
+                  type="text"
+                  className="bin-search-input"
+                  placeholder="Search by bin # (e.g. 4, 9, 10)"
+                  value={binSearchTerm}
+                  onChange={(e) => setBinSearchTerm(e.target.value)}
+                  aria-label="Search bins"
+                />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
               </div>
-              {(() => {
-                const filteredBins = bins.filter(bin => {
-                  if (!binSearchTerm.trim()) return true;
-                  const binNumber = bin.name.replace(/[^0-9]/g, '');
-                  return binNumber.includes(binSearchTerm.trim());
-                });
-
-                if (filteredBins.length === 0) {
-                  return (
-                    <div className="bin-search-dropdown-item bin-search-empty">
-                      {bins.length === 0 ? 'No bins available' : 'No bins found'}
-                    </div>
-                  );
-                }
-                return (
-                  <>
-                    {filteredBins.map((bin) => (
-                      <div key={bin.id} className="bin-search-dropdown-item bin-search-item-with-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedBinsForArchive.includes(bin.id)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            if (e.target.checked) {
-                              setSelectedBinsForArchive(prev => [...prev, bin.id]);
-                            } else {
-                              setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="bin-checkbox"
-                        />
-                        <span className="bin-name-text">{bin.name}</span>
-                      </div>
-                    ))}
-                  </>
-                );
-              })()}
             </div>
-          )}
+            {!isArchiveView && (
+              <button
+                type="button"
+                className="bin-add-bin-button-inline"
+                onClick={() => setShowAddBinModal(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Bin
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

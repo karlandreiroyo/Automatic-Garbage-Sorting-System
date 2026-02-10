@@ -219,6 +219,8 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
   // State for selected bins (for archiving)
   const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
+  const [showArchiveCheckboxesOnCards, setShowArchiveCheckboxesOnCards] = useState(false);
+  const [awaitingArchiveConfirm, setAwaitingArchiveConfirm] = useState(false);
   // State for bin search term
   const [binSearchTerm, setBinSearchTerm] = useState('');
   // State to track if we're viewing archived bins
@@ -372,10 +374,10 @@ const [collectors, setCollectors] = useState([]);
   return () => clearInterval(interval);
 }, [isArchiveView]);
 
-  // Reset to page 1 when filter selection (Search Bin checkboxes) changes
+  // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBinsForArchive]);
+  }, [selectedBinsForArchive, binSearchTerm]);
 
   /**
    * Fetches bin data from Supabase database
@@ -954,10 +956,22 @@ const updateBinFillLevels = () => {
     );
   }
 
-  // When checkboxes in Search Bin are selected, show only those bins on the page; when none selected, show all
-  const displayBins = selectedBinsForArchive.length > 0
+  // When archive checkboxes are on cards, always show all bins (filtered by search). Otherwise when Search Bin dropdown selection is used, show only selected bins when any are selected.
+  const binsBySelection = selectedBinsForArchive.length > 0 && !showArchiveCheckboxesOnCards
     ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
     : bins;
+  const searchTerms = binSearchTerm
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(s => /^\d+$/.test(s));
+  const displayBins = searchTerms.length === 0
+    ? binsBySelection
+    : binsBySelection.filter(bin => {
+        const binNumber = (bin.name || '').replace(/[^0-9]/g, '');
+        const binNum = binNumber ? parseInt(binNumber, 10) : NaN;
+        if (Number.isNaN(binNum)) return false;
+        return searchTerms.some(term => binNum === parseInt(term, 10));
+      });
 
   // Calculate pagination from displayBins
   const totalPages = Math.max(1, Math.ceil(displayBins.length / binsPerPage));
@@ -1186,6 +1200,7 @@ const handleAddBin = async (e) => {
             <div className="modal-actions">
               <button className="btn-modal btn-cancel" onClick={() => {
                 setShowArchiveModal(false);
+                setAwaitingArchiveConfirm(false);
               }}>
                 No, Cancel
               </button>
@@ -1216,6 +1231,7 @@ const handleAddBin = async (e) => {
                     // Remove unarchived bins from local state (they'll appear in active view)
                     setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
                     setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
                     setIsBinDropdownOpen(false);
                     setShowArchiveModal(false);
                     showSuccessNotification(`${selectedBinsForArchive.length} bin(s) unarchived successfully!`);
@@ -1243,6 +1259,7 @@ const handleAddBin = async (e) => {
                     // Remove archived bins from local state
                     setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
                     setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
                     setIsBinDropdownOpen(false);
                     setShowArchiveModal(false);
                     showSuccessNotification(`${selectedBinsForArchive.length} bin(s) archived successfully!`);
@@ -1253,6 +1270,7 @@ const handleAddBin = async (e) => {
                   setAlertMessage(`Error ${isArchiveView ? 'unarchiving' : 'archiving'} bins: ` + error.message);
                   setShowAlertModal(true);
                   setShowArchiveModal(false);
+                  setAwaitingArchiveConfirm(false);
                 } finally {
                   setLoading(false);
                 }
@@ -1312,32 +1330,102 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header */}
+      {/* List View Header - title left, search + Archive + Add Bin right */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-        {/* Search Bin Dropdown Button - same style as Add Bin */}
-        <div className="bin-search-dropdown-wrapper">
+        <div className="bin-header-right-column">
+        <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+        <div className="bin-search-bar-above-cards">
+          <div className="bin-search-input-inner">
+            <input
+              type="text"
+              className="bin-search-input"
+              placeholder="Search by bin # (e.g. 4, 9, 10)"
+              value={binSearchTerm}
+              onChange={(e) => setBinSearchTerm(e.target.value)}
+              aria-label="Search bins"
+            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="bin-search-icon"
+            >
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`bin-archive-button bin-archive-button-inline ${isArchiveView ? 'bin-unarchive-button' : ''} ${awaitingArchiveConfirm ? 'bin-archive-button-confirm' : ''}`}
+          onClick={() => {
+            if (!showArchiveCheckboxesOnCards) {
+              setShowArchiveCheckboxesOnCards(true);
+              setAwaitingArchiveConfirm(true);
+              return;
+            }
+            if (selectedBinsForArchive.length === 0) {
+              setShowArchiveCheckboxesOnCards(false);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            if (awaitingArchiveConfirm) {
+              setShowArchiveModal(true);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            setAwaitingArchiveConfirm(true);
+          }}
+          disabled={loading}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {isArchiveView ? (
+              <>
+                <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
+                <path d="M21 9l-9-6-9 6"/>
+                <path d="M12 3v12"/>
+              </>
+            ) : (
+              <>
+                <polyline points="21 8 21 21 3 21 3 8"/>
+                <rect x="1" y="3" width="22" height="5"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+              </>
+            )}
+          </svg>
+          {showArchiveCheckboxesOnCards
+              ? (selectedBinsForArchive.length === 0
+                  ? 'Return'
+                  : (isArchiveView ? 'Confirm? (Click to Unarchive)' : 'Confirm? (Click to Archive)'))
+              : (isArchiveView ? 'Unarchive' : 'Archive')}
+        </button>
+        {!isArchiveView && (
           <button
-            className="add-bin-header-button"
-            onClick={() => {
-              setIsBinDropdownOpen((prev) => {
-                if (!prev) {
-                  // Opening dropdown - keep search term
-                  return true;
-                } else {
-                  // Closing dropdown - reset search term
-                  setBinSearchTerm('');
-                  return false;
-                }
-              });
-            }}
+            type="button"
+            className="bin-add-bin-button-inline"
+            onClick={() => setShowAddBinModal(true)}
           >
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1345,236 +1433,53 @@ const handleAddBin = async (e) => {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M4 8h16" />
-              <path d="M4 16h16" />
-              <path d="M10 12h10" />
+              <path d="M12 5v14M5 12h14"/>
             </svg>
-            Search Bin
-            <span className="bin-search-caret">▾</span>
+            Add Bin
           </button>
-
-          {isBinDropdownOpen && (
-            <div className="bin-search-dropdown">
-              {/* Search bar at the top */}
-              <div className="bin-search-input-wrapper">
-                <input
-                  type="text"
-                  className="bin-search-input"
-                  placeholder="Search Bin #"
-                  value={binSearchTerm}
-                  onChange={(e) => setBinSearchTerm(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="bin-search-icon"
-                >
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
-                </svg>
-              </div>
-              {/* Archive button as second item */}
-              <div className="bin-search-dropdown-item bin-search-archive-item">
-                <button
-                  className={`bin-archive-button ${isArchiveView ? 'bin-unarchive-button' : ''}`}
-                  onClick={() => {
-                    if (selectedBinsForArchive.length === 0) {
-                      setAlertTitle('No Selection');
-                      setAlertMessage(`Please select at least one bin to ${isArchiveView ? 'unarchive' : 'archive'}.`);
-                      setShowAlertModal(true);
-                      return;
-                    }
-                    // Show confirmation modal
-                    setShowArchiveModal(true);
-                  }}
-                  disabled={loading || selectedBinsForArchive.length === 0}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {isArchiveView ? (
-                      <>
-                        <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
-                        <path d="M21 9l-9-6-9 6"/>
-                        <path d="M12 3v12"/>
-                      </>
-                    ) : (
-                      <>
-                        <polyline points="21 8 21 21 3 21 3 8"/>
-                        <rect x="1" y="3" width="22" height="5"/>
-                        <line x1="10" y1="12" x2="14" y2="12"/>
-                      </>
-                    )}
-                  </svg>
-                  {isArchiveView ? `Unarchive (${selectedBinsForArchive.length})` : `Archive (${selectedBinsForArchive.length})`}
-                </button>
-              </div>
-              {/* Add Bin button as second item (hidden in archive view) */}
-              {!isArchiveView && (
-                <button
-                  className="bin-search-dropdown-item bin-search-add-item"
-                  onClick={() => {
-                    setShowAddBinModal(true);
-                    setIsBinDropdownOpen(false);
-                  }}
-                >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                >
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-                Add Bin
-              </button>
-              )}
-              {(() => {
-                // Filter bins based on search term (bin number only)
-                const filteredBins = bins.filter(bin => {
-                  if (!binSearchTerm.trim()) return true;
-                  // Extract number from bin name (e.g., "Bin 6" -> "6")
-                  const binNumber = bin.name.replace(/[^0-9]/g, '');
-                  return binNumber.includes(binSearchTerm.trim());
-                });
-
-                // Check if all filtered bins are selected
-                const allFilteredSelected = filteredBins.length > 0 && filteredBins.every(bin => selectedBinsForArchive.includes(bin.id));
-                const someFilteredSelected = filteredBins.some(bin => selectedBinsForArchive.includes(bin.id));
-
-                if (filteredBins.length === 0) {
-                  return (
-                    <>
-                      {/* Select All button - appears when at least one checkbox is selected */}
-                      {selectedBinsForArchive.length > 0 && (
-                        <button
-                          className="bin-search-dropdown-item bin-search-select-all-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBinsForArchive([]);
-                          }}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                          >
-                            <polyline points="9 11 12 14 22 4"/>
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                          </svg>
-                          Deselect All
-                        </button>
-                      )}
-                      <div className="bin-search-dropdown-item bin-search-empty">
-                        {bins.length === 0 ? 'No bins available' : 'No bins found'}
-                      </div>
-                    </>
-                  );
-                }
-
-                return (
-                  <>
-                    {/* Select All button - appears when at least one checkbox is selected */}
-                    {selectedBinsForArchive.length > 0 && (
-                      <button
-                        className="bin-search-dropdown-item bin-search-select-all-item"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (allFilteredSelected) {
-                            // Deselect all filtered bins
-                            setSelectedBinsForArchive(prev => prev.filter(id => !filteredBins.some(b => b.id === id)));
-                          } else {
-                            // Select all filtered bins
-                            const filteredBinIds = filteredBins.map(b => b.id);
-                            setSelectedBinsForArchive(prev => {
-                              const newSelection = [...prev];
-                              filteredBinIds.forEach(id => {
-                                if (!newSelection.includes(id)) {
-                                  newSelection.push(id);
-                                }
-                              });
-                              return newSelection;
-                            });
-                          }
-                        }}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                        >
-                          {allFilteredSelected ? (
-                            <>
-                              <polyline points="9 11 12 14 22 4"/>
-                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                            </>
-                          ) : (
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          )}
-                        </svg>
-                        {allFilteredSelected ? 'Deselect All' : 'Select All'}
-                      </button>
-                    )}
-                    {filteredBins.map((bin) => (
-                        <div
-                          key={bin.id}
-                          className="bin-search-dropdown-item bin-search-item-with-checkbox"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedBinsForArchive.includes(bin.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              if (e.target.checked) {
-                                setSelectedBinsForArchive(prev => [...prev, bin.id]);
-                              } else {
-                                setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bin-checkbox"
-                          />
-                          <span className="bin-name-text">{bin.name}</span>
-                        </div>
-                      ))}
-                  </>
-                );
-              })()}
-            </div>
-          )}
+        )}
+        </div>
         </div>
       </div>
+
+        {showArchiveCheckboxesOnCards && (
+          <div className="bin-select-all-row bin-select-all-below-search">
+            <button
+              type="button"
+              className="bin-select-all-btn"
+              onClick={() => {
+                const ids = displayBins.map(b => b.id);
+                setSelectedBinsForArchive(prev => {
+                  const next = new Set(prev);
+                  ids.forEach(id => next.add(id));
+                  return [...next];
+                });
+              }}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="bin-unselect-all-btn"
+              onClick={() => setSelectedBinsForArchive([])}
+            >
+              Unselect all
+            </button>
+            {selectedBinsForArchive.length > 0 && (
+              <div className="bin-selected-summary bin-selected-summary-inline">
+                <span className="bin-selected-count">
+                  {selectedBinsForArchive.length} bin{selectedBinsForArchive.length !== 1 ? 's' : ''} selected:
+                </span>
+                <span className="bin-selected-names">
+                  {bins
+                    .filter(b => selectedBinsForArchive.includes(b.id))
+                    .map(b => b.name)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
@@ -1585,6 +1490,16 @@ const handleAddBin = async (e) => {
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
             assignedPosition="header"
+            showArchiveCheckbox={showArchiveCheckboxesOnCards}
+            isSelectedForArchive={selectedBinsForArchive.includes(bin.id)}
+            onArchiveCheckboxChange={(e) => {
+              e.stopPropagation();
+              if (e.target.checked) {
+                setSelectedBinsForArchive(prev => [...prev, bin.id]);
+              } else {
+                setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
+              }
+            }}
           />
         ))}
       </div>

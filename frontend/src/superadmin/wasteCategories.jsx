@@ -109,14 +109,20 @@ const WasteCategories = () => {
         Unsorted: 0
       };
 
+      const normalizeCategory = (cat) => {
+        if (!cat) return 'Unsorted';
+        const c = String(cat).trim().toLowerCase();
+        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
+        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
+        return 'Unsorted';
+      };
+
       if (data) {
         data.forEach(item => {
-          const category = item.category || 'Unsorted';
-          if (categoryCounts.hasOwnProperty(category)) {
-            categoryCounts[category]++;
-          } else {
-            categoryCounts.Unsorted++;
-          }
+          const key = normalizeCategory(item.category);
+          if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
+          else categoryCounts.Unsorted++;
         });
       }
 

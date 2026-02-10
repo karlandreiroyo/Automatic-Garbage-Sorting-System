@@ -1,8 +1,10 @@
 .admin-dash-container {
-  padding: 0;
+  padding: 24px;
   width: 100%;
   max-width: 100%;
   margin: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
@@ -39,10 +41,10 @@
   width: 100%;
 }
 
-/* Stats Cards Section - equal-size cards at all breakpoints */
+/* Stats Cards Section */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 20px;
   width: 100%;
@@ -64,8 +66,8 @@
 
 .stat-card {
   background: white;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -74,41 +76,6 @@
   border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-}
-
-/* Force center alignment inside each card - admin dashboard; icon a bit in from left (row layout) */
-.admin-dash-container .stat-card {
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  padding-left: 22px;
-}
-
-/* Larger icons, less space between icon and text */
-.admin-dash-container .stat-icon-bg {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-}
-
-.admin-dash-container .stat-icon-bg svg {
-  width: 28px;
-  height: 28px;
-}
-
-.admin-dash-container .stat-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: visible;
-}
-
-.admin-dash-container .stat-label,
-.admin-dash-container .stat-value {
-  text-align: center;
 }
 
 .stat-card:hover {
@@ -120,9 +87,39 @@
   cursor: pointer;
 }
 
-/* Collectors, Superadmins, and Total Employees card dropdown */
+/* Total Bins / Collectors / Total Employees: breakdown (active · inactive/archived) on the right */
+.admin-dash-container .stat-card .stat-card-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+  flex-shrink: 0;
+}
+
+.admin-dash-container .stat-card .stat-card-right .stat-breakdown-side {
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-breakdown-active {
+  color: #047857;
+  font-weight: 600;
+}
+
+.stat-breakdown-sep {
+  color: #94a3b8;
+}
+
+.stat-breakdown-inactive {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Collectors and Total Employees card dropdown */
 .admin-dash-container .stat-card-wrapper.stat-card-collectors-dropdown,
-.admin-dash-container .stat-card-wrapper.stat-card-superadmins-dropdown,
 .admin-dash-container .stat-card-wrapper.stat-card-employees-dropdown {
   position: relative;
   min-width: 0;
@@ -263,13 +260,14 @@
   line-height: 1.1;
 }
 
-
 /* Charts and Activity Layout */
 .main-charts-layout {
   display: grid;
-  grid-template-columns: 1.6fr 1fr; /* Malaki yung chart, sakto yung activity */
+  grid-template-columns: 1.6fr 1fr;
   gap: 15px;
   align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 
 .chart-card-full, .activity-card-full {
@@ -280,6 +278,7 @@
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .activity-card-full {
@@ -532,63 +531,45 @@
   }
 }
 
-/* Desktop - responsive only: icon top, label center, number bottom; content height (no stretch) */
+/* Desktop */
 @media (max-width: 1200px) {
+  .admin-dash-container {
+    padding-left: 12px;
+    padding-right: 12px;
+    box-sizing: border-box;
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    align-items: stretch;
   }
-  
-  .admin-dash-container .stat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 14px 12px;
-    text-align: center;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 0;
-  }
-  
-  .admin-dash-container .stat-icon-bg {
-    flex-shrink: 0;
-  }
-  
-  .admin-dash-container .stat-info {
-    display: contents;
-  }
-  
-  .admin-dash-container .stat-card .stat-label {
-    text-align: center;
-    width: 100%;
-  }
-  
-  .admin-dash-container .stat-card .stat-value {
-    text-align: center;
-    width: 100%;
-  }
-  
+
   .main-charts-layout {
     grid-template-columns: 1fr;
     gap: 15px;
+    min-width: 0;
   }
-  
+
   .chart-card-full,
   .activity-card-full {
     height: auto;
     min-height: 320px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
   }
-  
+
   .chart-card-full {
     min-height: 320px;
     height: 320px;
   }
-  
+
+  .distribution-section,
+  .activity-card-full {
+    min-width: 0;
+    overflow: hidden;
+  }
+
   .visual-chart-area {
     min-height: 240px;
     height: 240px;
@@ -596,13 +577,13 @@
     align-items: flex-end;
     gap: 10px;
   }
-  
+
   .bars-flex-container {
     min-height: 240px;
     height: 100%;
     gap: 10px;
   }
-  
+
   .single-bar-column {
     height: 100%;
     flex: 1;
@@ -611,85 +592,61 @@
 
 /* Tablet */
 @media (max-width: 1024px) {
+  .admin-dash-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .dashboard-title-section {
     margin-bottom: 20px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
   }
-  
+
   .main-title {
     font-size: 1.9rem;
   }
-  
+
   .sub-title {
     font-size: 0.95rem;
   }
-  
+
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     align-items: stretch;
   }
-  
-  .stat-card {
-    padding: 10px;
-  }
-  
+
   .admin-dash-container .stat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 14px 12px;
-    text-align: center;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 0;
+    padding: 10px 12px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   
-  .admin-dash-container .stat-icon-bg {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-  }
-  
-  .admin-dash-container .stat-icon-bg svg {
-    width: 26px;
-    height: 26px;
-  }
-  
-  .admin-dash-container .stat-info {
-    display: contents;
-  }
-  
-  .admin-dash-container .stat-card .stat-label {
-    text-align: center;
-    width: 100%;
-  }
-  
-  .admin-dash-container .stat-card .stat-value {
-    text-align: center;
-    width: 100%;
+  .stat-value {
     font-size: 1.3rem;
   }
-  
+
   .chart-card-full,
   .activity-card-full {
     padding: 16px;
     min-height: 300px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
   }
-  
+
   .chart-card-full {
     min-height: 300px;
     height: 300px;
   }
-  
+
+  .distribution-section,
+  .activity-card-full {
+    min-width: 0;
+    overflow: hidden;
+  }
+
   .visual-chart-area {
     min-height: 220px;
     height: 220px;
@@ -697,63 +654,50 @@
     align-items: flex-end;
     gap: 10px;
   }
-  
+
   .bars-flex-container {
     min-height: 220px;
     height: 100%;
     gap: 10px;
   }
-  
+
   .single-bar-column {
     height: 100%;
     flex: 1;
   }
 }
 
-/* Mobile */
+/* Mobile - 1 card per row = 6 rows */
 @media (max-width: 768px) {
+  .admin-dash-container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
   .dashboard-title-section {
     margin-bottom: 18px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
-    padding-right: 20px;
-    box-sizing: border-box;
+    padding-left: 0;
+    padding-right: 0;
   }
-  
+
   .main-title {
     font-size: 1.7rem;
   }
-  
+
   .sub-title {
     font-size: 0.9rem;
   }
-  
+
   .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
     align-items: stretch;
   }
-  
-  .stat-card {
-    padding: 10px;
-    gap: 8px;
-  }
-  
+
   .admin-dash-container .stat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    padding: 10px 8px;
     gap: 6px;
-    padding: 12px 10px;
-    text-align: center;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 0;
+    flex-wrap: wrap;
   }
   
   .stat-icon-bg {
@@ -761,52 +705,37 @@
     height: 36px;
   }
   
-  .admin-dash-container .stat-icon-bg {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-  }
-  
-  .admin-dash-container .stat-icon-bg svg {
-    width: 26px;
-    height: 26px;
-  }
-  
-  .admin-dash-container .stat-info {
-    display: contents;
-  }
-  
-  .admin-dash-container .stat-card .stat-label {
-    text-align: center;
-    width: 100%;
-    font-size: 0.75rem;
-    line-height: 1.3;
-  }
-  
-  .admin-dash-container .stat-card .stat-value {
-    text-align: center;
-    width: 100%;
+  .stat-value {
     font-size: 1.2rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
   }
   
   .section-title {
     font-size: 1rem;
     margin-bottom: 15px;
   }
-  
+
   .chart-card-full,
   .activity-card-full {
     padding: 15px;
     min-height: 280px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
   }
-  
+
   .chart-card-full {
     min-height: 280px;
     height: 280px;
   }
-  
+
+  .distribution-header {
+    gap: 10px;
+  }
+
   .visual-chart-area {
     gap: 8px;
     min-height: 200px;
@@ -815,65 +744,65 @@
     display: flex;
     align-items: flex-end;
   }
-  
+
   .bars-flex-container {
     min-height: 200px;
     height: 100%;
     display: flex;
     gap: 8px;
   }
-  
+
   .single-bar-column {
     height: 100%;
     flex: 1;
-  }
-  
-  .single-bar-column {
     width: 50px;
     min-width: 40px;
-    visibility: visible;
   }
-  
+
   .bar-name {
     font-size: 0.8rem;
     margin-top: 10px;
   }
-  
+
   .activity-row {
     padding: 12px 0;
   }
-  
+
   .act-text {
     font-size: 0.9rem;
   }
-  
+
   .act-timestamp {
     font-size: 0.8rem;
   }
+
+  .admin-dash-container .stat-card-dropdown-list {
+    max-height: 50vh;
+    overflow-y: auto;
+  }
 }
 
-/* Small mobile */
+/* Small mobile - 1 card per row = 6 rows */
 @media (max-width: 480px) {
+  .admin-dash-container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
   .dashboard-title-section {
     margin-bottom: 15px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    padding-left: 50px; /* Add padding on left to avoid hamburger menu */
-    padding-right: 15px;
-    box-sizing: border-box;
+    padding-left: 0;
+    padding-right: 0;
   }
-  
+
   .main-title {
     font-size: 1.5rem;
   }
-  
+
   .sub-title {
     font-size: 0.85rem;
   }
-  
+
   .stats-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;
@@ -885,70 +814,48 @@
     gap: 10px;
   }
   
-  .admin-dash-container .stat-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 14px 12px;
-    text-align: center;
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 0;
-  }
-  
   .stat-icon-bg {
     width: 40px;
     height: 40px;
   }
   
-  .admin-dash-container .stat-icon-bg {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
-  }
-  
-  .admin-dash-container .stat-icon-bg svg {
-    width: 26px;
-    height: 26px;
-  }
-  
-  .admin-dash-container .stat-info {
-    display: contents;
-  }
-  
-  .admin-dash-container .stat-card .stat-label {
-    text-align: center;
-    width: 100%;
-    font-size: 0.8rem;
-    line-height: 1.35;
-  }
-  
-  .admin-dash-container .stat-card .stat-value {
-    text-align: center;
-    width: 100%;
+  .stat-value {
     font-size: 1.4rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
   }
   
   .section-title {
     font-size: 0.95rem;
     margin-bottom: 12px;
   }
-  
+
   .chart-card-full,
   .activity-card-full {
     padding: 12px;
     min-height: 250px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
   }
-  
+
   .chart-card-full {
     min-height: 250px;
     height: 250px;
   }
-  
+
+  .distribution-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .date-selector-container {
+    justify-content: center;
+  }
+
   .visual-chart-area {
     gap: 6px;
     min-height: 180px;
@@ -957,44 +864,45 @@
     display: flex;
     align-items: flex-end;
   }
-  
+
   .bars-flex-container {
     min-height: 180px;
     height: 100%;
     display: flex;
     gap: 6px;
   }
-  
+
   .single-bar-column {
     height: 100%;
     flex: 1;
+    width: 40px;
+    min-width: 35px;
   }
-  
+
   .y-axis-labels {
     font-size: 0.75rem;
     padding-right: 6px;
   }
-  
-  .single-bar-column {
-    width: 40px;
-    min-width: 35px;
-    visibility: visible;
-  }
-  
+
   .bar-name {
     font-size: 0.75rem;
     margin-top: 8px;
   }
-  
+
   .activity-row {
     padding: 10px 0;
   }
-  
+
   .act-text {
     font-size: 0.85rem;
   }
-  
+
   .act-timestamp {
     font-size: 0.75rem;
+  }
+
+  .admin-dash-container .stat-card-dropdown-list {
+    max-height: 45vh;
+    overflow-y: auto;
   }
 }

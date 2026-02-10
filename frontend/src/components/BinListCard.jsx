@@ -34,7 +34,15 @@ function getColorClass(category) {
   return 'lime';
 }
 
-export default function BinListCard({ bin, onClick, isArchived = false, assignedPosition = 'header' }) {
+export default function BinListCard({
+  bin,
+  onClick,
+  isArchived = false,
+  assignedPosition = 'header',
+  showArchiveCheckbox = false,
+  isSelectedForArchive = false,
+  onArchiveCheckboxChange
+}) {
   const assignedName = bin.assigned_collector_name ?? 'Unassigned';
   const colorClass = getColorClass(bin.category);
   const fillColor = getFillLevelColor(bin.fillLevel ?? 0);
@@ -42,12 +50,27 @@ export default function BinListCard({ bin, onClick, isArchived = false, assigned
 
   return (
     <div
-      className={`bin-list-card ${isArchived ? 'archived' : colorClass}`}
+      className={`bin-list-card ${isArchived ? 'archived' : colorClass} ${showArchiveCheckbox ? 'bin-list-card-has-archive-checkbox' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     >
+      {showArchiveCheckbox && (
+        <div
+          className="bin-list-card-archive-checkbox-wrap"
+          onClick={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          <input
+            type="checkbox"
+            className="bin-list-card-archive-checkbox"
+            checked={isSelectedForArchive}
+            onChange={onArchiveCheckboxChange}
+            aria-label={`Select ${bin.name || 'bin'} for ${isArchived ? 'unarchive' : 'archive'}`}
+          />
+        </div>
+      )}
       <div className="bin-list-header">
         <div className="bin-list-icon-wrapper">
           <TrashIcon />

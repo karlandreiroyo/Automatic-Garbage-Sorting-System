@@ -1,8 +1,9 @@
 .admin-dash-container {
-  padding: 0;
+  padding: 24px;
   width: 100%;
   max-width: 100%;
   margin: 0;
+  box-sizing: border-box;
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
@@ -39,10 +40,11 @@
   width: 100%;
 }
 
-/* Stats Cards Section - 2 columns = 3 rows of cards */
+/* Stats Cards Section - Row 1: Total Bins, Overall Items Sorted, Average Processing Time. Row 2: Collectors, Admin, Total Employees. */
 .stats-grid {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-flow: row;
   gap: 12px;
   margin-bottom: 20px;
   width: 100%;
@@ -158,12 +160,45 @@
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Breakdown (active · inactive) on the right - same as admin dashboard */
+.admin-dash-container .stat-card .stat-card-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+  flex-shrink: 0;
+}
+
+.admin-dash-container .stat-card .stat-card-right .stat-breakdown-side {
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-dash-container .stat-breakdown-active {
+  color: #047857;
+  font-weight: 600;
+}
+
+.admin-dash-container .stat-breakdown-sep {
+  color: #94a3b8;
+}
+
+.admin-dash-container .stat-breakdown-inactive {
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .admin-dash-container .stat-card-dropdown-caret {
   font-size: 0.75rem;
   color: #64748b;
-  margin-left: auto;
+  margin-left: 0;
   flex-shrink: 0;
   transition: transform 0.2s ease;
 }
@@ -607,7 +642,7 @@
   }
 }
 
-/* Mobile */
+/* Mobile - 1 card per row = 6 rows (Total Bins, Overall Items Sorted, Avg Time, Collectors, Admin, Total Employees) */
 @media (max-width: 768px) {
   .dashboard-title-section {
     margin-bottom: 18px;
@@ -630,7 +665,7 @@
   }
   
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
   }
   
@@ -747,7 +782,7 @@
   }
 }
 
-/* Small mobile */
+/* Small mobile - 1 card per row = 6 rows */
 @media (max-width: 480px) {
   .dashboard-title-section {
     margin-bottom: 15px;
@@ -770,7 +805,7 @@
   }
   
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
   }
   

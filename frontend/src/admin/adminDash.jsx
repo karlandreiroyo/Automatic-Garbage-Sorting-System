@@ -42,17 +42,22 @@ const Icons = {
 };
 
 const AdminDash = ({ onNavigateTo }) => {
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [stats, setStats] = useState({
+    totalCollection: 0,
     totalBins: 0,
+    totalBinsAll: 0,
+    archivedBins: 0,
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
+    collectorsAll: 0,
     supervisor: 0,
-    totalEmployees: 0
+    totalEmployees: 0,
+    totalEmployeesAll: 0
   });
   
   const [distribution, setDistribution] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
@@ -92,14 +97,20 @@ const AdminDash = ({ onNavigateTo }) => {
 
 const fetchDashboardData = async () => {
   try {
-    // Fetch total bins
+    // Fetch active bins and archived bins for breakdown (like Collectors active/inactive)
     const { data: binsData, error: binsError } = await supabase
       .from('bins')
       .select('*')
       .eq('status', 'ACTIVE');
-    
     if (binsError) throw binsError;
-    
+    const { data: archivedBinsData } = await supabase
+      .from('bins')
+      .select('id')
+      .eq('status', 'ARCHIVED');
+    const activeBins = Number(binsData?.length) || 0;
+    const archivedBins = Number(archivedBinsData?.length) || 0;
+    const totalBinsAll = activeBins + archivedBins;
+
     // Fetch users to get employee counts and lists for dropdowns
     const { data: usersData, error: usersError } = await supabase
       .from('users')
@@ -109,12 +120,18 @@ const fetchDashboardData = async () => {
 
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
     const collectors = collectorUsers.length;
+    const collectorsAll = usersData?.filter(u => u.role === 'COLLECTOR')?.length || 0;
     setCollectorsList(collectorUsers);
+    const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
+    const admins = adminUsers.length;
+    const adminsAll = usersData?.filter(u => u.role === 'ADMIN')?.length || 0;
     const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE') || [];
     const supervisors = supervisorUsers.length;
     setSuperadminsList(supervisorUsers);
-    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
-    const totalEmployees = activeEmployees.length;
+    // Total employees = Collectors + Admins only (active count for breakdown)
+    const totalEmployees = collectors + admins;
+    const totalEmployeesAll = collectorsAll + adminsAll;
+    const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE' && (u.role === 'COLLECTOR' || u.role === 'ADMIN')) || [];
     setEmployeesList(activeEmployees);
 
     // Fetch waste items for statistics
@@ -199,12 +216,17 @@ const fetchDashboardData = async () => {
     }
 
     setStats({
-      totalBins: binsData?.length || 0,
+      totalCollection: 0,
+      totalBins: activeBins,
+      totalBinsAll,
+      archivedBins,
       overallItemsSorted,
       avgProcessingTime: avgTime,
       collectors,
+      collectorsAll,
       supervisor: supervisors,
-      totalEmployees
+      totalEmployees,
+      totalEmployeesAll
     });
 
     setRecentActivity(formattedActivity);
@@ -215,38 +237,31 @@ const fetchDashboardData = async () => {
   }
 };
 
-  const fetchWasteDistribution = async (dateString) => {
+  const fetchWasteDistribution = async (dateStr) => {
     try {
-      const selectedDateObj = new Date(dateString);
-      selectedDateObj.setHours(0, 0, 0, 0);
-      const startOfDay = selectedDateObj.toISOString();
-      const endOfDay = new Date(selectedDateObj);
-      endOfDay.setHours(23, 59, 59, 999);
-      const endOfDayISO = endOfDay.toISOString();
-      const { data: itemsData, error: itemsError } = await supabase
+      const start = new Date(dateStr + 'T00:00:00.000Z');
+      const end = new Date(dateStr + 'T23:59:59.999Z');
+      const { data: itemsData } = await supabase
         .from('waste_items')
-        .select('*, bins(name)')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDayISO);
-      if (itemsError) throw itemsError;
-      const categoryCounts = {
-        'Biodegradable': 0,
-        'Non-Bio': 0,
-        'Recycle': 0,
-        'Unsorted': 0
+        .select('category')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+      const categoryCounts = { 'Biodegradable': 0, 'Non-Bio': 0, 'Recycle': 0, 'Unsorted': 0 };
+      const normalizeCategory = (cat) => {
+        if (!cat) return 'Unsorted';
+        const c = String(cat).trim().toLowerCase();
+        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Bio';
+        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
+        return 'Unsorted';
       };
       itemsData?.forEach(item => {
-        if (categoryCounts.hasOwnProperty(item.category)) {
-          categoryCounts[item.category]++;
-        }
+        const key = normalizeCategory(item.category);
+        if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
       });
-      const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
-        name,
-        count
-      }));
-      setDistribution(distributionArray);
-    } catch (error) {
-      console.error('Error fetching waste distribution:', error);
+      setDistribution(Object.entries(categoryCounts).map(([name, count]) => ({ name, count })));
+    } catch (err) {
+      console.error('Error fetching waste distribution:', err);
       setDistribution([]);
     }
   };
@@ -308,18 +323,20 @@ const fetchDashboardData = async () => {
       </div>
 
       <div className="stats-grid">
+        {/* Row 1: Total Collection, Overall Items Sorted, Average Processing Time */}
         <div
           className="stat-card stat-card-link"
+          style={{ order: 1 }}
           role="button"
           tabIndex={0}
-          onClick={() => onNavigateTo?.('bins')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
-          aria-label="Go to Bin Monitoring"
+          onClick={() => onNavigateTo?.('data')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
+          aria-label="Go to Data Analytics"
         >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
           <div className="stat-info">
-            <span className="stat-label">Total Bins</span>
-            <h2 className="stat-value">{stats.totalBins}</h2>
+            <span className="stat-label">Total Collection</span>
+            <h2 className="stat-value">{stats.totalCollection}</h2>
           </div>
         </div>
 
@@ -330,6 +347,7 @@ const fetchDashboardData = async () => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 2 }}
         >
           <div className="stat-icon-bg"><Icons.ItemsSorted /></div>
           <div className="stat-info">
@@ -345,6 +363,7 @@ const fetchDashboardData = async () => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 3 }}
         >
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
@@ -353,7 +372,31 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
+        {/* Row 2: Total Bins, Collectors, Total Employees */}
+        <div
+          className="stat-card stat-card-link stat-card-bins"
+          style={{ order: 4 }}
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTo?.('bins')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
+          aria-label="Go to Bin Monitoring"
+        >
+          <div className="stat-icon-bg"><Icons.TotalBins /></div>
+          <div className="stat-info">
+            <span className="stat-label">Total Bins</span>
+            <h2 className="stat-value">{Number(stats.totalBinsAll) || 0}</h2>
+          </div>
+          <div className="stat-card-right">
+            <div className="stat-breakdown-side">
+              <span className="stat-breakdown-active">{Number(stats.totalBins) || 0}</span>
+              <span className="stat-breakdown-sep"> · </span>
+              <span className="stat-breakdown-inactive">{Number(stats.archivedBins) || 0}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef} style={{ order: 5 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -366,9 +409,16 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.Collector /></div>
             <div className="stat-info">
               <span className="stat-label">Collectors</span>
-              <h2 className="stat-value">{stats.collectors}</h2>
+              <h2 className="stat-value">{Number(stats.collectorsAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.collectors) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.collectorsAll) || 0) - (Number(stats.collectors) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {collectorsDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -388,42 +438,7 @@ const fetchDashboardData = async () => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
-          <div
-            className="stat-card stat-card-dropdown-trigger"
-            role="button"
-            tabIndex={0}
-            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
-            aria-expanded={superadminsDropdownOpen}
-            aria-label="Superadmin count, click to view list"
-          >
-            <div className="stat-icon-bg"><Icons.Supervisor /></div>
-            <div className="stat-info">
-              <span className="stat-label">Superadmin</span>
-              <h2 className="stat-value">{stats.supervisor}</h2>
-            </div>
-            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
-          </div>
-          {superadminsDropdownOpen && (
-            <div className="stat-card-dropdown">
-              <div className="stat-card-dropdown-title">All Superadmins</div>
-              <ul className="stat-card-dropdown-list">
-                {superadminsList.length === 0 ? (
-                  <li className="stat-card-dropdown-item empty">No superadmins</li>
-                ) : (
-                  superadminsList.map((s) => (
-                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
-                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
+        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef} style={{ order: 6 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -436,9 +451,16 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
             <div className="stat-info">
               <span className="stat-label">Total Employees</span>
-              <h2 className="stat-value">{stats.totalEmployees}</h2>
+              <h2 className="stat-value">{Number(stats.totalEmployeesAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.totalEmployees) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalEmployeesAll) || 0) - (Number(stats.totalEmployees) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {employeesDropdownOpen && (
             <div className="stat-card-dropdown">
