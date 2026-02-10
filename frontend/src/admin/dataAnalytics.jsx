@@ -88,6 +88,8 @@ const [wasteDistribution, setWasteDistribution] = useState([
 ]);
   const [dailyTrend, setDailyTrend] = useState([]);
   const [selectedBar, setSelectedBar] = useState(null);
+  const [hoveredBar, setHoveredBar] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const [loading, setLoading] = useState(false);
 
@@ -508,7 +510,7 @@ const calculateYAxisLabels = () => {
         </div>
 
 {/* Daily Sorting Trend Bar Chart */}
-<div className="chart-card">
+<div className="chart-card chart-card-with-tooltip">
   <h3 className="chart-title">Daily Sorting Trend</h3>
   {selectedBar && (
     <div className="bar-selection-info">
@@ -522,7 +524,15 @@ const calculateYAxisLabels = () => {
       </button>
     </div>
   )}
-  <div className="bar-chart-container">
+  <div
+    className="bar-chart-container"
+    onMouseMove={(e) => {
+      if (hoveredBar) {
+        setTooltipPos({ x: e.clientX + 10, y: e.clientY });
+      }
+    }}
+    onMouseLeave={() => setHoveredBar(null)}
+  >
     <div className="bar-chart-y-axis">
       {calculateYAxisLabels().map((label, index) => (
         <span key={index} className="y-axis-label">{label}</span>
@@ -539,6 +549,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'pointer'
               }}
               onClick={() => setSelectedBar(item)}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`Click to view details: ${item.day} - ${item.value} items`}
             >
               <span className="bar-value">{item.value}</span>
@@ -552,6 +570,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'default',
                 opacity: 0.3
               }}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`${item.day}: No items`}
             />
           )}
@@ -559,6 +585,19 @@ const calculateYAxisLabels = () => {
         </div>
       ))}
     </div>
+    {hoveredBar && (
+      <div
+        className="bar-chart-tooltip"
+        style={{
+          left: tooltipPos.x,
+          top: tooltipPos.y
+        }}
+        role="tooltip"
+      >
+        <span className="tooltip-period">{hoveredBar.day}</span>
+        <span className="tooltip-value">{hoveredBar.value} items sorted</span>
+      </div>
+    )}
   </div>
 </div>
       </div>

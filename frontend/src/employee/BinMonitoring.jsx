@@ -47,16 +47,20 @@ const GearIcon = () => ( <svg width="32" height="32" viewBox="0 0 24 24" fill="n
 const DrainAllIcon = () => ( <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7l5 5 5-5M7 13l5 5 5-5"/></svg> );
 const AlertTriangle = () => ( <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> );
 
+// Fill level color: green (low) → yellow (medium) → red (high)
 const getFillLevelColor = (fillLevel) => {
-  if (fillLevel >= 50) return '#10b981'; 
-  if (fillLevel >= 30) return '#eab308'; 
-  if (fillLevel >= 15) return '#f97316'; 
-  return '#ef4444'; 
+  if (fillLevel >= 75) return '#ef4444'; // red — high/full
+  if (fillLevel >= 40) return '#eab308'; // yellow — medium
+  return '#10b981'; // green — low/ok
 };
 
+const WEIGHT_MAX_G = 500; // Weight sensor progress bar scale (0–500 g)
+
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain, isSelected, onToggle, showCheckbox }) => {
+const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain, isSelected, onToggle, showCheckbox, weight }) => {
   const isEmpty = fillLevel === 0;
+  const weightG = weight != null ? Number(weight) : null;
+  const weightPercent = weightG != null ? Math.min(100, Math.max(0, (weightG / WEIGHT_MAX_G) * 100)) : 0;
 
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`} onClick={showCheckbox ? onToggle : undefined}>
@@ -84,6 +88,16 @@ const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorC
          <div className="progress-track">
            <div className="progress-fill" style={{ width: `${fillLevel}%`, backgroundColor: getFillLevelColor(fillLevel) }}></div>
          </div>
+        {/* Weight sensor: reads from serial, same design in each bin */}
+        <div className="bin-weight-sensor">
+          <span className="bin-weight-label">Weight sensor</span>
+          <div className="bin-weight-progress-wrap">
+            <div className="bin-weight-progress-track">
+              <div className="bin-weight-progress-fill" style={{ width: `${weightPercent}%` }} />
+            </div>
+            <span className="bin-weight-value">{weightG != null ? `${Number(weightG).toFixed(1)} g` : '— g'}</span>
+          </div>
+        </div>
         <div className="meta-info">
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
         </div>
@@ -127,15 +141,26 @@ const BinMonitoring = () => {
   const [showDrainAllSelection, setShowDrainAllSelection] = useState(false); // when true: checkboxes on cards, header shows Return or Confirm
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
   const [assignedBinLocationText, setAssignedBinLocationText] = useState("");
+  const [hardwareWeight, setHardwareWeight] = useState(null); // weight from serial (g), shown in each bin card — updated in real time
   const [collectorName, setCollectorName] = useState("");
   const [collectorInfo, setCollectorInfo] = useState(null);
   const [collectorBins, setCollectorBins] = useState([]);
+  const [fallbackBinId, setFallbackBinId] = useState(null); // when collector has no assigned bins, use any bin for waste_items
+  const [wasteItemError, setWasteItemError] = useState(null); // "Supabase did not connected" or backend error when waste_items insert fails
   const [hasPersistedBinState, setHasPersistedBinState] = useState(false);
   const [restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
+  const hardwareWeightRef = useRef(null);
+  const collectorInfoRef = useRef(null);
+  const collectorBinsRef = useRef([]);
+  const fallbackBinIdRef = useRef(null);
   binsRef.current = bins;
+  hardwareWeightRef.current = hardwareWeight;
+  collectorInfoRef.current = collectorInfo;
+  collectorBinsRef.current = collectorBins;
+  fallbackBinIdRef.current = fallbackBinId;
 
   const persistBinsToBackendAndStorage = (binsToSave) => {
     const list = Array.isArray(binsToSave) ? binsToSave : binsRef.current;
@@ -197,32 +222,36 @@ const BinMonitoring = () => {
         if (parts.length) setCollectorName(parts.join(' '));
         setCollectorInfo({ id: userRow.id, first_name: userRow.first_name, middle_name: userRow.middle_name, last_name: userRow.last_name });
         const { data: assignedBins, error: binsError } = await supabase.from('bins').select('id, name, location, fill_level, last_update').eq('assigned_collector_id', userRow.id).eq('status', 'ACTIVE');
-        if (binsError || !assignedBins?.length) return;
-        setCollectorBins(assignedBins);
-        const locations = assignedBins.map((b) => (b.location?.trim() || b.name || 'Unspecified')).filter(Boolean);
-        if (locations.length) setAssignedBinLocationText(locations.length === 1 ? `Located at ${locations[0]}` : `Located at ${locations.join(', ')}`);
+        if (!binsError && Array.isArray(assignedBins) && assignedBins.length > 0) {
+          setCollectorBins(assignedBins);
+          const locations = assignedBins.map((b) => (b.location?.trim() || b.name || 'Unspecified')).filter(Boolean);
+          if (locations.length) setAssignedBinLocationText(locations.length === 1 ? `Located at ${locations[0]}` : `Located at ${locations.join(', ')}`);
 
-        // Map DB bins to the 4 category cards (Bio, Non-Bio, Recycle, Unsorted) for accurate numbers from DB
-        const categoryOrder = ['Biodegradable', 'Non Biodegradable', 'Recyclable', 'Unsorted'];
-        const byCardId = {};
-        assignedBins.forEach((b) => {
-          const cardId = categoryToCardId(b.name) ?? categoryToCardId(b.category);
-          if (cardId) byCardId[cardId] = b;
-        });
-        // Fill by order if no category match (e.g. first 4 bins = Bio, Non-Bio, Recycle, Unsorted)
-        assignedBins.forEach((b, i) => {
-          const cardId = categoryOrder[i];
-          if (cardId && !byCardId[cardId]) byCardId[cardId] = b;
-        });
-        const fromDb = INITIAL_BINS.map((base) => {
-          const dbBin = byCardId[base.id];
-          const fillLevel = dbBin != null ? roundToTen(Number(dbBin.fill_level) || 0) : (base.fillLevel ?? 0);
-          const lastCollection = dbBin?.last_update ? formatLastCollection(dbBin.last_update) : (base.lastCollection ?? 'Just now');
-          const status = fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : 'Empty';
-          return { ...base, fillLevel, lastCollection, status, binId: dbBin?.id };
-        });
-        setBins(fromDb);
-        setHasPersistedBinState(true);
+          // Map DB bins to the 4 category cards (Bio, Non-Bio, Recycle, Unsorted) for accurate numbers from DB
+          const categoryOrder = ['Biodegradable', 'Non Biodegradable', 'Recyclable', 'Unsorted'];
+          const byCardId = {};
+          assignedBins.forEach((b) => {
+            const cardId = categoryToCardId(b.name) ?? categoryToCardId(b.category);
+            if (cardId) byCardId[cardId] = b;
+          });
+          assignedBins.forEach((b, i) => {
+            const cardId = categoryOrder[i];
+            if (cardId && !byCardId[cardId]) byCardId[cardId] = b;
+          });
+          const fromDb = INITIAL_BINS.map((base) => {
+            const dbBin = byCardId[base.id];
+            const fillLevel = dbBin != null ? roundToTen(Number(dbBin.fill_level) || 0) : (base.fillLevel ?? 0);
+            const lastCollection = dbBin?.last_update ? formatLastCollection(dbBin.last_update) : (base.lastCollection ?? 'Just now');
+            const status = fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : 'Empty';
+            return { ...base, fillLevel, lastCollection, status, binId: dbBin?.id };
+          });
+          setBins(fromDb);
+          setHasPersistedBinState(true);
+        } else {
+          setCollectorBins([]);
+          const { data: anyBin } = await supabase.from('bins').select('id').eq('status', 'ACTIVE').limit(1).maybeSingle();
+          if (anyBin?.id != null) setFallbackBinId(anyBin.id);
+        }
       } catch {}
     };
     load();
@@ -235,7 +264,28 @@ const BinMonitoring = () => {
    * - 90%+ → Critical notification: "Bin Full Alert" / "<Bin> bin has reached X% — bin is full"
    * Notifications are pushed to localStorage (agss_notifications) and shown on the Notifications page.
    */
-  // Arduino detection: NORMAL -> type adds 10% to matching bin; create notification per rules above
+  // Real-time weight: poll hardware every 300ms; connect serial weight to all four bins
+  useEffect(() => {
+    let cancelled = false;
+    const pollWeight = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/hardware/status`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        let w = data.lastWeight != null ? Number(data.lastWeight) : null;
+        if (w == null && data.lastLine) {
+          const match = String(data.lastLine).match(/Weight:\s*([-\d.]+)/i);
+          if (match) w = parseFloat(match[1]);
+        }
+        if (!cancelled) setHardwareWeight(w != null ? w : null);
+      } catch {}
+    };
+    pollWeight();
+    const weightId = setInterval(pollWeight, 300);
+    return () => { cancelled = true; clearInterval(weightId); };
+  }, []);
+
+  // Poll hardware: type for bin updates (detection logic stays at 1s)
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
@@ -269,13 +319,41 @@ const BinMonitoring = () => {
             localStorage.setItem("agss_notifications", JSON.stringify([...existing, newNotification].slice(-100)));
           } catch {}
         }
-        if (collectorInfo && collectorBins.length > 0) {
-          const categoryMap = { BIO: "Biodegradable", NON_BIO: "Non Biodegradable", RECYCABLE: "Recyclable", UNSORTED: "Unsorted" };
-          const categoryText = categoryMap[type];
-          if (categoryText) {
-            try {
-              await supabase.from("waste_items").insert({ bin_id: collectorBins[0].id, category: categoryText, weight: null, processing_time: null, last_name: collectorInfo.last_name, first_name: collectorInfo.first_name, middle_name: collectorInfo.middle_name });
-            } catch {}
+        // Record detection via backend → Supabase waste_items (use refs so poll always sees latest)
+        const categoryMap = { BIO: "Biodegradable", NON_BIO: "Non Biodegradable", RECYCABLE: "Recyclable", UNSORTED: "Unsorted" };
+        const categoryText = categoryMap[type];
+        const info = collectorInfoRef.current;
+        const cBins = collectorBinsRef.current;
+        const binId = categoryText ? (nextBins.find((b) => b.id === categoryText)?.binId ?? cBins[0]?.id ?? fallbackBinIdRef.current ?? null) : null;
+        if (info && binId != null && categoryText) {
+          const weightG = hardwareWeightRef.current != null ? Number(hardwareWeightRef.current) : null;
+          try {
+            const res = await fetch(`${API_BASE}/api/collector-bins/waste-item`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                bin_id: binId,
+                category: categoryText,
+                weight: weightG,
+                processing_time: null,
+                first_name: info.first_name ?? "",
+                middle_name: info.middle_name ?? "",
+                last_name: info.last_name ?? "",
+              }),
+            });
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              const msg = errData.error || res.statusText || "Supabase did not connected";
+              console.error("waste_items backend error:", msg);
+              setWasteItemError(msg);
+              setTimeout(() => setWasteItemError(null), 8000);
+            } else {
+              setWasteItemError(null);
+            }
+          } catch (err) {
+            console.error("waste_items request failed:", err);
+            setWasteItemError("Supabase did not connected");
+            setTimeout(() => setWasteItemError(null), 8000);
           }
         }
       } catch {}
@@ -506,6 +584,40 @@ const BinMonitoring = () => {
       console.error('Error updating database on drain:', error);
     }
 
+    // Log each drained bin to collection history (real-time)
+    const logEntries = binsToDrain.map((bin) => ({
+      bin_category: bin.id,
+      bin_name: bin.title || bin.id,
+      collector_id: collectorInfo?.id ?? null,
+      collector_name: collectorName || '',
+    }));
+    try {
+      await fetch(`${API_BASE}/api/collector-bins/collection-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: logEntries }),
+      });
+    } catch (err) {
+      console.error('Error logging collection:', err);
+    }
+
+    // Notify which bin(s) were drained (per bin, so collector sees each one)
+    try {
+      const raw = localStorage.getItem('agss_notifications');
+      const existing = raw ? JSON.parse(raw) : [];
+      const drainNotifications = binsToDrain.map((bin, i) => ({
+        id: Date.now() + i,
+        type: 'success',
+        title: 'Bin Drained',
+        time: 'Just now',
+        date: '',
+        message: `${bin.title} bin has been drained`,
+        subtext: bin.title,
+        isUnread: true,
+      }));
+      localStorage.setItem('agss_notifications', JSON.stringify([...existing, ...drainNotifications].slice(-100)));
+    } catch {}
+
     const updatedBins = binsRef.current.map(bin => {
       if (idsToDrain.includes(bin.id)) {
         return { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' };
@@ -563,6 +675,7 @@ const BinMonitoring = () => {
       )}
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
+      {wasteItemError && <div className="notification-banner warning"><span>!</span> <p>waste_items: {wasteItemError}</p></div>}
 
       <HardwareStatus />
 
@@ -574,6 +687,7 @@ const BinMonitoring = () => {
           <BinCard 
             key={bin.id}
             {...bin}
+            weight={hardwareWeight}
             isSelected={selectedBins.includes(bin.id)}
             onToggle={() => handleToggleSelect(bin.id)}
             onDrain={() => handleDrainSingle(bin.id)}

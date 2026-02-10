@@ -17,7 +17,7 @@ export default function HardwareStatus() {
       } catch {}
     };
     fetchStatus();
-    const id = setInterval(fetchStatus, 1000);
+    const id = setInterval(fetchStatus, 500);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 

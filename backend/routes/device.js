@@ -25,6 +25,7 @@ router.post('/sensor', async (req, res) => {
       category: categoryVal,
       processing_time: typeof processing_time === 'number' ? processing_time : 0,
       ...(bin_id && { bin_id }),
+      created_at: new Date().toISOString(),
     };
     if (device_id) console.log('[device/sensor] device_id:', device_id);
 
