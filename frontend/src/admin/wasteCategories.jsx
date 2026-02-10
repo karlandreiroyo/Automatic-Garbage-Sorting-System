@@ -163,14 +163,8 @@ const WasteCategories = () => {
     }
   };
 
-  /**
-   * Gets the maximum count from all categories
-   * Used to calculate progress bar percentages
-   */
-  const getMaxCount = () => {
-    if (wasteData.length === 0) return 1;
-    return Math.max(...wasteData.map(item => item.count), 1);
-  };
+  /** Level indicator uses a fixed max of 100 (0–100 scale) */
+  const LEVEL_INDICATOR_MAX = 100;
 
   /**
    * Gets the appropriate icon component based on category
@@ -269,8 +263,8 @@ const WasteCategories = () => {
       {/* Category Cards Grid - Now optimized for 2 columns */}
       <div className="categories-grid">
         {wasteData.map((category, index) => {
-          const maxCount = getMaxCount();
-          const percentage = maxCount > 0 ? (category.count / maxCount) * 100 : 0;
+          // Level indicator: 0–100 scale; e.g. 31 items → 31% fill
+          const percentage = Math.min((category.count / LEVEL_INDICATOR_MAX) * 100, 100);
           const progressColor = category.color === '#6b7280' ? '#4b5563' : category.color;
 
           return (

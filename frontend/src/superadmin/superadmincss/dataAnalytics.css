@@ -349,12 +349,22 @@
   font-weight: 700;
 }
 
+/* Wrapper for horizontal scroll - keeps chart inside card, no overflow */
+.bar-chart-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-top: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .bar-chart-container {
   display: flex;
   gap: 12px;
   align-items: flex-end;
   height: 300px;
-  margin-top: 20px;
+  min-width: min-content;
+  flex-shrink: 0;
 }
 
 .bar-chart-y-axis {
@@ -364,6 +374,7 @@
   height: 100%;
   padding-right: 8px;
   border-right: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .y-axis-label {
@@ -377,7 +388,8 @@
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  flex: 1;
+  flex: 1 0 auto;
+  min-width: min-content;
   height: 100%;
 }
 
@@ -386,7 +398,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  flex: 1;
+  flex: 0 0 40px;
+  min-width: 40px;
   height: 100%;
 }
 

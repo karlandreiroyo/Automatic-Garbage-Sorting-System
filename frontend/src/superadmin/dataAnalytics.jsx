@@ -530,29 +530,31 @@ const calculateYAxisLabels = () => {
           </div>
         </div>
 
-{/* Daily Sorting Trend Bar Chart */}
+{/* Daily Sorting Trend Bar Chart - horizontal scroll when many bars */}
 <div className="chart-card">
   <h3 className="chart-title">Daily Sorting Trend</h3>
-  <div className="bar-chart-container">
-    <div className="bar-chart-y-axis">
-      {calculateYAxisLabels().map((label, index) => (
-        <span key={index} className="y-axis-label">{label}</span>
-      ))}
-    </div>
-    <div className="bar-chart-bars">
-      {dailyTrend.map((item, index) => (
-        <div key={index} className="bar-chart-item">
-          {item.value > 0 && (
-            <div
-              className="bar"
-              style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
-            >
-              <span className="bar-value">{item.value}</span>
-            </div>
-          )}
-          <span className="bar-label">{item.day}</span>
-        </div>
-      ))}
+  <div className="bar-chart-scroll-wrapper">
+    <div className="bar-chart-container">
+      <div className="bar-chart-y-axis">
+        {calculateYAxisLabels().map((label, index) => (
+          <span key={index} className="y-axis-label">{label}</span>
+        ))}
+      </div>
+      <div className="bar-chart-bars">
+        {dailyTrend.map((item, index) => (
+          <div key={index} className="bar-chart-item">
+            {item.value > 0 && (
+              <div
+                className="bar"
+                style={{ height: `${(item.value / calculateYAxisLabels()[0]) * 100}%` }}
+              >
+                <span className="bar-value">{item.value}</span>
+              </div>
+            )}
+            <span className="bar-label">{item.day}</span>
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 </div>

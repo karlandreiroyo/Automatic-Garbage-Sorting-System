@@ -128,9 +128,9 @@
   line-height: 1.1;
 }
 
-/* Collectors, Superadmins, and Total Employees card dropdown */
+/* Collectors, Admins, and Total Employees card dropdown */
 .admin-dash-container .stat-card-wrapper.stat-card-collectors-dropdown,
-.admin-dash-container .stat-card-wrapper.stat-card-superadmins-dropdown,
+.admin-dash-container .stat-card-wrapper.stat-card-admins-dropdown,
 .admin-dash-container .stat-card-wrapper.stat-card-employees-dropdown {
   position: relative;
   min-width: 0;
