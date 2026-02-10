@@ -69,6 +69,7 @@ const collectorBinsRoutes = require('./routes/collectorBins');
 const adminWasteRoutes = require('./routes/adminWaste');
 const adminDataAnalyticsRoutes = require('./routes/adminDataAnalytics');
 const adminRecordedItemsRoutes = require('./routes/adminRecordedItems');
+const adminWasteDistributionRoutes = require('./routes/adminWasteDistribution');
 
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
@@ -82,6 +83,7 @@ app.use('/api/collector-bins', collectorBinsRoutes);
 app.use('/api/admin/waste-categories', adminWasteRoutes);
 app.use('/api/admin/data-analytics', adminDataAnalyticsRoutes);
 app.use('/api/admin/recorded-items', adminRecordedItemsRoutes);
+app.use('/api/admin/waste-distribution', adminWasteDistributionRoutes);
 
 try { const { initHardware } = require('./utils/hardwareStore'); initHardware(); } catch (e) { }
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './superadmincss/adminDash.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // SVG Icons matching the photo
 const Icons = {
   TotalBins: () => (
@@ -194,60 +196,35 @@ const fetchDashboardData = async () => {
   }
 };
 
-const fetchWasteDistribution = async (dateString) => {
-  try {
-    // Parse the selected date
-    const selectedDateObj = new Date(dateString);
-    selectedDateObj.setHours(0, 0, 0, 0);
-    const startOfDay = selectedDateObj.toISOString();
-    
-    // End of selected day
-    const endOfDay = new Date(selectedDateObj);
-    endOfDay.setHours(23, 59, 59, 999);
-    const endOfDayISO = endOfDay.toISOString();
-    
-    // Fetch waste items for the selected date
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('waste_items')
-      .select('*, bins(name)')
-      .gte('created_at', startOfDay)
-      .lte('created_at', endOfDayISO);
-
-    if (itemsError) throw itemsError;
-
-    // Create distribution data by category (normalize DB values to match chart keys)
-    const categoryCounts = {
-      'Biodegradable': 0,
-      'Non-Bio': 0,
-      'Recycle': 0,
-      'Unsorted': 0
-    };
-
-    const normalizeCategory = (cat) => {
-      if (!cat) return 'Unsorted';
-      const c = String(cat).trim().toLowerCase();
-      if (c === 'recyclable' || c === 'recycle') return 'Recycle';
-      if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Bio';
-      if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
-      return 'Unsorted';
-    };
-
-    itemsData?.forEach(item => {
-      const key = normalizeCategory(item.category);
-      if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
-    });
-
-    const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
-
-    setDistribution(distributionArray);
-  } catch (error) {
-    console.error('Error fetching waste distribution:', error);
-    setDistribution([]);
-  }
-};
+  // Waste Distribution graph: backend connected to Supabase waste_items (Super Admin only)
+  const fetchWasteDistribution = async (dateString) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setDistribution([]);
+        return;
+      }
+      const params = new URLSearchParams({ selectedDate: dateString || selectedDate });
+      const res = await fetch(`${API_BASE}/api/admin/waste-distribution?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Waste distribution API error:', json.message || res.statusText);
+        setDistribution([]);
+        return;
+      }
+      if (json.success && Array.isArray(json.wasteDistribution)) {
+        setDistribution(json.wasteDistribution);
+      } else {
+        setDistribution([]);
+      }
+    } catch (error) {
+      console.error('Error fetching waste distribution:', error);
+      setDistribution([]);
+    }
+  };
 
   const getTimeAgo = (timestamp) => {
     const now = new Date();

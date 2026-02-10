@@ -24,28 +24,6 @@ router.get('/collection-history', (req, res) => {
   }
 });
 
-// Recorded items for collector's bin (Bin 2) – same data as admin "Recorded Items – Bin 2"
-router.get('/recorded-items', async (req, res) => {
-  try {
-    const binId = req.query.bin_id != null ? req.query.bin_id : 2;
-    const binIdVal = typeof binId === 'number' ? binId : (/^\d+$/.test(String(binId).trim()) ? parseInt(binId, 10) : 2);
-    const { data, error } = await supabase
-      .from('waste_items')
-      .select('id, category, processing_time, created_at')
-      .eq('bin_id', binIdVal)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) {
-      console.error('collector recorded-items error:', error.message);
-      return res.status(500).json({ error: error.message });
-    }
-    res.json({ success: true, data: data || [] });
-  } catch (err) {
-    console.error('collector recorded-items route error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Log one or more bin drains (called when collector drains bins in Bin Monitoring)
 router.post('/collection-log', (req, res) => {
   try {
