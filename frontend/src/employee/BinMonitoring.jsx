@@ -134,8 +134,26 @@ const INITIAL_BINS = [
   { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'lime', status: 'Empty', icon: GearIcon },
 ];
 
+/** Restore bins from localStorage synchronously so tab switch doesn't flash 0% */
+function getInitialBins() {
+  try {
+    const saved = localStorage.getItem("agss_bin_state");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return INITIAL_BINS.map((base) => {
+          const ov = parsed.find((b) => b.id === base.id);
+          if (!ov) return base;
+          return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
+        });
+      }
+    }
+  } catch {}
+  return INITIAL_BINS;
+}
+
 const BinMonitoring = () => {
-  const [bins, setBins] = useState(INITIAL_BINS);
+  const [bins, setBins] = useState(getInitialBins);
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
   const [showDrainAllSelection, setShowDrainAllSelection] = useState(false); // when true: checkboxes on cards, header shows Return or Confirm
@@ -151,6 +169,7 @@ const BinMonitoring = () => {
   const [restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const lastArduinoTypeRef = useRef("NORMAL");
+  const hasRestoredRef = useRef(false); // true after restore completes — avoid persisting initial 0% and overwriting file
   const binsRef = useRef(bins);
   const hardwareWeightRef = useRef(null);
   const collectorInfoRef = useRef(null);
@@ -189,6 +208,7 @@ const BinMonitoring = () => {
           setHasPersistedBinState(true);
           setRestoreAttempted(true);
           if (!cancelled) setIsRestoring(false);
+          if (!cancelled) hasRestoredRef.current = true;
           return;
         }
         const saved = localStorage.getItem("agss_bin_state");
@@ -204,7 +224,7 @@ const BinMonitoring = () => {
           }
         }
       } catch {}
-      if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); }
+      if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); hasRestoredRef.current = true; }
     };
     restore();
     return () => { cancelled = true; };
@@ -238,14 +258,17 @@ const BinMonitoring = () => {
             const cardId = categoryOrder[i];
             if (cardId && !byCardId[cardId]) byCardId[cardId] = b;
           });
-          const fromDb = INITIAL_BINS.map((base) => {
-            const dbBin = byCardId[base.id];
-            const fillLevel = dbBin != null ? roundToTen(Number(dbBin.fill_level) || 0) : (base.fillLevel ?? 0);
-            const lastCollection = dbBin?.last_update ? formatLastCollection(dbBin.last_update) : (base.lastCollection ?? 'Just now');
-            const status = fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : 'Empty';
-            return { ...base, fillLevel, lastCollection, status, binId: dbBin?.id };
-          });
-          setBins(fromDb);
+          // Only add binId (and optional lastCollection from DB); keep fillLevel from restored/persisted state so reload doesn't reset to 0
+          setBins((prev) =>
+            prev.map((base) => {
+              const dbBin = byCardId[base.id];
+              return {
+                ...base,
+                binId: dbBin?.id,
+                lastCollection: dbBin?.last_update ? formatLastCollection(dbBin.last_update) : (base.lastCollection ?? 'Just now'),
+              };
+            })
+          );
           setHasPersistedBinState(true);
         } else {
           setCollectorBins([]);
@@ -363,7 +386,11 @@ const BinMonitoring = () => {
     return () => { cancelled = true; clearInterval(id); };
   }, [collectorInfo, collectorBins]);
 
-  useEffect(() => { persistBinsToBackendAndStorage(bins); }, [bins]);
+  // Persist only after restore has run, so we don't overwrite the backend file with initial 0% on reload
+  useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    persistBinsToBackendAndStorage(bins);
+  }, [bins]);
   useEffect(() => { return () => persistBinsToBackendAndStorage(binsRef.current); }, []);
 
   /**

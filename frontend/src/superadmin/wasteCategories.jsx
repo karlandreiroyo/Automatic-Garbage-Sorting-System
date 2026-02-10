@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './superadmincss/wasteCategories.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Time Filter Icons
 const DailyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
 const WeeklyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
@@ -64,108 +66,40 @@ const WasteCategories = () => {
   }, [timeFilter, selectedDate]);
 
   /**
-   * Fetches waste items from database and calculates category counts
+   * Fetches waste items from backend (Supabase waste_items). Admin/superadmin only.
+   * Backend connects to Supabase so all actions (collector detections, etc.) are reflected here.
    */
   const fetchWasteData = async () => {
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('*');
-
-      // Apply time filter based on selected date (same logic as Data Analytics)
-      const dateObj = new Date(selectedDate);
-
-      if (timeFilter === 'daily') {
-        dateObj.setHours(0, 0, 0, 0);
-        const startOfDay = dateObj.toISOString();
-        const endOfDay = new Date(dateObj);
-        endOfDay.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfDay).lte('created_at', endOfDay.toISOString());
-      } else if (timeFilter === 'weekly') {
-        const dayOfWeek = dateObj.getDay();
-        const startOfWeek = new Date(dateObj);
-        startOfWeek.setDate(dateObj.getDate() - dayOfWeek);
-        startOfWeek.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfWeek.toISOString()).lte('created_at', endOfWeek.toISOString());
-      } else if (timeFilter === 'monthly') {
-        const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
-        endOfMonth.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setWasteData([]);
+        setTotalItems(0);
+        return;
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const categoryCounts = {
-        Biodegradable: 0,
-        'Non-Biodegradable': 0,
-        Recycle: 0,
-        Unsorted: 0
-      };
-
-      const normalizeCategory = (cat) => {
-        if (!cat) return 'Unsorted';
-        const c = String(cat).trim().toLowerCase();
-        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
-        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
-        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
-        return 'Unsorted';
-      };
-
-      if (data) {
-        data.forEach(item => {
-          const key = normalizeCategory(item.category);
-          if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
-          else categoryCounts.Unsorted++;
-        });
+      const params = new URLSearchParams({ timeFilter, selectedDate });
+      const res = await fetch(`${API_BASE}/api/admin/waste-categories?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Waste categories API error:', json.message || res.statusText);
+        setWasteData([]);
+        setTotalItems(0);
+        return;
       }
-
-      const total = data ? data.length : 0;
-      setTotalItems(total);
-
-      const formattedData = [
-        {
-          name: 'Biodegradable',
-          count: categoryCounts.Biodegradable,
-          color: '#10b981',
-          icon: 'leaf'
-        },
-        {
-          name: 'Non-Biodegradable',
-          count: categoryCounts['Non-Biodegradable'],
-          color: '#ef4444',
-          icon: 'trash'
-        },
-        {
-          name: 'Recycle',
-          count: categoryCounts.Recycle,
-          color: '#f97316',
-          icon: 'recycle'
-        },
-        {
-          name: 'Unsorted',
-          count: categoryCounts.Unsorted,
-          color: '#6b7280',
-          icon: 'gear'
-        }
-      ];
-
-      setWasteData(formattedData);
+      if (json.success && Array.isArray(json.wasteData)) {
+        setWasteData(json.wasteData);
+        setTotalItems(json.totalItems ?? 0);
+      } else {
+        setWasteData([]);
+        setTotalItems(0);
+      }
     } catch (error) {
       console.error('Error fetching waste data:', error);
-      setWasteData([
-        { name: 'Biodegradable', count: 10, color: '#10b981', icon: 'leaf' },
-        { name: 'Non-Biodegradable', count: 15, color: '#ef4444', icon: 'trash' },
-        { name: 'Recycle', count: 30, color: '#f97316', icon: 'recycle' },
-        { name: 'Unsorted', count: 2, color: '#6b7280', icon: 'gear' }
-      ]);
-      setTotalItems(39);
+      setWasteData([]);
+      setTotalItems(0);
     }
   };
 

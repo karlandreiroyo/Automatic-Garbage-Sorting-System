@@ -66,6 +66,7 @@ const securityAlertRoutes = require('./routes/securityAlert');
 const accountsRoutes = require('./routes/accounts');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collectorBins');
+const adminWasteRoutes = require('./routes/adminWaste');
 
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
@@ -76,6 +77,7 @@ app.use('/api/security', securityAlertRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
+app.use('/api/admin/waste-categories', adminWasteRoutes);
 
 try { const { initHardware } = require('./utils/hardwareStore'); initHardware(); } catch (e) { }
 
