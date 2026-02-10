@@ -726,6 +726,47 @@
   gap: 10px;
 }
 
+/* Search bar above the cards (outside dropdown) */
+.bin-search-bar-above-cards {
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.bin-search-bar-above-cards .bin-search-input-inner {
+  position: relative;
+  display: block;
+}
+
+.bin-search-bar-above-cards .bin-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #374151;
+  background: white;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.bin-search-bar-above-cards .bin-search-input:focus {
+  outline: none;
+  border-color: #047857;
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+}
+
+.bin-search-bar-above-cards .bin-search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+
 .bin-search-dropdown {
   position: absolute;
   top: calc(100% + 8px);

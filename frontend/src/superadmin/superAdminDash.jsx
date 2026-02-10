@@ -296,6 +296,7 @@ const fetchWasteDistribution = async (dateString) => {
           onClick={() => onNavigateTo?.('bins')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('bins'); } }}
           aria-label="Go to Bin Monitoring"
+          style={{ order: 1 }}
         >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
           <div className="stat-info">
@@ -311,6 +312,7 @@ const fetchWasteDistribution = async (dateString) => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 2 }}
         >
           <div className="stat-icon-bg"><Icons.ItemsSorted /></div>
           <div className="stat-info">
@@ -326,6 +328,7 @@ const fetchWasteDistribution = async (dateString) => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 3 }}
         >
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
@@ -334,7 +337,7 @@ const fetchWasteDistribution = async (dateString) => {
           </div>
         </div>
 
-        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
+        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef} style={{ order: 4 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -369,7 +372,7 @@ const fetchWasteDistribution = async (dateString) => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-admins-dropdown" ref={adminsDropdownRef}>
+        <div className="stat-card-wrapper stat-card-admins-dropdown" ref={adminsDropdownRef} style={{ order: 5 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -404,7 +407,7 @@ const fetchWasteDistribution = async (dateString) => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
+        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef} style={{ order: 6 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"

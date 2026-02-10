@@ -42,24 +42,28 @@ const Icons = {
 };
 
 const AdminDash = ({ onNavigateTo }) => {
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [stats, setStats] = useState({
     totalBins: 0,
+    totalBinsAll: 0,
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
-    supervisor: 0,
-    totalEmployees: 0
+    collectorsAll: 0,
+    admin: 0,
+    adminAll: 0,
+    totalEmployees: 0,
+    totalEmployeesAll: 0
   });
   
   const [distribution, setDistribution] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
   const collectorsDropdownRef = React.useRef(null);
-  const [superadminsList, setSuperadminsList] = useState([]);
-  const [superadminsDropdownOpen, setSuperadminsDropdownOpen] = useState(false);
-  const superadminsDropdownRef = React.useRef(null);
+  const [adminsList, setAdminsList] = useState([]);
+  const [adminsDropdownOpen, setAdminsDropdownOpen] = useState(false);
+  const adminsDropdownRef = React.useRef(null);
   const [employeesList, setEmployeesList] = useState([]);
   const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
   const employeesDropdownRef = React.useRef(null);
@@ -77,29 +81,31 @@ const AdminDash = ({ onNavigateTo }) => {
       if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
         setCollectorsDropdownOpen(false);
       }
-      if (superadminsDropdownRef.current && !superadminsDropdownRef.current.contains(e.target)) {
-        setSuperadminsDropdownOpen(false);
+      if (adminsDropdownRef.current && !adminsDropdownRef.current.contains(e.target)) {
+        setAdminsDropdownOpen(false);
       }
       if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
         setEmployeesDropdownOpen(false);
       }
     };
-    if (collectorsDropdownOpen || superadminsDropdownOpen || employeesDropdownOpen) {
+    if (collectorsDropdownOpen || adminsDropdownOpen || employeesDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [collectorsDropdownOpen, superadminsDropdownOpen, employeesDropdownOpen]);
+  }, [collectorsDropdownOpen, adminsDropdownOpen, employeesDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
-    // Fetch total bins
+    // Fetch active bins and all bins (for breakdown)
     const { data: binsData, error: binsError } = await supabase
       .from('bins')
       .select('*')
       .eq('status', 'ACTIVE');
-    
     if (binsError) throw binsError;
-    
+    const { data: allBinsData } = await supabase.from('bins').select('id');
+    const totalBinsAll = Number(allBinsData?.length) || 0;
+    const activeBins = Number(binsData?.length) || 0;
+
     // Fetch users to get employee counts and lists for dropdowns
     const { data: usersData, error: usersError } = await supabase
       .from('users')
@@ -110,12 +116,15 @@ const fetchDashboardData = async () => {
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR' && u.status === 'ACTIVE') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' && u.status === 'ACTIVE') || [];
-    const supervisors = supervisorUsers.length;
-    setSuperadminsList(supervisorUsers);
+    const collectorsAll = usersData?.filter(u => u.role === 'COLLECTOR')?.length || 0;
+    const adminUsers = usersData?.filter(u => u.role === 'ADMIN' && u.status === 'ACTIVE') || [];
+    const adminCount = adminUsers.length;
+    setAdminsList(adminUsers);
+    const adminAll = usersData?.filter(u => u.role === 'ADMIN')?.length || 0;
     const activeEmployees = usersData?.filter(u => u.status === 'ACTIVE') || [];
     const totalEmployees = activeEmployees.length;
     setEmployeesList(activeEmployees);
+    const totalEmployeesAll = usersData?.length || 0;
 
     // Fetch waste items for statistics
     const today = new Date();
@@ -199,12 +208,16 @@ const fetchDashboardData = async () => {
     }
 
     setStats({
-      totalBins: binsData?.length || 0,
+      totalBins: activeBins,
+      totalBinsAll,
       overallItemsSorted,
       avgProcessingTime: avgTime,
       collectors,
-      supervisor: supervisors,
-      totalEmployees
+      collectorsAll,
+      admin: adminCount,
+      adminAll,
+      totalEmployees,
+      totalEmployeesAll
     });
 
     setRecentActivity(formattedActivity);
@@ -215,38 +228,31 @@ const fetchDashboardData = async () => {
   }
 };
 
-  const fetchWasteDistribution = async (dateString) => {
+  const fetchWasteDistribution = async (dateStr) => {
     try {
-      const selectedDateObj = new Date(dateString);
-      selectedDateObj.setHours(0, 0, 0, 0);
-      const startOfDay = selectedDateObj.toISOString();
-      const endOfDay = new Date(selectedDateObj);
-      endOfDay.setHours(23, 59, 59, 999);
-      const endOfDayISO = endOfDay.toISOString();
-      const { data: itemsData, error: itemsError } = await supabase
+      const start = new Date(dateStr + 'T00:00:00.000Z');
+      const end = new Date(dateStr + 'T23:59:59.999Z');
+      const { data: itemsData } = await supabase
         .from('waste_items')
-        .select('*, bins(name)')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDayISO);
-      if (itemsError) throw itemsError;
-      const categoryCounts = {
-        'Biodegradable': 0,
-        'Non-Bio': 0,
-        'Recycle': 0,
-        'Unsorted': 0
+        .select('category')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+      const categoryCounts = { 'Biodegradable': 0, 'Non-Bio': 0, 'Recycle': 0, 'Unsorted': 0 };
+      const normalizeCategory = (cat) => {
+        if (!cat) return 'Unsorted';
+        const c = String(cat).trim();
+        if (c === 'Recyclable') return 'Recycle';
+        if (c === 'Non Biodegradable' || c === 'Non-Biodegradable') return 'Non-Bio';
+        if (c === 'Biodegradable' || c === 'Recycle' || c === 'Non-Bio' || c === 'Unsorted') return c;
+        return 'Unsorted';
       };
       itemsData?.forEach(item => {
-        if (categoryCounts.hasOwnProperty(item.category)) {
-          categoryCounts[item.category]++;
-        }
+        const key = normalizeCategory(item.category);
+        if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
       });
-      const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
-        name,
-        count
-      }));
-      setDistribution(distributionArray);
-    } catch (error) {
-      console.error('Error fetching waste distribution:', error);
+      setDistribution(Object.entries(categoryCounts).map(([name, count]) => ({ name, count })));
+    } catch (err) {
+      console.error('Error fetching waste distribution:', err);
       setDistribution([]);
     }
   };
@@ -309,7 +315,8 @@ const fetchDashboardData = async () => {
 
       <div className="stats-grid">
         <div
-          className="stat-card stat-card-link"
+          className="stat-card stat-card-link stat-card-bins"
+          style={{ order: 1 }}
           role="button"
           tabIndex={0}
           onClick={() => onNavigateTo?.('bins')}
@@ -317,9 +324,16 @@ const fetchDashboardData = async () => {
           aria-label="Go to Bin Monitoring"
         >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
-          <div className="stat-info">
-            <span className="stat-label">Total Bins</span>
-            <h2 className="stat-value">{stats.totalBins}</h2>
+          <div className="stat-card-bins-center">
+            <div className="stat-info">
+              <span className="stat-label">Total Bins</span>
+              <h2 className="stat-value">{Number(stats.totalBinsAll) || 0}</h2>
+            </div>
+          </div>
+          <div className="stat-breakdown-side">
+            <span className="stat-breakdown-active">{Number(stats.totalBins) || 0}</span>
+            <span className="stat-breakdown-sep"> · </span>
+            <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalBinsAll) || 0) - (Number(stats.totalBins) || 0))}</span>
           </div>
         </div>
 
@@ -330,6 +344,7 @@ const fetchDashboardData = async () => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 2 }}
         >
           <div className="stat-icon-bg"><Icons.ItemsSorted /></div>
           <div className="stat-info">
@@ -345,6 +360,7 @@ const fetchDashboardData = async () => {
           onClick={() => onNavigateTo?.('data')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
           aria-label="Go to Data Analytics"
+          style={{ order: 3 }}
         >
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
@@ -353,7 +369,7 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
+        <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef} style={{ order: 4 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -366,9 +382,16 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.Collector /></div>
             <div className="stat-info">
               <span className="stat-label">Collectors</span>
-              <h2 className="stat-value">{stats.collectors}</h2>
+              <h2 className="stat-value">{Number(stats.collectorsAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.collectors) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.collectorsAll) || 0) - (Number(stats.collectors) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${collectorsDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {collectorsDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -388,33 +411,40 @@ const fetchDashboardData = async () => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
+        <div className="stat-card-wrapper stat-card-admins-dropdown" ref={adminsDropdownRef} style={{ order: 5 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
             tabIndex={0}
-            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
-            aria-expanded={superadminsDropdownOpen}
-            aria-label="Superadmin count, click to view list"
+            onClick={() => setAdminsDropdownOpen((prev) => !prev)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdminsDropdownOpen((prev) => !prev); } }}
+            aria-expanded={adminsDropdownOpen}
+            aria-label="Admin count, click to view list"
           >
             <div className="stat-icon-bg"><Icons.Supervisor /></div>
             <div className="stat-info">
-              <span className="stat-label">Superadmin</span>
-              <h2 className="stat-value">{stats.supervisor}</h2>
+              <span className="stat-label">Admin</span>
+              <h2 className="stat-value">{Number(stats.adminAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.admin) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.adminAll) || 0) - (Number(stats.admin) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${adminsDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
-          {superadminsDropdownOpen && (
+          {adminsDropdownOpen && (
             <div className="stat-card-dropdown">
-              <div className="stat-card-dropdown-title">All Superadmins</div>
+              <div className="stat-card-dropdown-title">All Admins</div>
               <ul className="stat-card-dropdown-list">
-                {superadminsList.length === 0 ? (
-                  <li className="stat-card-dropdown-item empty">No superadmins</li>
+                {adminsList.length === 0 ? (
+                  <li className="stat-card-dropdown-item empty">No admins</li>
                 ) : (
-                  superadminsList.map((s) => (
-                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
-                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
+                  adminsList.map((a) => (
+                    <li key={a.id || `${a.first_name}-${a.last_name}`} className="stat-card-dropdown-item">
+                      {[a.first_name, a.last_name].filter(Boolean).join(' ') || 'Unnamed'}
                     </li>
                   ))
                 )}
@@ -423,7 +453,7 @@ const fetchDashboardData = async () => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
+        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef} style={{ order: 6 }}>
           <div
             className="stat-card stat-card-dropdown-trigger"
             role="button"
@@ -436,9 +466,16 @@ const fetchDashboardData = async () => {
             <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
             <div className="stat-info">
               <span className="stat-label">Total Employees</span>
-              <h2 className="stat-value">{stats.totalEmployees}</h2>
+              <h2 className="stat-value">{Number(stats.totalEmployeesAll) || 0}</h2>
             </div>
-            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            <div className="stat-card-right">
+              <div className="stat-breakdown-side">
+                <span className="stat-breakdown-active">{Number(stats.totalEmployees) || 0}</span>
+                <span className="stat-breakdown-sep"> · </span>
+                <span className="stat-breakdown-inactive">{Math.max(0, (Number(stats.totalEmployeesAll) || 0) - (Number(stats.totalEmployees) || 0))}</span>
+              </div>
+              <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
           </div>
           {employeesDropdownOpen && (
             <div className="stat-card-dropdown">
@@ -447,14 +484,11 @@ const fetchDashboardData = async () => {
                 {employeesList.length === 0 ? (
                   <li className="stat-card-dropdown-item empty">No employees</li>
                 ) : (
-                  employeesList.map((emp) => {
-                    const roleLabel = emp.role === 'SUPERVISOR' ? 'Superadmin' : emp.role === 'ADMIN' ? 'Admin' : 'Collector';
-                    return (
-                      <li key={emp.id || `${emp.first_name}-${emp.last_name}-${emp.role}`} className="stat-card-dropdown-item">
-                        {[emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Unnamed'} <span className="stat-card-dropdown-role">({roleLabel})</span>
-                      </li>
-                    );
-                  })
+                  employeesList.map((e) => (
+                    <li key={e.id || `${e.first_name}-${e.last_name}`} className="stat-card-dropdown-item">
+                      {[e.first_name, e.last_name].filter(Boolean).join(' ') || 'Unnamed'} ({e.role || '—'})
+                    </li>
+                  ))
                 )}
               </ul>
             </div>

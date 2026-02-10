@@ -1,8 +1,9 @@
 .admin-dash-container {
-  padding: 0;
+  padding: 24px;
   width: 100%;
   max-width: 100%;
   margin: 0;
+  box-sizing: border-box;
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
@@ -39,10 +40,11 @@
   width: 100%;
 }
 
-/* Stats Cards Section - 2 columns = 3 rows of cards */
+/* Stats Cards Section - desktop: 3 cols; tablet: 2 cols; mobile: 1 col (6 rows). Order: 1 Total Bins, 2 Overall Items Sorted, 3 Avg Time, 4 Collectors, 5 Admin, 6 Total Employees */
 .stats-grid {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-flow: row;
   gap: 12px;
   margin-bottom: 20px;
   width: 100%;
@@ -607,7 +609,7 @@
   }
 }
 
-/* Mobile */
+/* Mobile - 1 card per row = 6 rows (Total Bins, Overall Items Sorted, Avg Time, Collectors, Admin, Total Employees) */
 @media (max-width: 768px) {
   .dashboard-title-section {
     margin-bottom: 18px;
@@ -630,7 +632,7 @@
   }
   
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
   }
   
@@ -747,7 +749,7 @@
   }
 }
 
-/* Small mobile */
+/* Small mobile - 1 card per row = 6 rows */
 @media (max-width: 480px) {
   .dashboard-title-section {
     margin-bottom: 15px;
@@ -770,7 +772,7 @@
   }
   
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 8px;
   }
   
