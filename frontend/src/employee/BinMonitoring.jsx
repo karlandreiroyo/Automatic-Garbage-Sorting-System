@@ -1,7 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
-import ReactDOM from "react-dom"; 
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { supabase } from "../supabaseClient";
+import HardwareStatus from "../components/HardwareStatus";
 import "../employee/employeecss/BinMonitoring.css";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 /**
  * Rounds fill level to nearest 10
@@ -64,30 +67,158 @@ const ModalPortal = ({ children }) => {
   );
 };
 
-// --- MAIN COMPONENT ---
-const BinMonitoring = () => {
-  const [bins, setBins] = useState([
-    { id: 'Biodegradable', title: 'Biodegradable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'green', status: 'Empty', icon: LeafIcon },
-    { id: 'Non Biodegradable', title: 'Non-Bio', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'red', status: 'Empty', icon: TrashIcon },
-    { id: 'Recyclable', title: 'Recyclable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'blue', status: 'Empty', icon: RecycleIcon },
-    { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'lime', status: 'Empty', icon: GearIcon },
-  ]);
+// Base bin definition (icons not serializable; merge on restore)
+const INITIAL_BINS = [
+  { id: 'Biodegradable', title: 'Biodegradable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'green', status: 'Empty', icon: LeafIcon },
+  { id: 'Non Biodegradable', title: 'Non-Bio', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'red', status: 'Empty', icon: TrashIcon },
+  { id: 'Recyclable', title: 'Recyclable', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'blue', status: 'Empty', icon: RecycleIcon },
+  { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'lime', status: 'Empty', icon: GearIcon },
+];
 
+const BinMonitoring = () => {
+  const [bins, setBins] = useState(INITIAL_BINS);
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
+  const [assignedBinLocationText, setAssignedBinLocationText] = useState("");
+  const [collectorName, setCollectorName] = useState("");
+  const [collectorInfo, setCollectorInfo] = useState(null);
+  const [collectorBins, setCollectorBins] = useState([]);
+  const [hasPersistedBinState, setHasPersistedBinState] = useState(false);
+  const [restoreAttempted, setRestoreAttempted] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
+  const lastArduinoTypeRef = useRef("NORMAL");
+  const binsRef = useRef(bins);
+  binsRef.current = bins;
 
-  // Fetch bin data from database and aggregate category bins
+  const persistBinsToBackendAndStorage = (binsToSave) => {
+    const list = Array.isArray(binsToSave) ? binsToSave : binsRef.current;
+    const serializable = list.map((b) => ({ id: b.id, fillLevel: b.fillLevel, status: b.status, lastCollection: b.lastCollection }));
+    try {
+      localStorage.setItem("agss_bin_state", JSON.stringify(serializable));
+      fetch(`${API_BASE}/api/collector-bins`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bins: serializable }) }).catch(() => {});
+    } catch {}
+  };
+
+  // Restore: backend first, then localStorage. No DB fetch / no auto-decrease.
   useEffect(() => {
-    fetchBinData();
-    
-    // Set up interval to update fill levels
-    const interval = setInterval(() => {
-      updateBinFillLevels();
-    }, 2000);
-
-    return () => clearInterval(interval);
+    let cancelled = false;
+    const restore = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/collector-bins`);
+        const data = res.ok ? await res.json() : {};
+        const backendBins = data?.bins;
+        if (cancelled) return;
+        if (Array.isArray(backendBins) && backendBins.length > 0) {
+          setBins(INITIAL_BINS.map((base) => {
+            const ov = backendBins.find((b) => b.id === base.id);
+            if (!ov) return base;
+            return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
+          }));
+          setHasPersistedBinState(true);
+          setRestoreAttempted(true);
+          if (!cancelled) setIsRestoring(false);
+          return;
+        }
+        const saved = localStorage.getItem("agss_bin_state");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0 && !cancelled) {
+            setBins(INITIAL_BINS.map((base) => {
+              const ov = parsed.find((b) => b.id === base.id);
+              if (!ov) return base;
+              return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
+            }));
+            setHasPersistedBinState(true);
+          }
+        }
+      } catch {}
+      if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); }
+    };
+    restore();
+    return () => { cancelled = true; };
   }, []);
+
+  // Collector name + assigned bins (for waste_items) + location
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+        const { data: userRow, error: userError } = await supabase.from('users').select('id, first_name, middle_name, last_name').eq('auth_id', session.user.id).maybeSingle();
+        if (userError || !userRow) return;
+        const parts = [userRow.first_name?.trim(), userRow.middle_name?.trim() !== 'EMPTY' && userRow.middle_name?.trim() !== 'NULL' ? userRow.middle_name?.trim() : null, userRow.last_name?.trim()].filter(Boolean);
+        if (parts.length) setCollectorName(parts.join(' '));
+        setCollectorInfo({ id: userRow.id, first_name: userRow.first_name, middle_name: userRow.middle_name, last_name: userRow.last_name });
+        const { data: assignedBins, error: binsError } = await supabase.from('bins').select('id, name, location').eq('assigned_collector_id', userRow.id).eq('status', 'ACTIVE');
+        if (binsError || !assignedBins?.length) return;
+        setCollectorBins(assignedBins);
+        const locations = assignedBins.map((b) => (b.location?.trim() || b.name || 'Unspecified')).filter(Boolean);
+        if (locations.length) setAssignedBinLocationText(locations.length === 1 ? `Located at ${locations[0]}` : `Located at ${locations.join(', ')}`);
+      } catch {}
+    };
+    load();
+  }, []);
+
+  /**
+   * NOTIFICATION PROMPT (based on bin monitoring fill level):
+   * - 10%  → Info notification:    "Bin update" / "<Bin> bin is at 10% capacity"
+   * - 50%  → No notification:      (warning removed; do not show "Almost Full" at 50%)
+   * - 90%+ → Critical notification: "Bin Full Alert" / "<Bin> bin has reached X% — bin is full"
+   * Notifications are pushed to localStorage (agss_notifications) and shown on the Notifications page.
+   */
+  // Arduino detection: NORMAL -> type adds 10% to matching bin; create notification per rules above
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/hardware/status`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const type = (data.lastType || "").toUpperCase();
+        const prev = lastArduinoTypeRef.current || "NORMAL";
+        lastArduinoTypeRef.current = type || "NORMAL";
+        if (!type || type === "NORMAL" || prev !== "NORMAL") return;
+        let newNotification = null;
+        const nextBins = binsRef.current.map((bin) => {
+          const isTarget = (type === "BIO" && bin.id === "Biodegradable") || (type === "NON_BIO" && bin.id === "Non Biodegradable") || (type === "RECYCABLE" && bin.id === "Recyclable") || (type === "UNSORTED" && bin.id === "Unsorted");
+          if (!isTarget) return bin;
+          const raw = Math.min(100, bin.fillLevel + 10);
+          const rounded = roundToTen(raw);
+          if (rounded === 10) {
+            newNotification = { id: Date.now(), type: "info", title: "Bin update", time: "Just now", date: "", message: `${bin.title} bin is at 10% capacity`, subtext: bin.title, fillLevel: "10%", capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
+          } else if (rounded >= 90) {
+            newNotification = { id: Date.now(), type: "critical", title: "Bin Full Alert", time: "Just now", date: "", message: `${bin.title} bin has reached ${rounded}% — bin is full`, subtext: bin.title, fillLevel: `${rounded}%`, capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
+          }
+          return { ...bin, fillLevel: rounded, status: rounded >= 90 ? "Full" : rounded >= 75 ? "Almost Full" : rounded >= 50 ? "Normal" : "Empty" };
+        });
+        setBins(nextBins);
+        persistBinsToBackendAndStorage(nextBins);
+        if (newNotification) {
+          try {
+            const raw = localStorage.getItem("agss_notifications");
+            const existing = raw ? JSON.parse(raw) : [];
+            localStorage.setItem("agss_notifications", JSON.stringify([...existing, newNotification].slice(-100)));
+          } catch {}
+        }
+        if (collectorInfo && collectorBins.length > 0) {
+          const categoryMap = { BIO: "Biodegradable", NON_BIO: "Non Biodegradable", RECYCABLE: "Recyclable", UNSORTED: "Unsorted" };
+          const categoryText = categoryMap[type];
+          if (categoryText) {
+            try {
+              await supabase.from("waste_items").insert({ bin_id: collectorBins[0].id, category: categoryText, weight: null, processing_time: null, last_name: collectorInfo.last_name, first_name: collectorInfo.first_name, middle_name: collectorInfo.middle_name });
+            } catch {}
+          }
+        }
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [collectorInfo, collectorBins]);
+
+  useEffect(() => { persistBinsToBackendAndStorage(bins); }, [bins]);
+  useEffect(() => { return () => persistBinsToBackendAndStorage(binsRef.current); }, []);
 
   /**
    * Fetches bin data from Supabase and aggregates category bins
@@ -314,12 +445,15 @@ const BinMonitoring = () => {
         <div className="header-titles">
           <h1>Bin Monitoring</h1>
           <p>Monitor bin fill levels</p>
+          {collectorName && <p className="collector-name">Collector: <strong>{collectorName}</strong></p>}
+          {assignedBinLocationText && (
+            <div className="assigned-bin-location-card">
+              <span>{assignedBinLocationText}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* --- SMART NOTIFICATIONS (No blocking errors) --- */}
-      
-      {/* Informational: User selected some empty bins, but we don't block action */}
       {selectedBins.length > actionableBins.length && actionableBins.length > 0 && (
          <div className="notification-banner warning" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
            <span>ℹ️</span>
@@ -329,6 +463,11 @@ const BinMonitoring = () => {
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
 
+      <HardwareStatus />
+
+      {isRestoring ? (
+        <div className="bin-levels-loading" style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b' }}>Loading bin levels…</div>
+      ) : (
       <div className="bin-grid-layout">
         {bins.map((bin) => (
           <BinCard 
@@ -341,6 +480,7 @@ const BinMonitoring = () => {
           />
         ))}
       </div>
+      )}
 
       {confirmModal.show && (
         <ModalPortal>

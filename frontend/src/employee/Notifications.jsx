@@ -1,5 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../employee/employeecss/Notifications.css';
+
+/**
+ * NOTIFICATION PROMPT (driven by Bin Monitoring):
+ * Notifications come from agss_notifications (localStorage), filled by Bin Monitoring when Arduino detects items:
+ * - 10%  → Info:    "Bin update" / "<Bin> bin is at 10% capacity"
+ * - 50%  → No notification (no warning at 50%)
+ * - 90%+ → Critical: "Bin Full Alert" / "<Bin> bin has reached X% — bin is full"
+ */
+const loadInitialNotifications = () => {
+  try {
+    const raw = localStorage.getItem('agss_notifications');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+};
 
 // --- ICONS ---
 const Icons = {
@@ -24,19 +40,17 @@ const getBinClassName = (subtext) => {
 };
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'critical', title: 'Bin Full Alert', time: '2 minutes ago', date: 'Jan 17, 2025', message: 'Non-biodegradable bin has reached 100% capacity', subtext: 'Non-Biodegradable', fillLevel: '100%', capacity: '100 L', location: 'Zone A', isUnread: true },
-    { id: 2, type: 'warning', title: 'Bin Almost Full', time: '15 minutes ago', date: 'Jan 17, 2025', message: 'Recyclable bin is at 85% capacity', subtext: 'Recyclable', fillLevel: '85%', capacity: '100 L', location: 'Zone B', isUnread: true },
-    { id: 3, type: 'warning', title: 'Bin Almost Full', time: '1 hour ago', date: 'Jan 17, 2025', message: 'Biodegradable bin is at 78% capacity', subtext: 'Biodegradable', fillLevel: '78%', capacity: '100 L', location: 'Zone C', isUnread: false },
-    { id: 4, type: 'success', title: 'Collection Completed', time: '3 hours ago', date: 'Jan 17, 2025', message: 'Non-biodegradable bin has been emptied', subtext: 'Non-Biodegradable', collector: 'Kelly', weight: '45.2 kg', location: 'Zone A', isUnread: false },
-    { id: 5, type: 'info', title: 'Scheduled Collection', time: '5 hours ago', date: 'Jan 17, 2025', message: 'Recyclable bin collection scheduled for tomorrow 9:00 AM', subtext: 'Recyclable', scheduledTime: '9:00 AM', location: 'Zone B', isUnread: false },
-  ]);
+  const [notifications, setNotifications] = useState(loadInitialNotifications);
 
   const [activeFilter, setActiveFilter] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('agss_notifications', JSON.stringify(notifications)); } catch {}
+  }, [notifications]);
 
   // Filter logic: 
   // - When no filter is active: show only unread notifications (main view)
