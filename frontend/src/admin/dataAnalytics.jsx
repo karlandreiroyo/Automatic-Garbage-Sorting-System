@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/dataAnalytics.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Time filter icons
 const ClockIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -88,6 +90,8 @@ const [wasteDistribution, setWasteDistribution] = useState([
 ]);
   const [dailyTrend, setDailyTrend] = useState([]);
   const [selectedBar, setSelectedBar] = useState(null);
+  const [hoveredBar, setHoveredBar] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const [loading, setLoading] = useState(false);
 
@@ -99,41 +103,41 @@ const [wasteDistribution, setWasteDistribution] = useState([
 const fetchAnalyticsData = async () => {
   setLoading(true);
   try {
-    let query = supabase
-      .from('waste_items')
-      .select('*');
-
-    // Apply time filter based on selected date (same logic as superadmin Data Analytics)
-    const dateObj = new Date(selectedDate);
-
-    if (timeFilter === 'daily') {
-      dateObj.setHours(0, 0, 0, 0);
-      const startOfDay = dateObj.toISOString();
-      const endOfDay = new Date(dateObj);
-      endOfDay.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay.toISOString());
-    } else if (timeFilter === 'weekly') {
-      const dayOfWeek = dateObj.getDay();
-      const startOfWeek = new Date(dateObj);
-      startOfWeek.setDate(dateObj.getDate() - dayOfWeek);
-      startOfWeek.setHours(0, 0, 0, 0);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfWeek.toISOString()).lte('created_at', endOfWeek.toISOString());
-    } else if (timeFilter === 'monthly') {
-      const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
     }
+    const params = new URLSearchParams({ timeFilter, selectedDate });
+    const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('Data analytics API error:', json.message || res.statusText);
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
+    }
+    const data = json.success && Array.isArray(json.data) ? json.data : [];
 
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Calculate distribution from actual data (normalize DB category values)
+    // Calculate distribution from backend data (normalize DB category values)
     if (data && data.length > 0) {
       const categoryCounts = {
         'Biodegradable': 0,
@@ -192,13 +196,13 @@ const fetchAnalyticsData = async () => {
         { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
         { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
       ]);
-      
       setCategoryAccuracy({
         'Biodegradable': 0,
         'Non-Biodegradable': 0,
         'Recycle': 0,
         'Unsorted': 0
       });
+      setDailyTrend([]);
     }
   } catch (error) {
     console.error('Error fetching analytics data:', error);
@@ -433,46 +437,74 @@ const calculateYAxisLabels = () => {
         </div>
       </div>
 
-      {/* Sorting Accuracy Metrics */}
+      {/* Sorting Accuracy Metrics - icon circle and % match pie graph bin colors (Waste Distribution) */}
       <div className="accuracy-metrics">
         <div className="accuracy-card">
-          <div className="accuracy-icon">
+          <div
+            className="accuracy-icon"
+            style={{
+              color: '#10b981',
+              background: 'rgba(16, 185, 129, 0.12)',
+              borderColor: 'rgba(16, 185, 129, 0.35)'
+            }}
+          >
             <LeafIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Biodegradable']}%</div>
+            <div className="accuracy-value" style={{ color: '#10b981' }}>{categoryAccuracy['Biodegradable']}%</div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
+          <div
+            className="accuracy-icon"
+            style={{
+              color: '#ef4444',
+              background: 'rgba(239, 68, 68, 0.12)',
+              borderColor: 'rgba(239, 68, 68, 0.35)'
+            }}
+          >
             <TrashIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Non-Biodegradable']}%</div>
+            <div className="accuracy-value" style={{ color: '#ef4444' }}>{categoryAccuracy['Non-Biodegradable']}%</div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
+          <div
+            className="accuracy-icon"
+            style={{
+              color: '#f97316',
+              background: 'rgba(249, 115, 22, 0.12)',
+              borderColor: 'rgba(249, 115, 22, 0.35)'
+            }}
+          >
             <RecycleIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Recycle']}%</div>
+            <div className="accuracy-value" style={{ color: '#f97316' }}>{categoryAccuracy['Recycle']}%</div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
+          <div
+            className="accuracy-icon"
+            style={{
+              color: '#6b7280',
+              background: 'rgba(107, 114, 128, 0.12)',
+              borderColor: 'rgba(107, 114, 128, 0.35)'
+            }}
+          >
             <GearIcon />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Unsorted']}%</div>
+            <div className="accuracy-value" style={{ color: '#6b7280' }}>{categoryAccuracy['Unsorted']}%</div>
           </div>
         </div>
       </div>
@@ -508,7 +540,7 @@ const calculateYAxisLabels = () => {
         </div>
 
 {/* Daily Sorting Trend Bar Chart */}
-<div className="chart-card">
+<div className="chart-card chart-card-with-tooltip">
   <h3 className="chart-title">Daily Sorting Trend</h3>
   {selectedBar && (
     <div className="bar-selection-info">
@@ -522,7 +554,15 @@ const calculateYAxisLabels = () => {
       </button>
     </div>
   )}
-  <div className="bar-chart-container">
+  <div
+    className="bar-chart-container"
+    onMouseMove={(e) => {
+      if (hoveredBar) {
+        setTooltipPos({ x: e.clientX + 10, y: e.clientY });
+      }
+    }}
+    onMouseLeave={() => setHoveredBar(null)}
+  >
     <div className="bar-chart-y-axis">
       {calculateYAxisLabels().map((label, index) => (
         <span key={index} className="y-axis-label">{label}</span>
@@ -539,6 +579,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'pointer'
               }}
               onClick={() => setSelectedBar(item)}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`Click to view details: ${item.day} - ${item.value} items`}
             >
               <span className="bar-value">{item.value}</span>
@@ -552,6 +600,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'default',
                 opacity: 0.3
               }}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`${item.day}: No items`}
             />
           )}
@@ -559,6 +615,19 @@ const calculateYAxisLabels = () => {
         </div>
       ))}
     </div>
+    {hoveredBar && (
+      <div
+        className="bar-chart-tooltip"
+        style={{
+          left: tooltipPos.x,
+          top: tooltipPos.y
+        }}
+        role="tooltip"
+      >
+        <span className="tooltip-period">{hoveredBar.day}</span>
+        <span className="tooltip-value">{hoveredBar.value} items sorted</span>
+      </div>
+    )}
   </div>
 </div>
       </div>

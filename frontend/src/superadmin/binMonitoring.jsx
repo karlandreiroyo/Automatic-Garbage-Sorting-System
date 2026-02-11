@@ -1,15 +1,15 @@
 /**
- * Bin Monitoring Component
- * Real-time monitoring of waste bin fill levels with two views:
- * 1. List View: Shows all bins with system power indicators
- * 2. Detail View: Shows category-specific bins with drain functionality
- * Features: Click bins to view details, drain individual or all bins
+ * Super Admin Bin Monitoring
+ * Same UI and behavior as Admin Bin Monitoring; standalone code for Super Admin only.
+ * Recorded Items (collection history) from backend GET /api/admin/recorded-items.
  */
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import BinListCard from '../components/BinListCard';
 import './superadmincss/binMonitoring.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
@@ -275,6 +275,8 @@ const fetchCollectors = async () => {
 
   // State for list view bins, each with its own independent category bins
 const [bins, setBins] = useState([]);
+const binsRef = React.useRef(bins);
+binsRef.current = bins;
 const [collectors, setCollectors] = useState([]);
 
   const showSuccessNotification = (message) => {
@@ -306,22 +308,33 @@ const [collectors, setCollectors] = useState([]);
     setCollectionHistoryBin(binToUse);
     setCollectionHistoryCategory(categoryLabel);
     if (showOnPage) setShowCollectionHistoryInline(true);
+    else setShowCollectionHistoryModal(true);
     setLoadingCollectionHistory(true);
     setCollectionHistoryItems([]);
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('id, category, processing_time, created_at')
-        .eq('bin_id', binToUse.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      const params = new URLSearchParams({ bin_id: String(binToUse.id) });
       if (categoryLabel) {
         const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
-        query = query.eq('category', dbCategory);
+        params.set('category', dbCategory);
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      setCollectionHistoryItems(data || []);
+      const res = await fetch(`${API_BASE}/api/admin/recorded-items?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Recorded items API error:', json.message || res.statusText);
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      setCollectionHistoryItems(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       console.error('Error fetching collection history:', err);
       setCollectionHistoryItems([]);
@@ -365,10 +378,10 @@ const [collectors, setCollectors] = useState([]);
   // Fetch bin data on component mount and when archive view toggles
   useEffect(() => {
   fetchBinData();
-  fetchCollectors(); // Add this line
+  fetchCollectors();
   
   const interval = setInterval(() => {
-    updateBinFillLevels();
+    updateBinFillLevelsFromWasteItems();
   }, 2000);
 
   return () => clearInterval(interval);
@@ -457,8 +470,8 @@ const fetchBinData = async () => {
       }));
       
       setBins(updatedBins);
+      updateBinFillLevelsFromWasteItems(updatedBins);
     } else {
-      // No bins in database
       setBins([]);
     }
   } catch (error) {
@@ -467,44 +480,73 @@ const fetchBinData = async () => {
   }
 };
 
-  /**
-   * Updates bin fill levels in real-time based on category bins
-   * Calculates the overall fill level as the maximum fill level among category bins
-   * Simulates natural decrease over time (waste being processed/removed)
-   * Bins decrease gradually unless manually drained or new waste is added
-   */
-  // Then in your updateBinFillLevels function, update this part:
+const ITEMS_FOR_FULL_BIN = 50;
+const ITEMS_FOR_FULL_CATEGORY = 20;
 
-const updateBinFillLevels = () => {
-  setBins(prevBins =>
-    prevBins.map(bin => {
-      const updatedCategoryBins = bin.categoryBins.map(catBin => {
-        if (catBin.fillLevel > 0) {
-          const decreaseAmount = 0.1 + (Math.random() * 0.2);
-          const newCatFillLevel = Math.max(0, catBin.fillLevel - decreaseAmount);
-          // Round to nearest 10
-          return {
-            ...catBin,
-            fillLevel: roundToTen(newCatFillLevel)
-          };
-        }
-        return {
-          ...catBin,
-          fillLevel: 0
-        };
+const normalizeCategory = (cat) => {
+  if (!cat) return 'Unsorted';
+  const s = String(cat).toLowerCase();
+  if (s.includes('bio') && !s.includes('non')) return 'Biodegradable';
+  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
+  if (s.includes('recycl')) return 'Recyclable';
+  return 'Unsorted';
+};
+
+/** Fill levels from Supabase waste_items table (same as admin) */
+const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
+  const currentBins = binsOverride ?? binsRef.current;
+  const binIds = (currentBins || []).map(b => b.id);
+  if (binIds.length === 0) return;
+  try {
+    const { data, error } = await supabase
+      .from('waste_items')
+      .select('bin_id, category, created_at')
+      .in('bin_id', binIds);
+
+    if (error) {
+      console.warn('Error fetching waste_items for fill levels:', error);
+      return;
+    }
+    const byBin = {};
+    binIds.forEach(id => {
+      byBin[id] = { total: 0, byCategory: { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 }, lastAt: null };
+    });
+    (data || []).forEach(item => {
+      const bid = item.bin_id;
+      if (byBin[bid]) {
+        byBin[bid].total++;
+        const key = normalizeCategory(item.category);
+        if (byBin[bid].byCategory[key] !== undefined) byBin[bid].byCategory[key]++;
+        const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
+        if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
+      }
+    });
+    const merged = (currentBins || []).map(bin => {
+      const stats = byBin[bin.id] || { total: 0, byCategory: {}, lastAt: null };
+      const mainFill = Math.min(100, Math.round((stats.total / ITEMS_FOR_FULL_BIN) * 100));
+      const categoryMap = {
+        'Biodegradable': stats.byCategory.Biodegradable || 0,
+        'Non Biodegradable': stats.byCategory['Non Biodegradable'] || 0,
+        Recyclable: stats.byCategory.Recyclable || 0,
+        Unsorted: stats.byCategory.Unsorted || 0
+      };
+      const lastUpdateStr = stats.lastAt ? formatLastCollection(new Date(stats.lastAt).toISOString()) : bin.lastUpdate;
+      const updatedCategoryBins = bin.categoryBins.map(cb => {
+        const count = categoryMap[cb.category] || 0;
+        const catFill = Math.min(100, Math.round((count / ITEMS_FOR_FULL_CATEGORY) * 100));
+        return { ...cb, fillLevel: roundToTen(catFill) };
       });
-
-      const maxFillLevel = updatedCategoryBins.length > 0
-        ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
-        : bin.fillLevel;
-
       return {
         ...bin,
-        fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
+        fillLevel: roundToTen(mainFill),
+        lastUpdate: lastUpdateStr,
         categoryBins: updatedCategoryBins
       };
-    })
-  );
+    });
+    setBins(merged);
+  } catch (err) {
+    console.warn('updateBinFillLevelsFromWasteItems:', err);
+  }
 };
 
   /**
@@ -534,23 +576,20 @@ const updateBinFillLevels = () => {
   };
 
   /**
-   * Drains a specific category bin by setting fill level to 0%
-   * Only affects the category bin for the currently selected bin
-   * @param {string} categoryBinId - The ID of the category bin to drain (e.g., 'non-bio-1')
+   * Drains a specific category bin: delete waste_items for that bin/category, update bins table (same as admin).
    */
   const handleDrain = async (categoryBinId) => {
     try {
-      // Update in Supabase if you have a bins table (for category bins)
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', categoryBinId);
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 means table doesn't exist, which is okay for now
-        console.warn('Bins table may not exist:', error);
+      const match = categoryBinId?.match(/^(bio|non-bio|recycle|unsorted)-(\d+)$/i);
+      const physicalBinId = match ? parseInt(match[2], 10) : null;
+      const catKey = match ? { bio: 'Biodegradable', 'non-bio': 'Non Biodegradable', recycle: 'Recyclable', unsorted: 'Unsorted' }[match[1].toLowerCase()] : null;
+      if (physicalBinId && catKey) {
+        const variants = catKey === 'Non Biodegradable' ? ['Non Biodegradable', 'Non-Bio'] : catKey === 'Recyclable' ? ['Recyclable', 'Recycle'] : [catKey];
+        await supabase.from('waste_items').delete().eq('bin_id', physicalBinId).in('category', variants);
       }
-
+      if (selectedBinId) {
+        await supabase.from('bins').update({ last_update: new Date().toISOString() }).eq('id', selectedBinId);
+      }
       const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
@@ -593,21 +632,12 @@ const updateBinFillLevels = () => {
   };
 
   /**
-   * Drains a specific list view bin (Bin 1, Bin 2, etc.)
-   * Only affects the specific bin in the list view
-   * @param {number} binId - The ID of the list view bin to drain
+   * Drains a specific list view bin: delete all waste_items for that bin, update bins table (same as admin).
    */
   const handleDrainListBin = async (binId) => {
     try {
-      // Update in Supabase if you have a bins table
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', binId);
-
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Bins table may not exist:', error);
-      }
+      await supabase.from('waste_items').delete().eq('bin_id', binId);
+      await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', binId);
 
       const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>

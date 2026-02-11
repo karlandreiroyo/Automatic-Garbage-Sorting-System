@@ -4,7 +4,7 @@
  * white body (Fill Level, progress bar, Last Collection).
  * Can optionally show assigned employee in body instead of header (Admin format).
  *
- * @param {Object} bin - { name, fillLevel, lastUpdate, assigned_collector_name, category }
+ * @param {Object} bin - { id, name, fillLevel, lastUpdate, assigned_collector_name, category, location }
  * @param {Function} onClick - Optional click handler
  * @param {boolean} isArchived - Optional, applies archived styling
  * @param {'header'|'body'} assignedPosition - 'header' = "Assign For: name" in green header (image format); 'body' = "Assigned Employee" row in white body
@@ -103,6 +103,12 @@ export default function BinListCard({
             </p>
           )}
           <div className="bin-list-meta-info">
+            {bin.id != null && (
+              <div className="bin-list-info-row">
+                <span className="info-label">Bin ID</span>
+                <span className="info-value">{bin.id}</span>
+              </div>
+            )}
             {assignedPosition === 'body' && (
               <div className="bin-list-info-row">
                 <span className="info-label">Assigned Employee</span>

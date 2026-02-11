@@ -1,5 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import '../employee/employeecss/CollectionHistory.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+/** Normalize API bin_category to display/filter type (e.g. "Non Biodegradable" → "Non-Biodegradable"). */
+const normalizeType = (binCategory) => {
+  if (!binCategory) return 'Unsorted';
+  const s = String(binCategory).trim();
+  if (s === 'Non Biodegradable') return 'Non-Biodegradable';
+  if (s === 'Biodegradable' || s === 'Recyclable' || s === 'Unsorted') return s;
+  return s;
+};
 
 // --- ICONS ---
 const LeafIcon = () => (
@@ -78,18 +89,47 @@ const SearchIcon = () => (
 const CollectionHistory = () => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [historyData, setHistoryData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const itemsPerPage = 4;
 
-  // Sample data - replace with API call or props
-  const historyData = [
-    { id: 1, type: 'Non-Biodegradable', date: 'Jan 17, 2025', time: '09:30 AM', collector: 'Kelly', weight: '45.2 kg', status: 'Completed' },
-    { id: 2, type: 'Recyclable', date: 'Jan 17, 2025', time: '10:15 AM', collector: 'Kim', weight: '32.8 kg', status: 'Completed' },
-    { id: 3, type: 'Biodegradable', date: 'Jan 14, 2025', time: '02:45 PM', collector: 'Carlo', weight: '28.5 kg', status: 'Completed' },
-    { id: 4, type: 'Non-Biodegradable', date: 'Jan 14, 2025', time: '11:20 AM', collector: 'Charize', weight: '52.1 kg', status: 'Completed' },
-    { id: 5, type: 'Non-Biodegradable', date: 'Jan 13, 2025', time: '09:30 AM', collector: 'Kim', weight: '45.2 kg', status: 'Completed' },
-    { id: 6, type: 'Recyclable', date: 'Jan 14, 2025', time: '10:15 AM', collector: 'Carlo', weight: '32.8 kg', status: 'Completed' },
-    { id: 7, type: 'Unsorted', date: 'Jan 16, 2025', time: '08:00 AM', collector: 'Kelly', weight: '18.0 kg', status: 'Completed' },
-  ];
+  // Real-time collection history from backend (bin drains from Bin Monitoring)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchHistory = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`);
+        if (!res.ok) throw new Error('Failed to load collection history');
+        const data = await res.json();
+        if (cancelled) return;
+        const raw = data?.history ?? [];
+        const mapped = raw.map((entry) => {
+          const d = entry.drained_at ? new Date(entry.drained_at) : new Date();
+          return {
+            id: entry.id,
+            type: normalizeType(entry.bin_category),
+            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            drainedAt: d,
+            collector: entry.collector_name || '—',
+            status: entry.status || 'Completed',
+          };
+        });
+        setHistoryData(mapped);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Could not load collection history');
+        setHistoryData([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 10000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   // Filter types (no "All" – multi-select like Notifications). Includes Unsorted.
   const filterTypes = ['Biodegradable', 'Non-Biodegradable', 'Recyclable', 'Unsorted'];
@@ -100,47 +140,37 @@ const CollectionHistory = () => {
     return historyData.filter(item => activeFilters.includes(item.type));
   }, [activeFilters, historyData]);
 
-  // Calculate statistics
+  // Calculate statistics from real-time data (using drained_at)
   const stats = useMemo(() => {
     const totalCollections = historyData.length;
-
-    // Get today's date for calculations
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    // Helper function to parse date string (e.g., "Jan 17, 2025")
-    const parseDate = (dateStr) => {
-      if (!dateStr) return null;
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return null;
-      date.setHours(0, 0, 0, 0);
-      return date;
-    };
-    
-    // Count daily collections (today)
-    const todayStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
     const daily = historyData.filter(item => {
-      const itemDate = parseDate(item.date);
+      const itemDate = item.drainedAt;
       if (!itemDate) return false;
-      return itemDate.getTime() === today.getTime();
+      const d = new Date(itemDate);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === today.getTime();
     }).length;
 
-    // Count weekly collections (last 7 days including today)
     const oneWeekAgo = new Date(today);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const weekly = historyData.filter(item => {
-      const itemDate = parseDate(item.date);
+      const itemDate = item.drainedAt;
       if (!itemDate) return false;
-      return itemDate >= oneWeekAgo && itemDate <= today;
+      const d = new Date(itemDate);
+      d.setHours(0, 0, 0, 0);
+      return d >= oneWeekAgo && d <= today;
     }).length;
 
-    // Count monthly collections (current month)
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     const monthly = historyData.filter(item => {
-      const itemDate = parseDate(item.date);
+      const itemDate = item.drainedAt;
       if (!itemDate) return false;
-      return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+      const d = new Date(itemDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     }).length;
 
     return {
@@ -211,8 +241,24 @@ const CollectionHistory = () => {
         </div>
       </div>
 
+      {/* Loading / Error */}
+      {loading && (
+        <div className="empty-state-container">
+          <p>Loading collection history…</p>
+        </div>
+      )}
+      {error && !loading && (
+        <div className="empty-state-container">
+          <div className="empty-icon-large">
+            <AlertIcon />
+          </div>
+          <h3>Could not load history</h3>
+          <p>{error}</p>
+        </div>
+      )}
+
       {/* Statistics */}
-      {hasData && (
+      {hasData && !loading && (
         <div className="stats-row">
           <div className="stats-box">
             <div className="stats-icon-bg bg-green-light">
@@ -253,7 +299,8 @@ const CollectionHistory = () => {
         </div>
       )}
 
-      {/* Filter Tabs – type only, multi-select like Notifications */}
+      {/* Filter Tabs – by bin type (Biodegradable, Non-Biodegradable, Recyclable, Unsorted) */}
+      {!loading && (
       <div className="filter-tabs">
         {filterTypes.map(type => (
           <button
@@ -268,6 +315,7 @@ const CollectionHistory = () => {
           </button>
         ))}
       </div>
+      )}
 
       {/* Active filter badge – inline, like Notifications */}
       {activeFilters.length > 0 && (
@@ -282,14 +330,14 @@ const CollectionHistory = () => {
       )}
 
       {/* Content Area */}
-      {!hasData ? (
+      {loading || error ? null : !hasData ? (
         // No data state
         <div className="empty-state-container">
           <div className="empty-icon-large">
             <AlertIcon />
           </div>
           <h3>No Collection History</h3>
-          <p>There are no collection records available at the moment.</p>
+          <p>Collection records appear here when bins are drained in Bin Monitoring.</p>
         </div>
       ) : !hasFilteredResults ? (
         // No results state (filters active but no match)

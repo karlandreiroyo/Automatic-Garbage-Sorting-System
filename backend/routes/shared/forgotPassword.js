@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { generateVerificationCode, verificationCodes } = require('../utils/verification');
-const { getSmtpConfig, sendResetPasswordVerificationEmail } = require('../utils/mailer');
+const supabase = require('../../utils/supabase');
+const { generateVerificationCode, verificationCodes } = require('../../utils/verification');
+const { getSmtpConfig, sendResetPasswordVerificationEmail } = require('../../utils/mailer');
 // SMS and phone-based reset removed - email-only flow
 
 // Phone lookup functions removed - email-only password reset

@@ -1,16 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
+const supabase = require('../../utils/supabase');
 
 /**
  * POST /api/device/sensor
  * Accepts sensor/reading data from Raspberry Pi (or any device).
  * Body: { bin_id?, category, processing_time?, device_id? }
- * - bin_id: optional Supabase bins.id (UUID)
- * - category: one of 'Biodegradable' | 'Non-Biodegradable' | 'Recycle' | 'Unsorted'
- * - processing_time: optional number (seconds)
- * - device_id: optional string (e.g. Pi identifier)
- * Writes to Supabase waste_items so the dashboard shows real-time data.
  */
 router.post('/sensor', async (req, res) => {
   try {
@@ -25,6 +20,7 @@ router.post('/sensor', async (req, res) => {
       category: categoryVal,
       processing_time: typeof processing_time === 'number' ? processing_time : 0,
       ...(bin_id && { bin_id }),
+      created_at: new Date().toISOString(),
     };
     if (device_id) console.log('[device/sensor] device_id:', device_id);
 

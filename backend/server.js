@@ -57,25 +57,35 @@ if (smtpCfg.hasPlaceholders) {
 app.use(cors());
 app.use(express.json());
 
-// Import routes
-const forgotPasswordRoutes = require('./routes/forgotPassword');
-const profilePasswordRoutes = require('./routes/profilePassword');
-const loginVerificationRoutes = require('./routes/loginVerification');
-const healthRoutes = require('./routes/health');
-const securityAlertRoutes = require('./routes/securityAlert');
-const accountsRoutes = require('./routes/accounts');
-const hardwareRoutes = require('./routes/hardware');
-const collectorBinsRoutes = require('./routes/collectorBins');
+// Shared routes (auth, health - used by all roles)
+const forgotPasswordRoutes = require('./routes/shared/forgotPassword');
+const profilePasswordRoutes = require('./routes/shared/profilePassword');
+const loginVerificationRoutes = require('./routes/shared/loginVerification');
+const healthRoutes = require('./routes/shared/health');
+const securityAlertRoutes = require('./routes/shared/securityAlert');
 
-// Use routes
+// Role-based routes (collector, admin, superadmin)
+const collectorRoutes = require('./routes/collector');
+const adminRoutes = require('./routes/admin');
+const superadminRoutes = require('./routes/superadmin');
+const hardwareRoutes = require('./routes/collector/hardware');
+const deviceRoutes = require('./routes/collector/device');
+
+// Use shared routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
 app.use('/api/login', loginVerificationRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/security', securityAlertRoutes);
-app.use('/api/accounts', accountsRoutes);
+
+// Collector-related (hardware status, device/sensor API)
 app.use('/api/hardware', hardwareRoutes);
-app.use('/api/collector-bins', collectorBinsRoutes);
+app.use('/api/device', deviceRoutes);
+
+// Use role-based routes (same API paths as before)
+app.use('/api/collector-bins', collectorRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/accounts', superadminRoutes);
 
 try { const { initHardware } = require('./utils/hardwareStore'); initHardware(); } catch (e) { }
 

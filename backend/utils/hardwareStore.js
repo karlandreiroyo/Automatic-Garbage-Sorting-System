@@ -1,46 +1,108 @@
 /**
- * Arduino serial reader (COM3). Parses TYPE:BIO, RECYCABLE, etc. from Serial.
+ * Arduino serial reader. Parses new Arduino output:
+ * - RECYCABLE, NON-BIO, BIO, UNSORTED (waste type detected)
+ * - "Weight: X.X g" (no object → NORMAL)
+ * If configured port (e.g. COM3) is not found, tries first available port.
  * GET /api/hardware/status for frontend.
  */
-let SerialPort, ReadlineParser;
+let SerialPort, ReadlineParser, listPorts;
 try {
   const serial = require('serialport');
   SerialPort = serial.SerialPort || serial;
+  listPorts = serial.list || SerialPort.list;
   try { ReadlineParser = require('@serialport/parser-readline').ReadlineParser; } catch { ReadlineParser = serial.ReadlineParser; }
 } catch (e) {
   console.warn('serialport not installed: npm install serialport');
 }
 
-const PORT_NAME = process.env.ARDUINO_PORT || 'COM3';
+const PORT_NAME = process.env.ARDUINO_PORT || 'COM7';
 const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
 
 let port, parser;
-const hardwareState = { lastType: 'NORMAL', lastLine: null, lastUpdated: null, connected: false, error: null };
+const hardwareState = { lastType: 'NORMAL', lastLine: null, lastUpdated: null, connected: false, error: null, availablePorts: [], attemptedPort: null, lastWeight: null };
 
-function initHardware() {
+function attachParser(portInstance) {
+  parser = portInstance.pipe(new ReadlineParser({ delimiter: '\n' }));
+  portInstance.on('open', () => { hardwareState.connected = true; hardwareState.error = null; });
+  portInstance.on('close', () => { hardwareState.connected = false; });
+  portInstance.on('error', (err) => { hardwareState.error = err.message; hardwareState.connected = false; });
+  parser.on('data', (line) => {
+    const clean = String(line).trim();
+    hardwareState.lastLine = clean;
+    hardwareState.lastUpdated = new Date().toISOString();
+    const upper = clean.toUpperCase();
+    if (upper === 'RECYCABLE') { hardwareState.lastType = 'RECYCABLE'; return; }
+    if (upper === 'NON-BIO') { hardwareState.lastType = 'NON_BIO'; return; }
+    if (upper === 'BIO') { hardwareState.lastType = 'BIO'; return; }
+    if (upper === 'UNSORTED') { hardwareState.lastType = 'UNSORTED'; return; }
+    if (upper.startsWith('WEIGHT:')) {
+      hardwareState.lastType = 'NORMAL';
+      const match = clean.match(/Weight:\s*([-\d.]+)/i);
+      if (match) {
+        const val = parseFloat(match[1]);
+        if (!Number.isNaN(val)) hardwareState.lastWeight = val;
+      }
+      return;
+    }
+    if (upper.startsWith('TYPE:')) { hardwareState.lastType = (clean.split(':')[1] || '').trim().toUpperCase().replace('-', '_') || 'NORMAL'; return; }
+    if (upper.includes('RECYCABLE')) hardwareState.lastType = 'RECYCABLE';
+    else if (upper.includes('NON-BIO') || upper.includes('NON_BIO')) hardwareState.lastType = 'NON_BIO';
+    else if (upper.includes('BIO') && !upper.includes('NON')) hardwareState.lastType = 'BIO';
+    else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
+    else if (upper.includes('NORMAL') || upper.includes('WEIGHT')) hardwareState.lastType = 'NORMAL';
+  });
+}
+
+function openPort(pathToTry) {
+  hardwareState.attemptedPort = pathToTry;
+  port = new SerialPort({ path: pathToTry, baudRate: BAUD_RATE }, (err) => {
+    if (err) {
+      hardwareState.error = err.message;
+      hardwareState.connected = false;
+      if (hardwareState.availablePorts && hardwareState.availablePorts.length > 0) {
+        hardwareState.error += ' Available: ' + hardwareState.availablePorts.join(', ') + '. Set ARDUINO_PORT in backend/.env and restart.';
+      }
+      return;
+    }
+    attachParser(port);
+  });
+}
+
+async function initHardware() {
   if (port || !SerialPort) return;
   try {
-    port = new SerialPort({ path: PORT_NAME, baudRate: BAUD_RATE }, (err) => {
-      if (err) { hardwareState.error = err.message; hardwareState.connected = false; }
-    });
-    parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
-    port.on('open', () => { hardwareState.connected = true; hardwareState.error = null; });
-    port.on('close', () => { hardwareState.connected = false; });
-    port.on('error', (err) => { hardwareState.error = err.message; hardwareState.connected = false; });
-    parser.on('data', (line) => {
-      const clean = String(line).trim();
-      hardwareState.lastLine = clean;
-      hardwareState.lastUpdated = new Date().toISOString();
-      const upper = clean.toUpperCase();
-      if (upper.startsWith('TYPE:')) { hardwareState.lastType = (clean.split(':')[1] || '').trim().toUpperCase() || 'NORMAL'; return; }
-      if (upper.includes('RECYCABLE')) hardwareState.lastType = 'RECYCABLE';
-      else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) hardwareState.lastType = 'NON_BIO';
-      else if (upper.includes('BIO')) hardwareState.lastType = 'BIO';
-      else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
-      else if (upper.includes('NORMAL POSITION')) hardwareState.lastType = 'NORMAL';
-    });
+    const list = listPorts ? await (typeof listPorts === 'function' ? listPorts() : Promise.resolve([])) : [];
+    const paths = (list || []).map((p) => p.path || p.comName).filter(Boolean);
+    hardwareState.availablePorts = paths;
+
+    if (paths.length === 0) {
+      hardwareState.error = 'No serial ports found. Connect Arduino, check Device Manager (or Arduino IDE Tools > Port), then restart the server.';
+      return;
+    }
+
+    const portToTry = paths.includes(PORT_NAME) ? PORT_NAME : paths[0];
+    if (portToTry !== PORT_NAME && paths.length > 0) {
+      hardwareState.error = null;
+      openPort(portToTry);
+      setTimeout(() => {
+        if (hardwareState.connected && hardwareState.availablePorts.length) {
+          hardwareState.error = null;
+        } else if (!hardwareState.connected && hardwareState.error) {
+          hardwareState.error = (hardwareState.error || '') + ' Try closing Arduino Serial Monitor and other apps using the port.';
+        }
+      }, 500);
+    } else {
+      openPort(portToTry);
+    }
   } catch (err) {
     hardwareState.error = err.message;
+    if (err.message && err.message.includes('list') === false && SerialPort) {
+      try {
+        openPort(PORT_NAME);
+      } catch (e2) {
+        hardwareState.error = (hardwareState.error || '') + ' (Port list failed: ' + e2.message + ')';
+      }
+    }
   }
 }
 

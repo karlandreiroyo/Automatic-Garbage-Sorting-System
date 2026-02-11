@@ -2,9 +2,9 @@
 
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { sendNewEmployeeCredentialsEmail, sendSecondEmailVerification } = require('../utils/mailer');
-const { generateSecondEmailToken, secondEmailTokens } = require('../utils/verification');
+const supabase = require('../../utils/supabase');
+const { sendNewEmployeeCredentialsEmail, sendSecondEmailVerification } = require('../../utils/mailer');
+const { generateSecondEmailToken, secondEmailTokens } = require('../../utils/verification');
 // SMS functionality removed - using email only
 // const { getSmsConfig, sendCredentialsSms } = require('../utils/sms');
 
