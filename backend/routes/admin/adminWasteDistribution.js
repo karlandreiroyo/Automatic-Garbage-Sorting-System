@@ -2,8 +2,8 @@
 
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const requireAuth = require('../middleware/requireAuth');
+const supabase = require('../../utils/supabase');
+const requireAuth = require('../../middleware/requireAuth');
 
 function normalizeCategory(cat) {
   if (!cat) return 'Unsorted';
@@ -18,8 +18,7 @@ function normalizeCategory(cat) {
 /**
  * GET /api/admin/waste-distribution
  * Query: selectedDate=YYYY-MM-DD
- * Returns waste distribution by category for the Waste Distribution graph.
- * Super Admin only. Backend connects to Supabase waste_items table.
+ * Returns waste distribution by category for the Waste Distribution graph. Admin/superadmin only.
  */
 router.get('/', requireAuth, async (req, res) => {
   try {

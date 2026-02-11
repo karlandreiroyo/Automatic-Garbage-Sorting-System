@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { generateVerificationCode, verificationCodes } = require('../utils/verification');
-const { getSmtpConfig, sendChangePasswordVerificationEmail } = require('../utils/mailer');
-const requireAuth = require('../middleware/requireAuth');
+const supabase = require('../../utils/supabase');
+const { generateVerificationCode, verificationCodes } = require('../../utils/verification');
+const { getSmtpConfig, sendChangePasswordVerificationEmail } = require('../../utils/mailer');
+const requireAuth = require('../../middleware/requireAuth');
 
 // Route: Send OTP for password change (from profile)
 // This route sends verification email to the authenticated user's email address

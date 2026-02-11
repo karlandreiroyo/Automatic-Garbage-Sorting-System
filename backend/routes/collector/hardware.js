@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getHardwareState } = require('../utils/hardwareStore');
+const { getHardwareState } = require('../../utils/hardwareStore');
 
 // GET /status — used by Bin Monitoring to connect weight to the four bins
 router.get('/status', (req, res) => {

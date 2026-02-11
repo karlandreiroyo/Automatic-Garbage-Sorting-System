@@ -2,8 +2,8 @@
 
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const requireAuth = require('../middleware/requireAuth');
+const supabase = require('../../utils/supabase');
+const requireAuth = require('../../middleware/requireAuth');
 
 /**
  * Normalize category string to one of: Biodegradable, Non-Biodegradable, Recycle, Unsorted
@@ -22,7 +22,6 @@ function normalizeCategory(cat) {
  * GET /api/admin/waste-categories
  * Query: timeFilter=daily|weekly|monthly, selectedDate=YYYY-MM-DD
  * Returns waste_items counts by category from Supabase (admin/superadmin only).
- * Backend connects to Supabase so the admin dashboard uses one source of truth.
  */
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -31,7 +30,6 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Restrict to admin and superadmin only
     const { data: userRow, error: userError } = await supabase
       .from('users')
       .select('id, role')
@@ -48,7 +46,6 @@ router.get('/', requireAuth, async (req, res) => {
 
     const timeFilter = (req.query.timeFilter || 'daily').toLowerCase();
     const selectedDate = req.query.selectedDate || new Date().toISOString().split('T')[0];
-    // Use UTC bounds so Supabase created_at (timestamptz) matches. Avoid local time which can exclude records.
     const [y, m, d] = selectedDate.split('-').map(Number);
     const dateObj = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
 

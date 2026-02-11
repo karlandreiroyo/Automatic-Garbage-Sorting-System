@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { generateVerificationCode, verificationCodes } = require('../utils/verification');
-const { getSmtpConfig, sendLoginVerificationEmail } = require('../utils/mailer');
-const requireAuth = require('../middleware/requireAuth');
+const supabase = require('../../utils/supabase');
+const { generateVerificationCode, verificationCodes } = require('../../utils/verification');
+const { getSmtpConfig, sendLoginVerificationEmail } = require('../../utils/mailer');
+const requireAuth = require('../../middleware/requireAuth');
 
 const COOLDOWN_HOURS = 3;
 
