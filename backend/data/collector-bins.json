@@ -1,7 +1,7 @@
 [
   {
     "id": "Biodegradable",
-    "fillLevel": 20,
+    "fillLevel": 0,
     "status": "Empty",
     "lastCollection": "Just now"
   },
@@ -13,7 +13,7 @@
   },
   {
     "id": "Recyclable",
-    "fillLevel": 10,
+    "fillLevel": 0,
     "status": "Empty",
     "lastCollection": "Just now"
   },

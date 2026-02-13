@@ -95,45 +95,56 @@ const CollectionHistory = () => {
   const [error, setError] = useState(null);
   const itemsPerPage = 4;
 
-  // Real-time collection history from backend (per-collector – only this collector's drains)
+  // Real-time collection history: fetch from API + Supabase Realtime on notification_bin
+  const fetchHistory = React.useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`, { headers });
+      if (!res.ok) throw new Error('Failed to load collection history');
+      const data = await res.json();
+      const raw = data?.history ?? [];
+      const mapped = raw.map((entry) => {
+        const d = entry.drained_at ? new Date(entry.drained_at) : new Date();
+        return {
+          id: entry.id,
+          type: normalizeType(entry.bin_category),
+          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          drainedAt: d,
+          collector: entry.collector_name || '—',
+          status: entry.status || 'Completed',
+        };
+      });
+      setHistoryData(mapped);
+    } catch (err) {
+      setError(err.message || 'Could not load collection history');
+      setHistoryData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`, { headers });
-        if (!res.ok) throw new Error('Failed to load collection history');
-        const data = await res.json();
-        if (cancelled) return;
-        const raw = data?.history ?? [];
-        const mapped = raw.map((entry) => {
-          const d = entry.drained_at ? new Date(entry.drained_at) : new Date();
-          return {
-            id: entry.id,
-            type: normalizeType(entry.bin_category),
-            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-            drainedAt: d,
-            collector: entry.collector_name || '—',
-            status: entry.status || 'Completed',
-          };
-        });
-        setHistoryData(mapped);
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Could not load collection history');
-        setHistoryData([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    fetchHistory(true);
+    const interval = setInterval(() => { if (!cancelled) fetchHistory(false); }, 10000);
+    // Supabase Realtime: listen for new notification_bin rows (instant update when collector drains)
+    const channel = supabase
+      .channel('notification_bin_realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notification_bin' }, () => {
+        if (!cancelled) fetchHistory(false);
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      supabase.removeChannel(channel);
     };
-    fetchHistory();
-    const interval = setInterval(fetchHistory, 10000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [fetchHistory]);
 
   // Filter types (no "All" – multi-select like Notifications). Includes Unsorted.
   const filterTypes = ['Biodegradable', 'Non-Biodegradable', 'Recyclable', 'Unsorted'];

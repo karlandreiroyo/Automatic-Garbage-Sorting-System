@@ -91,3 +91,38 @@ In the **Collector (Employee)** Bin Monitoring view:
 - **Automatic 0** for new bins: when a bin is newly assigned to a collector (`assigned_at`), only `waste_items` created after that time count; new assignments start at 0%.
 - Each bin has its own events/activities; data is not shared between bins.
 - The view polls `/levels` every 2 seconds so it stays in sync with the database.
+
+## Collection History → notification_bin (Real-time per collector)
+
+Collection History for collectors is connected to the `notification_bin` table in Supabase.
+
+### 1. Add columns to notification_bin
+
+Run in **Supabase Dashboard → SQL Editor**:
+
+```sql
+-- backend/scripts/add-notification-bin-columns.sql
+ALTER TABLE public.notification_bin
+  ADD COLUMN IF NOT EXISTS collector_id int8 REFERENCES public.users(id),
+  ADD COLUMN IF NOT EXISTS bin_category text;
+```
+
+### 2. Enable Realtime on notification_bin
+
+In **Supabase Dashboard → Table Editor → notification_bin** → click **Enable Realtime**.
+
+### 3. Flow
+
+- When a collector drains a bin, the drain API inserts into `notification_bin` (bin_id, status, first_name, last_name, middle_name).
+- `GET /api/collector-bins/collection-history` reads from `notification_bin`.
+- The frontend subscribes to Supabase Realtime on `notification_bin` so new drains appear instantly without refresh.
+
+### 4. If notification_bin stays empty (not connected)
+
+1. **Check backend/.env** – `SUPABASE_SERVICE_KEY` must be set to your **service_role** key (Supabase → Settings → API → service_role). The anon key may be blocked by RLS.
+
+2. **Check RLS on notification_bin** – If Row Level Security is enabled:
+   - Add policy: allow INSERT for service_role
+   - Or in Supabase → Table Editor → notification_bin → "Add RLS policy" → allow INSERT for `service_role`
+
+3. **Check backend console** – When you drain a bin, look for `[notification_bin] insert error:` in the terminal. It shows the exact Supabase error.

@@ -195,13 +195,47 @@ router.post('/', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Collection history: per-collector only (each collector sees their own drains)
+// Collection history: per-collector from notification_bin (real-time); fallback to collection-log.json
 router.get('/collection-history', requireAuth, async (req, res) => {
   try {
     const authId = req.authUser?.id;
     if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
-    const { data: userRow } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+    const { data: userRow } = await supabase.from('users').select('id, first_name, middle_name, last_name').eq('auth_id', authId).maybeSingle();
     const collectorId = userRow?.id;
+    const collectorFullName = [userRow?.first_name, userRow?.middle_name, userRow?.last_name].filter(Boolean).join(' ').trim().toLowerCase();
+
+    const mapNotificationBinRow = (r) => ({
+      id: r.id,
+      bin_category: r.bin_category || 'Unsorted',
+      bin_name: r.bin_category || 'Bin',
+      collector_id: r.collector_id ?? collectorId,
+      collector_name: [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').trim() || '—',
+      drained_at: r.created_at,
+      status: r.status || 'Drained',
+    });
+
+    // Try notification_bin with collector_id (after migration)
+    const { data: dbRows, error: dbErr } = await supabase
+      .from('notification_bin')
+      .select('id, bin_id, bin_category, status, first_name, middle_name, last_name, created_at, collector_id')
+      .eq('collector_id', collectorId)
+      .order('created_at', { ascending: false });
+    if (!dbErr && Array.isArray(dbRows) && dbRows.length > 0) {
+      return res.json({ history: dbRows.map(mapNotificationBinRow) });
+    }
+    // Fallback: notification_bin without collector_id (match by first_name+middle_name+last_name)
+    const { data: allRows, error: allErr } = await supabase
+      .from('notification_bin')
+      .select('id, bin_id, status, first_name, middle_name, last_name, created_at')
+      .order('created_at', { ascending: false });
+    if (!allErr && Array.isArray(allRows) && allRows.length > 0 && collectorFullName) {
+      const match = allRows.filter((r) => {
+        const rowName = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').trim().toLowerCase();
+        return rowName === collectorFullName;
+      });
+      if (match.length > 0) return res.json({ history: match.map(mapNotificationBinRow) });
+    }
+    // Fallback: collection-log.json
     const fullLog = getCollectionLog();
     const log = collectorId != null ? fullLog.filter((e) => e.collector_id === collectorId) : [];
     res.json({ history: log });
@@ -248,6 +282,39 @@ router.post('/drain', requireAuth, async (req, res) => {
       await supabase.from('bins').update({ fill_level: 0, last_update: now }).eq('id', bid);
     }
     await supabase.from('waste_items').delete().in('bin_id', allowedIds);
+
+    // Insert into notification_bin for per-collector Collection History (real-time)
+    const { data: collectorRow } = await supabase.from('users').select('first_name, middle_name, last_name').eq('id', userRow.id).maybeSingle();
+    const { data: binRows } = await supabase.from('bins').select('id, name').in('id', allowedIds);
+    const nameToCategory = (name) => {
+      if (!name) return 'Unsorted';
+      const n = String(name).toLowerCase();
+      if (n.includes('bio') && !n.includes('non')) return 'Biodegradable';
+      if (n.includes('non') && n.includes('bio')) return 'Non Biodegradable';
+      if (n.includes('recycl')) return 'Recyclable';
+      return 'Unsorted';
+    };
+    for (const b of binRows || []) {
+      // Insert into notification_bin (your columns: id, created_at, bin_id, status, last_name, first_name, middle_name)
+      const baseRow = {
+        bin_id: b.id,
+        status: 'Drained',
+        first_name: collectorRow?.first_name ?? '',
+        last_name: collectorRow?.last_name ?? '',
+      };
+      const rowWithMiddle = { ...baseRow, middle_name: collectorRow?.middle_name ?? '' };
+      const { error: insErr } = await supabase.from('notification_bin').insert(rowWithMiddle);
+      if (insErr) {
+        console.error('[notification_bin] insert error:', insErr.message, insErr.details);
+        const { error: fallbackErr } = await supabase.from('notification_bin').insert(baseRow);
+        if (fallbackErr) {
+          console.error('[notification_bin] fallback insert failed:', fallbackErr.message);
+          console.error('→ Check: Supabase RLS on notification_bin may block inserts. Add policy or use service_role key in backend/.env');
+        }
+      } else {
+        console.log('[notification_bin] inserted:', { bin_id: b.id, status: 'Drained' });
+      }
+    }
 
     res.json({ success: true, drained: allowedIds });
   } catch (err) {
