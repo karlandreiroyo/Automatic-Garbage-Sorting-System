@@ -356,11 +356,6 @@ const calculateYAxisLabels = () => {
 
   return (
     <div className="data-analytics-container">
-      {loading && (
-      <div style={{ textAlign: 'center', padding: '20px' }}>
-        <p>Loading analytics data...</p>
-      </div>
-    )}
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
@@ -453,7 +448,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#10b981' }}>{categoryAccuracy['Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#10b981' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -470,7 +467,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#ef4444' }}>{categoryAccuracy['Non-Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#ef4444' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Non-Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -487,7 +486,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#f97316' }}>{categoryAccuracy['Recycle']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#f97316' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Recycle']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -504,7 +505,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#6b7280' }}>{categoryAccuracy['Unsorted']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#6b7280' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Unsorted']}%`}
+            </div>
           </div>
         </div>
       </div>
@@ -515,6 +518,11 @@ const calculateYAxisLabels = () => {
         <div className="chart-card">
           <h3 className="chart-title">Waste Distribution</h3>
           <div className="donut-chart-container">
+            {loading ? (
+              <div className="analytics-loading-spinner" aria-label="Loading">
+                <div className="analytics-spinner" />
+              </div>
+            ) : (
             <svg className="donut-chart" viewBox="0 0 200 200">
               {donutSegments.map((segment, index) => (
                 <path
@@ -527,7 +535,9 @@ const calculateYAxisLabels = () => {
                 />
               ))}
             </svg>
+            )}
           </div>
+          {!loading && (
           <div className="chart-legend">
             {wasteDistribution.map((item, index) => (
               <div key={index} className="legend-item">
@@ -537,11 +547,18 @@ const calculateYAxisLabels = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
 
 {/* Daily Sorting Trend Bar Chart */}
 <div className="chart-card chart-card-with-tooltip">
   <h3 className="chart-title">Daily Sorting Trend</h3>
+  {loading ? (
+    <div className="analytics-loading-spinner analytics-loading-trend" aria-label="Loading">
+      <div className="analytics-spinner" />
+    </div>
+  ) : (
+  <>
   {selectedBar && (
     <div className="bar-selection-info">
       <p><strong>{selectedBar.day}:</strong> {selectedBar.value} items sorted</p>
@@ -629,6 +646,8 @@ const calculateYAxisLabels = () => {
       </div>
     )}
   </div>
+  </>
+  )}
 </div>
       </div>
     </div>
