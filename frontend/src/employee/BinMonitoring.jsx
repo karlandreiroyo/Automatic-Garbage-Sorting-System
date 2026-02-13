@@ -198,11 +198,31 @@ const BinMonitoring = () => {
     } catch {}
   };
 
-  // Restore: per-collector DB levels first (each collector sees only their bins' data), then fallback to global JSON/localStorage.
+  // Restore: prefer localStorage first (persisted on drain/unmount) so tab switch preserves state; /levels for first load when localStorage empty
   useEffect(() => {
     let cancelled = false;
     const restore = async () => {
       try {
+        // 1. Prefer localStorage — we persist on drain and unmount, so it reflects correct state after tab switch
+        const saved = localStorage.getItem("agss_bin_state");
+        if (saved && !cancelled) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setBins(INITIAL_BINS.map((base) => {
+                const ov = parsed.find((b) => b.id === base.id);
+                if (!ov) return base;
+                return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
+              }));
+              setHasPersistedBinState(true);
+              if (!cancelled) setIsRestoring(false);
+              if (!cancelled) hasRestoredRef.current = true;
+              setRestoreAttempted(true);
+              return;
+            }
+          } catch {}
+        }
+        // 2. Fallback: /levels from API (first load or empty localStorage)
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (token) {
@@ -211,7 +231,6 @@ const BinMonitoring = () => {
           });
           if (res.ok && !cancelled) {
             const data = await res.json();
-            // Prefer 4 category cards (Biodegradable, Non-Bio, Recyclable, Unsorted)
             if (data.success && Array.isArray(data.categories) && data.categories.length > 0) {
               setBins((prev) =>
                 prev.map((base) => {
@@ -234,7 +253,6 @@ const BinMonitoring = () => {
               if (!cancelled) hasRestoredRef.current = true;
               return;
             }
-            // Empty: automatic 0
             if (data.success && (!data.bins?.length) && (!data.categories?.length)) {
               setBins(INITIAL_BINS.map((b) => ({ ...b, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' })));
               setHasPersistedBinState(false);
@@ -245,6 +263,7 @@ const BinMonitoring = () => {
             }
           }
         }
+        // 3. Last resort: backend in-memory store
         const res = await fetch(`${API_BASE}/api/collector-bins`);
         const data = res.ok ? await res.json() : {};
         const backendBins = data?.bins;
@@ -256,19 +275,6 @@ const BinMonitoring = () => {
             return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
           }));
           setHasPersistedBinState(true);
-        } else {
-          const saved = localStorage.getItem("agss_bin_state");
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0 && !cancelled) {
-              setBins(INITIAL_BINS.map((base) => {
-                const ov = parsed.find((b) => b.id === base.id);
-                if (!ov) return base;
-                return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
-              }));
-              setHasPersistedBinState(true);
-            }
-          }
         }
       } catch {}
       if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); hasRestoredRef.current = true; }
@@ -495,14 +501,14 @@ const BinMonitoring = () => {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  // Persist only when collector has NO assigned bins (fallback mode). When they have assigned bins, DB is source of truth.
+  // Persist to localStorage so tab switch preserves state (DB is source of truth for /levels, but localStorage survives navigation)
   useEffect(() => {
-    if (!hasRestoredRef.current || collectorBinsRef.current?.length > 0) return;
+    if (!hasRestoredRef.current) return;
     persistBinsToBackendAndStorage(bins);
   }, [bins]);
   useEffect(() => {
     return () => {
-      if (collectorBinsRef.current?.length === 0) persistBinsToBackendAndStorage(binsRef.current);
+      persistBinsToBackendAndStorage(binsRef.current);
     };
   }, []);
 
