@@ -41,12 +41,15 @@ export default function BinListCard({
   assignedPosition = 'header',
   showArchiveCheckbox = false,
   isSelectedForArchive = false,
-  onArchiveCheckboxChange
+  onArchiveCheckboxChange,
+  showUnassignButton = false,
+  onUnassign
 }) {
   const assignedName = bin.assigned_collector_name ?? 'Unassigned';
   const colorClass = getColorClass(bin.category);
   const fillColor = getFillLevelColor(bin.fillLevel ?? 0);
   const level = bin.fillLevel ?? 0;
+  const hasAssignedCollector = bin.assigned_collector_id != null;
 
   return (
     <div
@@ -77,9 +80,23 @@ export default function BinListCard({
         </div>
         <h3 className="bin-list-category-name">{bin.name}</h3>
         {assignedPosition === 'header' && (
-          <p className="bin-list-assigned-for">
-            Assign For: <span className="assign-for-name">{assignedName}</span>
-          </p>
+          <>
+            <p className="bin-list-assigned-for">
+              Assign For: <span className="assign-for-name">{assignedName}</span>
+            </p>
+            {showUnassignButton && hasAssignedCollector && onUnassign && (
+              <div className="bin-list-assign-in-header" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="bin-list-unassign-btn"
+                  onClick={(e) => onUnassign(bin, e)}
+                  aria-label={`Unassign ${assignedName} from ${bin.name || 'bin'}`}
+                >
+                  Unassign Collector
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

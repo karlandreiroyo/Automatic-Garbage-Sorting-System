@@ -647,7 +647,7 @@ const handleConfirmCreate = async () => {
       if (newUser) {
         await supabase
           .from('bins')
-          .update({ assigned_collector_id: newUser.id })
+          .update({ assigned_collector_id: newUser.id, assigned_at: new Date().toISOString() })
           .eq('id', pendingCreateData.assigned_bin_id);
       }
     }
@@ -778,12 +778,12 @@ const handleConfirmSave = async () => {
     // Update bin assignment: unassign old bin(s) for this user, assign new bin if selected
     await supabase
       .from('bins')
-      .update({ assigned_collector_id: null })
+      .update({ assigned_collector_id: null, assigned_at: null })
       .eq('assigned_collector_id', pendingSaveData.id);
     if (pendingSaveData.assigned_bin_id) {
       await supabase
         .from('bins')
-        .update({ assigned_collector_id: pendingSaveData.id })
+        .update({ assigned_collector_id: pendingSaveData.id, assigned_at: new Date().toISOString() })
         .eq('id', pendingSaveData.assigned_bin_id);
     }
 

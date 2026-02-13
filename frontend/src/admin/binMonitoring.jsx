@@ -224,9 +224,10 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal (kept for code; no button to open in admin)
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: '',
-  assigned_collector_id: ''
-});
+    location: '',
+    assigned_collector_id: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -689,6 +690,30 @@ await supabase.from('activity_logs').insert([{
 }]);
   };
 
+  const handleUnassignBin = async (bin, e) => {
+    if (e) e.stopPropagation();
+    if (!bin?.id || !bin.assigned_collector_id) return;
+    try {
+      const { error } = await supabase
+        .from('bins')
+        .update({ assigned_collector_id: null, assigned_at: null })
+        .eq('id', bin.id);
+      if (error) throw error;
+      setBins(prevBins =>
+        prevBins.map(b =>
+          b.id === bin.id
+            ? { ...b, assigned_collector_id: null, assigned_collector_name: 'Unassigned' }
+            : b
+        )
+      );
+    } catch (err) {
+      console.error('Error unassigning bin:', err);
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Failed to unassign bin.');
+      setShowAlertModal(true);
+    }
+  };
+
   /**
    * Shows the drain all confirmation modal
    * Called when user clicks "Drain All" button
@@ -982,17 +1007,21 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      assigned_collector_id: parseInt(binFormData.assigned_collector_id),
+      assigned_at: new Date().toISOString(),
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select(`
         *,
         assigned_collector:users!bins_assigned_collector_id_fkey(
@@ -1073,7 +1102,8 @@ const handleAddBin = async (e) => {
     // Reset form
     setBinFormData({
       location: '',
-      assigned_collector_id: ''
+      assigned_collector_id: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1141,6 +1171,18 @@ const handleAddBin = async (e) => {
         ))}
       </select>
     </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
+    </div>
   </div>
   
   <div className="modal-footer">
@@ -1205,6 +1247,8 @@ const handleAddBin = async (e) => {
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
             assignedPosition="header"
+            showUnassignButton={!isArchiveView}
+            onUnassign={handleUnassignBin}
           />
         ))}
       </div>

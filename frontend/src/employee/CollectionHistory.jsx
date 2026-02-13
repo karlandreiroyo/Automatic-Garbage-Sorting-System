@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import '../employee/employeecss/CollectionHistory.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -94,14 +95,17 @@ const CollectionHistory = () => {
   const [error, setError] = useState(null);
   const itemsPerPage = 4;
 
-  // Real-time collection history from backend (bin drains from Bin Monitoring)
+  // Real-time collection history from backend (per-collector – only this collector's drains)
   useEffect(() => {
     let cancelled = false;
     const fetchHistory = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`, { headers });
         if (!res.ok) throw new Error('Failed to load collection history');
         const data = await res.json();
         if (cancelled) return;

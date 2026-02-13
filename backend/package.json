@@ -22,7 +22,8 @@
     "express": "^4.18.2",
     "nodemailer": "^6.9.8",
     "port": "^0.8.1",
-    "serial": "^0.0.9"
+    "serial": "^0.0.9",
+    "serialport": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

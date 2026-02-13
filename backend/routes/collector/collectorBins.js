@@ -21,7 +21,7 @@ const ITEMS_FOR_FULL_CATEGORY = 20;
  * GET /api/collector-bins/levels
  * Requires: Authorization: Bearer <supabase_access_token>
  * Query: date=YYYY-MM-DD (optional) - fill levels as of end of that day
- * Returns fill levels for the 4 category cards from waste_items for bins assigned to the collector.
+ * Returns fill levels for bins ASSIGNED to this collector only. Each collector sees different history/activity.
  */
 router.get('/levels', requireAuth, async (req, res) => {
   try {
@@ -35,13 +35,18 @@ router.get('/levels', requireAuth, async (req, res) => {
       .maybeSingle();
     if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
 
+    // Only bins assigned to this collector (per-collector data - different history/activity)
     const { data: assignedBins, error: binsError } = await supabase
       .from('bins')
-      .select('id, name, fill_level, last_update')
+      .select('id, name')
       .eq('assigned_collector_id', userRow.id)
-      .eq('status', 'ACTIVE');
-    if (binsError) return res.status(500).json({ success: false, message: binsError.message });
-    if (!assignedBins?.length) return res.json({ success: true, categories: [] });
+      .eq('status', 'ACTIVE')
+      .order('id', { ascending: true });
+    if (binsError) {
+      console.error('collector-bins/levels binsError:', binsError);
+      return res.status(500).json({ success: false, message: binsError.message });
+    }
+    if (!assignedBins?.length) return res.json({ success: true, categories: [], bins: [] });
 
     const binIds = assignedBins.map(b => b.id);
     const dateParam = req.query.date;
@@ -53,12 +58,48 @@ router.get('/levels', requireAuth, async (req, res) => {
       query = query.lte('created_at', `${dateParam}T23:59:59.999Z`);
     }
     const { data: items, error: itemsError } = await query;
-    if (itemsError) return res.status(500).json({ success: false, message: itemsError.message });
+    if (itemsError) {
+      console.error('collector-bins/levels waste_items error:', itemsError);
+      return res.status(500).json({ success: false, message: itemsError.message });
+    }
 
+    // Per-bin counts (each bin has its own events; new bins = 0)
+    const binCutoff = {};
+    assignedBins.forEach(b => {
+      const cut = b.assigned_at ? new Date(b.assigned_at).getTime() : 0;
+      binCutoff[b.id] = cut;
+    });
+    const byBin = {};
+    assignedBins.forEach(b => { byBin[b.id] = { count: 0, lastAt: null }; });
+    (items || []).forEach(item => {
+      const bid = item.bin_id;
+      if (!byBin[bid]) return;
+      const cut = binCutoff[bid] || 0;
+      const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
+      if (cut > 0 && ts < cut) return; // skip items before assignment (automatic 0 for new)
+      byBin[bid].count++;
+      if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
+    });
+
+    // Per-bin response (each assigned bin with its own fill level)
+    const binsResponse = assignedBins.map(b => {
+      const d = byBin[b.id] || { count: 0, lastAt: null };
+      const fillLevel = Math.min(100, Math.round((d.count / ITEMS_FOR_FULL_CATEGORY) * 100));
+      return {
+        id: b.id,
+        binId: b.id,
+        name: b.name,
+        title: b.name || `Bin ${b.id}`,
+        fillLevel: Math.round(fillLevel / 10) * 10,
+        lastCollection: d.lastAt ? new Date(d.lastAt).toISOString() : null,
+        category: normalizeCategory(b.name),
+      };
+    });
+
+    // Category fallback (for collectors without per-bin mode or legacy)
     const categoryOrder = ['Biodegradable', 'Non Biodegradable', 'Recyclable', 'Unsorted'];
     const byCard = {};
     categoryOrder.forEach(cat => { byCard[cat] = { count: 0, lastAt: null, binId: null }; });
-
     const nameToCard = { Biodegradable: 'Biodegradable', 'Non Biodegradable': 'Non Biodegradable', Recyclable: 'Recyclable', Unsorted: 'Unsorted' };
     assignedBins.forEach((b, i) => {
       const card = categoryOrder[i];
@@ -68,13 +109,15 @@ router.get('/levels', requireAuth, async (req, res) => {
       const c = normalizeCategory(b.name);
       if (nameToCard[c] && !byCard[nameToCard[c]].binId) byCard[nameToCard[c]].binId = b.id;
     });
-
     (items || []).forEach(item => {
+      const bid = item.bin_id;
+      const cut = binCutoff[bid] || 0;
+      const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
+      if (cut > 0 && ts < cut) return;
       const key = normalizeCategory(item.category);
       const card = nameToCard[key] || 'Unsorted';
       if (byCard[card]) {
         byCard[card].count++;
-        const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
         if (ts && (!byCard[card].lastAt || ts > byCard[card].lastAt)) byCard[card].lastAt = ts;
       }
     });
@@ -91,9 +134,53 @@ router.get('/levels', requireAuth, async (req, res) => {
         binId: d.binId || assignedBins[0]?.id,
       };
     });
-    res.json({ success: true, categories });
+
+    res.json({ success: true, categories, bins: binsResponse });
   } catch (err) {
     console.error('collector-bins/levels error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * GET /api/collector-bins/assigned
+ * Returns bins ASSIGNED to this collector only. Each collector sees different history/activity.
+ */
+router.get('/assigned', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, middle_name, last_name')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    // Only bins assigned to this collector (per-collector data)
+    const { data: bins, error: binsError } = await supabase
+      .from('bins')
+      .select('id, name, location')
+      .eq('assigned_collector_id', userRow.id)
+      .eq('status', 'ACTIVE')
+      .order('id', { ascending: true });
+    if (binsError) {
+      console.error('collector-bins/assigned binsError:', binsError);
+      return res.status(500).json({ success: false, message: binsError.message });
+    }
+
+    const parts = [userRow.first_name?.trim(), userRow.middle_name?.trim() !== 'EMPTY' && userRow.middle_name?.trim() !== 'NULL' ? userRow.middle_name?.trim() : null, userRow.last_name?.trim()].filter(Boolean);
+    let fallbackBinId = null;
+    if (!bins?.length) {
+      const { data: anyBin } = await supabase.from('bins').select('id').eq('status', 'ACTIVE').limit(1).maybeSingle();
+      fallbackBinId = anyBin?.id ?? null;
+    } else {
+      fallbackBinId = bins[0]?.id ?? null;
+    }
+    res.json({ success: true, collector: { id: userRow.id, name: parts.join(' ') }, bins: bins || [], fallback_bin_id: fallbackBinId });
+  } catch (err) {
+    console.error('collector-bins/assigned error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
@@ -108,13 +195,64 @@ router.post('/', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Collection history: real-time log of drained bins (from Bin Monitoring)
-router.get('/collection-history', (req, res) => {
+// Collection history: per-collector only (each collector sees their own drains)
+router.get('/collection-history', requireAuth, async (req, res) => {
   try {
-    const log = getCollectionLog();
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { data: userRow } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+    const collectorId = userRow?.id;
+    const fullLog = getCollectionLog();
+    const log = collectorId != null ? fullLog.filter((e) => e.collector_id === collectorId) : [];
     res.json({ history: log });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Drain one or more bins: only bins assigned to this collector (per-collector activity)
+router.post('/drain', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    const binIds = req.body?.bin_ids;
+    if (!Array.isArray(binIds) || binIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'bin_ids must be a non-empty array' });
+    }
+
+    const validIds = binIds.map(id => (typeof id === 'number' ? id : parseInt(id, 10))).filter(n => !isNaN(n));
+    if (validIds.length === 0) return res.status(400).json({ success: false, message: 'Invalid bin_ids' });
+
+    // Only bins assigned to this collector (per-collector activity)
+    const { data: ownedBins, error: ownedErr } = await supabase
+      .from('bins')
+      .select('id')
+      .eq('assigned_collector_id', userRow.id)
+      .in('id', validIds)
+      .eq('status', 'ACTIVE');
+    if (ownedErr) return res.status(500).json({ success: false, message: ownedErr.message });
+
+    const allowedIds = (ownedBins || []).map(b => b.id);
+    if (allowedIds.length === 0) return res.status(403).json({ success: false, message: 'No bins assigned to this collector' });
+
+    const now = new Date().toISOString();
+    for (const bid of allowedIds) {
+      await supabase.from('bins').update({ fill_level: 0, last_update: now }).eq('id', bid);
+    }
+    await supabase.from('waste_items').delete().in('bin_id', allowedIds);
+
+    res.json({ success: true, drained: allowedIds });
+  } catch (err) {
+    console.error('collector-bins drain error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -133,16 +271,23 @@ router.post('/collection-log', (req, res) => {
 });
 
 // Record a waste item detection from Bin Monitoring → Supabase waste_items (backend connects to Supabase)
-router.post('/waste-item', async (req, res) => {
+router.post('/waste-item', requireAuth, async (req, res) => {
   try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ error: 'Unauthorized' });
+    const { data: userRow, error: userError } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ error: 'User not found' });
     const { bin_id, category, weight, processing_time, first_name, middle_name, last_name } = req.body || {};
     if (bin_id == null || bin_id === '' || !category) {
       return res.status(400).json({ error: 'bin_id and category are required' });
     }
-    // bin_id can be number (int8) or string (e.g. UUID)
-    let binIdVal = typeof bin_id === 'number' ? bin_id : (typeof bin_id === 'string' && /^\d+$/.test(String(bin_id).trim()) ? parseInt(bin_id, 10) : bin_id);
-    // Collector uses bin 2; normalize bin_id 1 → 2 so waste_items match the collector bin
-    if (binIdVal === 1) binIdVal = 2;
+    const binIdVal = typeof bin_id === 'number' ? bin_id : (typeof bin_id === 'string' && /^\d+$/.test(String(bin_id).trim()) ? parseInt(bin_id, 10) : bin_id);
+    const { data: binRow } = await supabase.from('bins').select('id').eq('id', binIdVal).eq('assigned_collector_id', userRow.id).maybeSingle();
+    if (!binRow) {
+      const { data: anyAssigned } = await supabase.from('bins').select('id').eq('assigned_collector_id', userRow.id).limit(1).maybeSingle();
+      if (!anyAssigned) return res.status(403).json({ error: 'No bins assigned to this collector' });
+      return res.status(403).json({ error: 'bin_id must be assigned to this collector' });
+    }
     const row = {
       bin_id: binIdVal,
       category: String(category),
