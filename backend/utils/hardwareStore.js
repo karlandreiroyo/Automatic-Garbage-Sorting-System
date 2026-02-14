@@ -31,25 +31,29 @@ function attachParser(portInstance) {
     hardwareState.lastLine = clean;
     hardwareState.lastUpdated = new Date().toISOString();
     const upper = clean.toUpperCase();
-    if (upper === 'RECYCABLE') { hardwareState.lastType = 'RECYCABLE'; return; }
-    if (upper === 'NON-BIO') { hardwareState.lastType = 'NON_BIO'; return; }
-    if (upper === 'BIO') { hardwareState.lastType = 'BIO'; return; }
-    if (upper === 'UNSORTED') { hardwareState.lastType = 'UNSORTED'; return; }
-    if (upper.startsWith('WEIGHT:')) {
+    let detectedType = null;
+    let weightG = null;
+    if (upper === 'RECYCABLE') { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
+    else if (upper === 'NON-BIO') { hardwareState.lastType = 'NON_BIO'; detectedType = 'NON_BIO'; }
+    else if (upper === 'BIO') { hardwareState.lastType = 'BIO'; detectedType = 'BIO'; }
+    else if (upper === 'UNSORTED') { hardwareState.lastType = 'UNSORTED'; detectedType = 'UNSORTED'; }
+    else if (upper.startsWith('WEIGHT:')) {
       hardwareState.lastType = 'NORMAL';
       const match = clean.match(/Weight:\s*([-\d.]+)/i);
       if (match) {
         const val = parseFloat(match[1]);
-        if (!Number.isNaN(val)) hardwareState.lastWeight = val;
+        if (!Number.isNaN(val)) { hardwareState.lastWeight = val; weightG = val; }
       }
-      return;
     }
-    if (upper.startsWith('TYPE:')) { hardwareState.lastType = (clean.split(':')[1] || '').trim().toUpperCase().replace('-', '_') || 'NORMAL'; return; }
-    if (upper.includes('RECYCABLE')) hardwareState.lastType = 'RECYCABLE';
-    else if (upper.includes('NON-BIO') || upper.includes('NON_BIO')) hardwareState.lastType = 'NON_BIO';
-    else if (upper.includes('BIO') && !upper.includes('NON')) hardwareState.lastType = 'BIO';
-    else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
+    else if (upper.startsWith('TYPE:')) { hardwareState.lastType = (clean.split(':')[1] || '').trim().toUpperCase().replace('-', '_') || 'NORMAL'; }
+    else if (upper.includes('RECYCABLE')) { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
+    else if (upper.includes('NON-BIO') || upper.includes('NON_BIO')) { hardwareState.lastType = 'NON_BIO'; detectedType = 'NON_BIO'; }
+    else if (upper.includes('BIO') && !upper.includes('NON')) { hardwareState.lastType = 'BIO'; detectedType = 'BIO'; }
+    else if (upper.includes('UNSORTED')) { hardwareState.lastType = 'UNSORTED'; detectedType = 'UNSORTED'; }
     else if (upper.includes('NORMAL') || upper.includes('WEIGHT')) hardwareState.lastType = 'NORMAL';
+
+    // Do NOT insert here — frontend POST /api/collector-bins/waste-item does it with collector context.
+    // Inserting here would double up (one per scan).
   });
 }
 
@@ -64,6 +68,8 @@ function openPort(pathToTry) {
       }
       return;
     }
+    hardwareState.connected = true;
+    hardwareState.error = null;
     attachParser(port);
   });
 }

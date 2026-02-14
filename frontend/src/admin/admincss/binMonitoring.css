@@ -1110,6 +1110,29 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+.bin-list-assign-in-header {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #047857;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 1200px) {
   .bin-list-cards {
     grid-template-columns: 1fr;

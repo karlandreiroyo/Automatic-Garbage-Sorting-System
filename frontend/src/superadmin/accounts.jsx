@@ -266,6 +266,8 @@ const Accounts = () => {
           // If there is exactly one @, check for valid domain structure
           if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
             error = 'Email cannot end with @ or a period';
+          } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+            error = 'Use gmail.com for complete domain';
           } else if (!emailRegex.test(emailVal)) {
             error = 'Invalid domain format (e.g., .com)';
           }
@@ -299,6 +301,8 @@ const Accounts = () => {
           } else if (atCount === 1) {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
               error = 'Email cannot end with @ or a period';
+            } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+              error = 'Use gmail.com for complete domain';
             } else if (!emailRegex.test(emailVal)) {
               error = 'Invalid domain format (e.g., .com)';
             }
@@ -957,7 +961,7 @@ const handleCancelSave = () => {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -1080,7 +1084,7 @@ const handleCancelSave = () => {
                   {editErrors.last_name && <span className="error-message">{editErrors.last_name}</span>}
                 </div>
                 <div className={`form-group ${editErrors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name"

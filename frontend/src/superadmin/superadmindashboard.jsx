@@ -141,9 +141,6 @@ const SuperAdminDashboard = ({ onLogout }) => {
     if (activeTab !== 'bins') {
       handleNavClick('bins');
       setBinMonitoringDropdownOpen(true);
-    } else if (binMonitoringArchiveActive) {
-      setRequestExitArchiveView(true);
-      setBinMonitoringDropdownOpen(false);
     } else {
       setBinMonitoringDropdownOpen((prev) => !prev);
     }
@@ -156,6 +153,15 @@ const SuperAdminDashboard = ({ onLogout }) => {
     if (activeTab !== 'bins') {
       setActiveTab('bins');
     }
+    if (isMobile) {
+      setIsSidebarCollapsed(true);
+    }
+  };
+
+  const handleReturnToBinMonitoringFromSidebar = (e) => {
+    e.stopPropagation();
+    setRequestExitArchiveView(true);
+    setBinMonitoringDropdownOpen(false);
     if (isMobile) {
       setIsSidebarCollapsed(true);
     }
@@ -271,12 +277,21 @@ const SuperAdminDashboard = ({ onLogout }) => {
               </div>
               {binMonitoringDropdownOpen && (
                 <div className="nav-item-submenu">
-                  <div
-                    className="nav-item nav-item-sub"
-                    onClick={handleViewArchiveBinsFromSidebar}
-                  >
-                    View Archive Bins
-                  </div>
+                  {binMonitoringArchiveActive ? (
+                    <div
+                      className="nav-item nav-item-sub"
+                      onClick={handleReturnToBinMonitoringFromSidebar}
+                    >
+                      Return to Bin Monitoring
+                    </div>
+                  ) : (
+                    <div
+                      className="nav-item nav-item-sub"
+                      onClick={handleViewArchiveBinsFromSidebar}
+                    >
+                      View Archive Bins
+                    </div>
+                  )}
                 </div>
               )}
             </div>
