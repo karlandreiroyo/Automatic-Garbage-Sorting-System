@@ -28,7 +28,7 @@ export default function HardwareStatus() {
       <div className="hardware-status-header">
         <h2>Arduino sorting status</h2>
         <span className={`badge ${status.connected ? 'badge-connected' : 'badge-disconnected'}`}>
-          {status.connected ? 'Serial connected' : 'Not connected'}
+          {status.connected ? 'Connected' : 'Not connected'}
         </span>
       </div>
       {status.error && <div className="hardware-status-error">{status.error}</div>}

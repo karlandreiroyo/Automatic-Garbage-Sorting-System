@@ -238,8 +238,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: ''
-});
+    location: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -1052,16 +1053,19 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database (no assigned collector on add)
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select('*')
       .single();
 
@@ -1133,7 +1137,8 @@ const handleAddBin = async (e) => {
 
     // Reset form
     setBinFormData({
-      location: ''
+      location: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1344,6 +1349,18 @@ const handleAddBin = async (e) => {
         placeholder="e.g., Building A - 1st Floor"
         required
       />
+    </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
     </div>
   </div>
   
