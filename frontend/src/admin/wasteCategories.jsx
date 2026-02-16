@@ -32,14 +32,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -123,8 +118,8 @@ const WasteCategories = () => {
   /** Total items text: same divisor as per-category */
   const displayTotalItems = timeFilter === 'daily' ? totalItems : timeFilter === 'weekly' ? totalItems / 7 : totalItems / 30;
 
-  /** Fixed scale for progress bar so daily vs weekly vs monthly look different (daily ÷1, weekly ÷7, monthly ÷30). */
-  const PROGRESS_BAR_SCALE = 10;
+  /** Level indicator: displayed number = % of bar (4 items → 4%), max 100%. */
+  const getCategoryPercentage = (count) => Math.min(100, count);
 
   /**
    * Gets the appropriate icon component based on category
@@ -224,7 +219,7 @@ const WasteCategories = () => {
       <div className="categories-grid">
         {wasteData.map((category, index) => {
           const displayValue = getDisplayValue(category.count);
-          const percentage = Math.min(100, (displayValue / PROGRESS_BAR_SCALE) * 100);
+          const percentage = getCategoryPercentage(displayValue);
           const progressColor = category.color === '#6b7280' ? '#4b5563' : category.color;
 
           return (

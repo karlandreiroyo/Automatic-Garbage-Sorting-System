@@ -68,6 +68,7 @@ const AdminDash = ({ onNavigateTo }) => {
   const [employeesList, setEmployeesList] = useState([]);
   const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
   const employeesDropdownRef = React.useRef(null);
+  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -549,7 +550,12 @@ const fetchDashboardData = async () => {
     <div className="bars-flex-container">
       {distribution.length > 0 && distribution.some((d) => d.count > 0) ? (
         distribution.map((item, index) => (
-          <div key={index} className="single-bar-column">
+          <div
+            key={index}
+            className="single-bar-column"
+            onMouseEnter={() => setHoveredBarIndex(index)}
+            onMouseLeave={() => setHoveredBarIndex(null)}
+          >
             {item.count > 0 && (
               <div 
                 className="actual-bar" 
@@ -557,7 +563,16 @@ const fetchDashboardData = async () => {
                   height: `${(item.count / calculateYAxisLabels()[0]) * 100}%`,
                   backgroundColor: '#10b981'
                 }}
-              ></div>
+              >
+                {hoveredBarIndex === index && (
+                  <span className="bar-tooltip">{item.count}</span>
+                )}
+              </div>
+            )}
+            {item.count === 0 && hoveredBarIndex === index && (
+              <div className="bar-tooltip-wrapper-zero">
+                <span className="bar-tooltip">0</span>
+              </div>
             )}
             <span className="bar-name">{item.name}</span>
           </div>

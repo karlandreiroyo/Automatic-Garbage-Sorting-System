@@ -265,9 +265,9 @@
   display: flex; flex-direction: column; gap: 10px;
   background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: auto; margin-top: 10px;
 }
-.meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; gap: 10px; }
+.meta-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.95rem; gap: 10px; min-width: 0; }
 .meta-row span { color: #6b7280; font-weight: 500; white-space: nowrap; }
-.meta-row strong { color: #374151; font-weight: 700; white-space: nowrap; }
+.meta-row strong { color: #374151; font-weight: 700; white-space: normal; word-break: break-word; flex: 1; min-width: 0; text-align: right; }
 
 /* Bottom Button */
 .drain-btn {
