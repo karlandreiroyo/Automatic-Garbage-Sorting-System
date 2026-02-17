@@ -39,6 +39,23 @@ const getBinClassName = (subtext) => {
   return `bin-${subtext.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-')}`;
 };
 
+/** Format notification timestamp for display: use actual date/time for all collector notifications (createdAt or id as timestamp), else legacy .time */
+const formatNotificationTime = (notif) => {
+  const toFormatted = (d) => d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  if (notif.createdAt) {
+    try {
+      const d = new Date(notif.createdAt);
+      if (!Number.isNaN(d.getTime())) return toFormatted(d);
+    } catch {}
+  }
+  const idNum = typeof notif.id === 'number' ? notif.id : parseInt(notif.id, 10);
+  if (Number.isInteger(idNum) && idNum > 1e12) {
+    const d = new Date(idNum);
+    if (!Number.isNaN(d.getTime())) return toFormatted(d);
+  }
+  return notif.time || '—';
+};
+
 const Notifications = () => {
   const [notifications, setNotifications] = useState(loadInitialNotifications);
 
@@ -53,9 +70,18 @@ const Notifications = () => {
   }, [notifications]);
 
   // Filter logic: when no filters selected show only unread; when filters selected show matching types
-  const filteredNotifications = activeFilters.length > 0
+  // Sort by date/time (newest first): use createdAt (ISO) when present, else treat as oldest
+  const filteredNotifications = (activeFilters.length > 0
     ? notifications.filter(n => activeFilters.includes(n.type))
-    : notifications.filter(n => n.isUnread);
+    : notifications.filter(n => n.isUnread)
+  ).sort((a, b) => {
+    const ts = (n) => {
+      if (n.createdAt) { const d = new Date(n.createdAt); if (!Number.isNaN(d.getTime())) return d.getTime(); }
+      const idNum = typeof n.id === 'number' ? n.id : parseInt(n.id, 10);
+      return Number.isInteger(idNum) && idNum > 1e12 ? idNum : 0;
+    };
+    return ts(b) - ts(a);
+  });
 
   const stats = [
     { type: 'critical', label: 'Critical', count: notifications.filter(n => n.type === 'critical').length },
@@ -279,7 +305,7 @@ const Notifications = () => {
                 </div>
               </div>
               <div className="notif-actions">
-                <span className="time-text">{notif.time}</span>
+                <span className="time-text">{formatNotificationTime(notif)}</span>
                 <div className="action-buttons">
                   {deleteConfirm === notif.id ? (
                     <div className="delete-confirm">
