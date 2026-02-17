@@ -350,7 +350,7 @@ const fetchDashboardData = async () => {
         >
           <div className="stat-icon-bg"><Icons.TotalBins /></div>
           <div className="stat-info">
-            <span className="stat-label">Total Collection (bins drained)</span>
+            <span className="stat-label">Total Collection</span>
             <h2 className="stat-value">{stats.totalCollection}</h2>
           </div>
         </div>
