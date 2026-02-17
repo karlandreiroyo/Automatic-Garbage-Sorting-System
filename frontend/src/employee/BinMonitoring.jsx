@@ -177,6 +177,8 @@ const BinMonitoring = () => {
   const [isRestoring, setIsRestoring] = useState(true);
   const lastArduinoTypeRef = useRef("NORMAL");
   const lastWasteItemInsertRef = useRef({}); // { category: timestamp } — debounce: one insert per scan
+  const lastWasteItemInsertAnyRef = useRef(0); // fallback: timestamp of last insert (any category)
+  const lastHardwareUpdatedRef = useRef(null); // ISO or ms of last hardware lastUpdated used for insert — from "Last raw serial line"
   const hasRestoredRef = useRef(false); // true after restore completes — avoid persisting initial 0% and overwriting file
   const binsRef = useRef(bins);
   const hardwareWeightRef = useRef(null);
@@ -421,6 +423,15 @@ const BinMonitoring = () => {
           const lastInsert = lastWasteItemInsertRef.current[categoryText] || 0;
           if (now - lastInsert < 2500) return; // One insert per scan — debounce 2.5s per category
           const weightG = hardwareWeightRef.current != null ? Number(hardwareWeightRef.current) : null;
+          // Processing time from "Last raw serial line" timestamp (lastUpdated): seconds since previous hardware detection.
+          const hardwareTimeMs = data.lastUpdated ? new Date(data.lastUpdated).getTime() : null;
+          const prevHardwareMs = lastHardwareUpdatedRef.current;
+          let processingTimeSeconds = 0;
+          if (hardwareTimeMs != null && prevHardwareMs != null && !Number.isNaN(hardwareTimeMs) && !Number.isNaN(prevHardwareMs)) {
+            processingTimeSeconds = Math.max(0, Math.round((hardwareTimeMs - prevHardwareMs) / 1000 * 10) / 10);
+          } else if (lastWasteItemInsertAnyRef.current > 0) {
+            processingTimeSeconds = Math.round((now - lastWasteItemInsertAnyRef.current) / 1000 * 10) / 10;
+          }
           try {
             const { data: { session } } = await supabase.auth.getSession();
             const headers = { "Content-Type": "application/json" };
@@ -432,7 +443,7 @@ const BinMonitoring = () => {
                 bin_id: binId,
                 category: categoryText,
                 weight: weightG,
-                processing_time: null,
+                processing_time: processingTimeSeconds,
                 first_name: info.first_name ?? "",
                 middle_name: info.middle_name ?? "",
                 last_name: info.last_name ?? "",
@@ -445,7 +456,9 @@ const BinMonitoring = () => {
               setWasteItemError(msg);
               setTimeout(() => setWasteItemError(null), 8000);
             } else {
-              lastWasteItemInsertRef.current[categoryText] = Date.now();
+              lastWasteItemInsertRef.current[categoryText] = now;
+              lastWasteItemInsertAnyRef.current = now;
+              lastHardwareUpdatedRef.current = hardwareTimeMs != null && !Number.isNaN(hardwareTimeMs) ? hardwareTimeMs : now;
               setWasteItemError(null);
             }
           } catch (err) {

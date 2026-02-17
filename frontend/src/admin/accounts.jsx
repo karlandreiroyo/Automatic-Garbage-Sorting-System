@@ -493,16 +493,6 @@ const Accounts = () => {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
     }
 
-    // Contact: digits only, must start with 09, max 11 digits
-    if (name === 'contact') {
-      let digits = value.replace(/\D/g, '');
-      if (digits.length && !digits.startsWith('09')) {
-        if (digits.startsWith('9')) digits = '0' + digits;
-        else digits = '09' + digits;
-      }
-      finalValue = digits.slice(0, 11);
-    }
-
     setEditingUser(prev => ({ ...prev, [name]: finalValue }));
     setEditTouched(prev => ({ ...prev, [name]: true }));
     setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, finalValue) }));
@@ -752,14 +742,9 @@ const handleUpdateEmployee = async (e) => {
     if (err) newErrors['middle_name'] = err;
   }
 
-  if (editingUser.contact != null && String(editingUser.contact).replace(/\D/g, '').length > 0) {
-    const err = validateEditField('contact', editingUser.contact);
-    if (err) newErrors['contact'] = err;
-  }
-
   if (Object.keys(newErrors).length > 0) {
     setEditErrors(newErrors);
-    setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
+    setEditTouched({ first_name: true, last_name: true, middle_name: true });
     return;
   }
 
@@ -774,20 +759,12 @@ const handleConfirmSave = async () => {
   try {
     setLoading(true);
 
-    let contactValue = (pendingSaveData.contact ?? '').toString().replace(/\D/g, '');
-    if (contactValue.length && !contactValue.startsWith('09')) {
-      if (contactValue.startsWith('9')) contactValue = '0' + contactValue;
-      else contactValue = '09' + contactValue;
-    }
-    contactValue = contactValue.slice(0, 11) || null;
-
     const { error } = await supabase
       .from('users')
       .update({
         first_name: pendingSaveData.first_name.trim(),
         last_name: pendingSaveData.last_name.trim(),
         middle_name: pendingSaveData.middle_name?.trim() || '',
-        contact: contactValue,
         role: pendingSaveData.role
       })
       .eq('auth_id', pendingSaveData.auth_id);

@@ -151,14 +151,14 @@ const fetchProfile = async () => {
     if (first) return first.charAt(0).toUpperCase();
     const last = (formData.lastName || '').trim();
     if (last) return last.charAt(0).toUpperCase();
-    return 'E';
+    return 'A';
   };
 
   // Get full name - remove "User" from display
   const getFullName = () => {
     const nameParts = [formData.firstName, formData.middleName, formData.lastName]
       .filter(part => part && part.toLowerCase() !== 'user');
-    return nameParts.join(' ').trim() || 'Employee';
+    return nameParts.join(' ').trim() || 'Admin';
   };
 
   // Validation function
@@ -614,7 +614,7 @@ const validateAddress = () => {
                 <p className="user-email">{formData.email}</p>
                 <div className="role-badge">
                   <ShieldIcon />
-                  <span>Collector</span>
+                  <span>Admin</span>
                 </div>
                 <p className="joined-date">Joined {joinedDate || '—'}</p>
               </div>

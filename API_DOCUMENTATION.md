@@ -83,15 +83,9 @@ http://localhost:3001
 - **Response**: `{ success, message, password?, emailSent?, emailError? }`
 - Verifies email format/availability and sends credentials immediately
 
-##### Verify Phone
-- `POST /api/accounts/verify-phone`
-- **Body**: `{ contact, email, first_name, last_name }`
-- **Response**: `{ success, message, password?, smsSent?, smsError? }`
-- Verifies phone format/availability and sends credentials via SMS immediately
-
 ##### Create Employee
 - `POST /api/accounts/create-employee`
-- **Body**: `{ first_name, last_name, middle_name?, email, contact, role, password? }`
+- **Body**: `{ first_name, last_name, middle_name?, email, role, password? }`
 - **Response**: `{ success, message, sentToEmail?, sentToSms?, emailError?, smsError? }`
 - Creates new employee account in Supabase
 

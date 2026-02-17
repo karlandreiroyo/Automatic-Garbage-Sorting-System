@@ -232,6 +232,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
+  // Unassign collector confirmation
+  const [showUnassignConfirmModal, setShowUnassignConfirmModal] = useState(false);
+  const [binToUnassign, setBinToUnassign] = useState(null);
 
   // Collection history modal (Recent button on list view) and inline section (Recent on detail view)
   const [showCollectionHistoryModal, setShowCollectionHistoryModal] = useState(false);
@@ -685,9 +688,20 @@ await supabase.from('activity_logs').insert([{
 }]);
   };
 
-  const handleUnassignBin = async (bin, e) => {
+  const handleUnassignBin = (bin, e) => {
     if (e) e.stopPropagation();
     if (!bin?.id || !bin.assigned_collector_id) return;
+    setBinToUnassign(bin);
+    setShowUnassignConfirmModal(true);
+  };
+
+  const confirmUnassignBin = async () => {
+    const bin = binToUnassign;
+    if (!bin?.id) {
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      return;
+    }
     try {
       const { error } = await supabase
         .from('bins')
@@ -701,11 +715,16 @@ await supabase.from('activity_logs').insert([{
             : b
         )
       );
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      showSuccessNotification('Collector unassigned from bin.');
     } catch (err) {
       console.error('Error unassigning bin:', err);
       setAlertTitle('Error');
       setAlertMessage(err.message || 'Failed to unassign bin.');
       setShowAlertModal(true);
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
     }
   };
 
@@ -1189,6 +1208,33 @@ const handleAddBin = async (e) => {
     </button>
   </div>
 </form>
+          </div>
+        </div>
+      )}
+
+      {/* Unassign collector confirmation modal */}
+      {showUnassignConfirmModal && binToUnassign && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-icon-wrapper">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3>Unassign collector?</h3>
+            <p>
+              Are you sure you want to unassign <strong>{binToUnassign.assigned_collector_name || 'the collector'}</strong> from <strong>{binToUnassign.name || 'this bin'}</strong>? The bin will become unassigned.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => { setShowUnassignConfirmModal(false); setBinToUnassign(null); }}>
+                Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={confirmUnassignBin}>
+                Yes, unassign
+              </button>
+            </div>
           </div>
         </div>
       )}

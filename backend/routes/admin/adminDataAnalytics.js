@@ -21,10 +21,21 @@ router.get('/', requireAuth, async (req, res) => {
 
     const timeFilter = (req.query.timeFilter || 'daily').toLowerCase();
     const selectedDate = req.query.selectedDate || new Date().toISOString().split('T')[0];
+    const collectorId = req.query.collectorId ? String(req.query.collectorId).trim() : null;
     const [y, m, d] = selectedDate.split('-').map(Number);
     const dateObj = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
 
-    let query = supabase.from('waste_items').select('category, created_at');
+    let query = supabase.from('waste_items').select('category, created_at, bin_id');
+    if (collectorId) {
+      const { data: bins, error: binsErr } = await supabase
+        .from('bins')
+        .select('id')
+        .eq('assigned_collector_id', collectorId);
+      if (binsErr) return res.status(500).json({ success: false, message: binsErr.message });
+      const binIds = (bins || []).map((b) => b.id);
+      if (binIds.length === 0) return res.json({ success: true, data: [] });
+      query = query.in('bin_id', binIds);
+    }
     if (timeFilter === 'daily') {
       query = query.gte('created_at', `${selectedDate}T00:00:00.000Z`).lte('created_at', `${selectedDate}T23:59:59.999Z`);
     } else if (timeFilter === 'weekly') {
@@ -42,9 +53,10 @@ router.get('/', requireAuth, async (req, res) => {
       query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
     }
 
-    const { data, error } = await query;
+    const { data: rawData, error } = await query;
     if (error) return res.status(500).json({ success: false, message: error.message });
-    res.json({ success: true, data: data || [] });
+    const data = (rawData || []).map(({ category, created_at }) => ({ category, created_at }));
+    res.json({ success: true, data });
   } catch (err) {
     console.error('admin data-analytics route error:', err);
     res.status(500).json({ success: false, message: err.message });
