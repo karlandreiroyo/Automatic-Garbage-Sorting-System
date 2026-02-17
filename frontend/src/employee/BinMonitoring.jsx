@@ -164,6 +164,8 @@ function getInitialBins() {
 const BinMonitoring = () => {
   const [bins, setBins] = useState(getInitialBins);
   const [notification, setNotification] = useState("");
+  const [fillLevelAlert, setFillLevelAlert] = useState(null); // { title, message, type } — popup on Bin Monitoring so collector doesn't need to switch to Notifications
+  const fillLevelAlertTimeoutRef = useRef(null);
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
   const [assignedBinLocationText, setAssignedBinLocationText] = useState("");
   const [hardwareWeight, setHardwareWeight] = useState(null); // weight from serial (g), shown in each bin card — updated in real time
@@ -350,9 +352,10 @@ const BinMonitoring = () => {
 
   /**
    * NOTIFICATION PROMPT (based on bin monitoring fill level):
-   * - 10%  → Info notification:    "Bin update" / "<Bin> bin is at 10% capacity"
-   * - 50%  → No notification:      (warning removed; do not show "Almost Full" at 50%)
-   * - 90%+ → Critical notification: "Bin Full Alert" / "<Bin> bin has reached X% — bin is full"
+   * - 10%  → Info:    "Bin update" / bin at 10% capacity
+   * - 50%  → Warning: "Your trash is in the middle"
+   * - 80%  → Warning: "Bin almost full"
+   * - 90%+ → Critical: "Bin Full Alert" / bin is full
    * Notifications are pushed to localStorage (agss_notifications) and shown on the Notifications page.
    */
   // Real-time weight: poll hardware every 300ms; connect serial weight to all four bins
@@ -387,9 +390,42 @@ const BinMonitoring = () => {
         const type = (data.lastType || "").toUpperCase();
         const prev = lastArduinoTypeRef.current || "NORMAL";
         lastArduinoTypeRef.current = type || "NORMAL";
-        if (!type || type === "NORMAL" || prev !== "NORMAL") return;
         const categoryMap = { BIO: "Biodegradable", NON_BIO: "Non Biodegradable", RECYCABLE: "Recyclable", UNSORTED: "Unsorted" };
         const targetCategory = categoryMap[type];
+        if (!type || type === "NORMAL" || !targetCategory) return;
+
+        const targetBin = binsRef.current.find((b) => b.id === targetCategory || b.category === targetCategory);
+        if (targetBin && targetBin.fillLevel >= 100) {
+          // Bin already full: do not add more, do not insert waste_item; show Bin Full Alert so collector is notified
+          const fullAlert = { id: Date.now(), type: "critical", title: "Bin Full Alert", createdAt: new Date().toISOString(), message: `${targetBin.title} bin is full — no more can be added. Drain the bin.`, subtext: targetBin.title, fillLevel: "100%", capacity: targetBin.capacity || "", location: assignedBinLocationText || "", isUnread: true };
+          try {
+            const raw = localStorage.getItem("agss_notifications");
+            const existing = raw ? JSON.parse(raw) : [];
+            localStorage.setItem("agss_notifications", JSON.stringify([...existing, fullAlert].slice(-100)));
+          } catch {}
+          if (fillLevelAlertTimeoutRef.current) clearTimeout(fillLevelAlertTimeoutRef.current);
+          setFillLevelAlert({ title: fullAlert.title, message: fullAlert.message, type: "critical" });
+          fillLevelAlertTimeoutRef.current = setTimeout(() => { setFillLevelAlert(null); fillLevelAlertTimeoutRef.current = null; }, 6000);
+          // Record in notification_bin so alert shows in database for this specific bin
+          const binIdForAlert = targetBin.binId ?? collectorBinsRef.current[0]?.id ?? fallbackBinIdRef.current;
+          if (binIdForAlert != null) {
+            (async () => {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) return;
+                await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ bin_id: binIdForAlert, status: "Full - No more can be added", bin_category: targetBin.title }),
+                });
+              } catch {}
+            })();
+          }
+          return;
+        }
+
+        // One detect = one addition: only when we transition TO this category (prev !== type).
+        if (prev === type) return;
         let newNotification = null;
         const nextBins = binsRef.current.map((bin) => {
           const isTarget = targetCategory && (bin.id === targetCategory || bin.category === targetCategory);
@@ -398,6 +434,10 @@ const BinMonitoring = () => {
           const rounded = roundToTen(raw);
           if (rounded === 10) {
             newNotification = { id: Date.now(), type: "info", title: "Bin update", createdAt: new Date().toISOString(), message: `${bin.title} bin is at 10% capacity`, subtext: bin.title, fillLevel: "10%", capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
+          } else if (rounded === 50) {
+            newNotification = { id: Date.now(), type: "warning", title: "Bin at 50%", createdAt: new Date().toISOString(), message: `${bin.title} — your trash is in the middle`, subtext: bin.title, fillLevel: "50%", capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
+          } else if (rounded >= 80 && rounded < 90) {
+            newNotification = { id: Date.now(), type: "warning", title: "Bin Almost Full", createdAt: new Date().toISOString(), message: `${bin.title} bin is almost full (${rounded}%)`, subtext: bin.title, fillLevel: `${rounded}%`, capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
           } else if (rounded >= 90) {
             newNotification = { id: Date.now(), type: "critical", title: "Bin Full Alert", createdAt: new Date().toISOString(), message: `${bin.title} bin has reached ${rounded}% — bin is full`, subtext: bin.title, fillLevel: `${rounded}%`, capacity: bin.capacity, location: assignedBinLocationText || "", isUnread: true };
           }
@@ -412,6 +452,32 @@ const BinMonitoring = () => {
             const existing = raw ? JSON.parse(raw) : [];
             localStorage.setItem("agss_notifications", JSON.stringify([...existing, newNotification].slice(-100)));
           } catch {}
+          // Show alert popup on Bin Monitoring so collector sees it without switching to Notifications (50%, 80%, 90%+ only)
+          if (newNotification.type === 'warning' || newNotification.type === 'critical') {
+            if (fillLevelAlertTimeoutRef.current) clearTimeout(fillLevelAlertTimeoutRef.current);
+            setFillLevelAlert({ title: newNotification.title, message: newNotification.message, type: newNotification.type });
+            fillLevelAlertTimeoutRef.current = setTimeout(() => {
+              setFillLevelAlert(null);
+              fillLevelAlertTimeoutRef.current = null;
+            }, 6000);
+          }
+          // Record in notification_bin so alert shows in database for this specific bin and percentage
+          const alertBin = nextBins.find((b) => b.id === targetCategory || b.category === targetCategory);
+          const binIdForAlert = alertBin?.binId ?? collectorBinsRef.current[0]?.id ?? fallbackBinIdRef.current;
+          const statusForDb = newNotification.fillLevel || (newNotification.title === "Bin Full Alert" ? "100%" : "");
+          if (binIdForAlert != null && statusForDb) {
+            (async () => {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) return;
+                await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ bin_id: binIdForAlert, status: statusForDb, bin_category: newNotification.subtext }),
+                });
+              } catch {}
+            })();
+          }
         }
         // Record detection via backend → Supabase waste_items (use refs so poll always sees latest)
         const categoryText = targetCategory;
@@ -470,7 +536,7 @@ const BinMonitoring = () => {
       } catch {}
     };
     poll();
-    const id = setInterval(poll, 1000);
+    const id = setInterval(poll, 500);
     return () => { cancelled = true; clearInterval(id); };
   }, [collectorInfo, collectorBins]);
 
@@ -494,8 +560,8 @@ const BinMonitoring = () => {
             const cat = data.categories.find((c) => c.id === base.id);
             if (!cat) return base;
             const apiFill = cat.fillLevel ?? 0;
-            const localFill = base.fillLevel ?? 0;
-            // Never overwrite with a lower value: keeps previous bins from reverting when detecting another bin
+            // Use binsRef so we never overwrite hardware-driven updates (prev can be stale due to batching)
+            const localFill = binsRef.current.find((b) => b.id === base.id)?.fillLevel ?? base.fillLevel ?? 0;
             const fill = Math.max(localFill, apiFill);
             const status = fill >= 90 ? 'Full' : fill >= 75 ? 'Almost Full' : fill >= 50 ? 'Normal' : 'Empty';
             return {
@@ -522,6 +588,11 @@ const BinMonitoring = () => {
   useEffect(() => {
     return () => {
       persistBinsToBackendAndStorage(binsRef.current);
+    };
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (fillLevelAlertTimeoutRef.current) clearTimeout(fillLevelAlertTimeoutRef.current);
     };
   }, []);
 
@@ -700,10 +771,11 @@ const BinMonitoring = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+        const categoriesToDrain = binsToDrain.map((b) => b.id);
         const res = await fetch(`${API_BASE}/api/collector-bins/drain`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
-          body: JSON.stringify({ bin_ids: binIdsToDrain }),
+          body: JSON.stringify({ bin_ids: binIdsToDrain, categories: categoriesToDrain }),
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -770,11 +842,10 @@ const BinMonitoring = () => {
   };
 
   return (
-    <div className="bin-monitoring-container">
+    <div className={`bin-monitoring-container ${fillLevelAlert ? 'has-fill-alert' : ''}`}>
       <div className="header-section">
         <div className="header-titles">
           <h1>Bin Monitoring</h1>
-          <p>Monitor bin fill levels</p>
           {collectorName && <p className="collector-name">Collector: <strong>{collectorName}</strong></p>}
           {assignedBinLocationText && (
             <div className="assigned-bin-location-card">
@@ -798,6 +869,18 @@ const BinMonitoring = () => {
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
       {wasteItemError && <div className="notification-banner warning"><span>!</span> <p>waste_items: {wasteItemError}</p></div>}
+
+      {fillLevelAlert && (
+        <div className={`bin-fill-alert-popup ${fillLevelAlert.type}`} role="alert">
+          <div className="bin-fill-alert-content">
+            <strong>{fillLevelAlert.title}</strong>
+            <p>{fillLevelAlert.message}</p>
+            <button type="button" className="bin-fill-alert-dismiss" onClick={() => { if (fillLevelAlertTimeoutRef.current) clearTimeout(fillLevelAlertTimeoutRef.current); setFillLevelAlert(null); fillLevelAlertTimeoutRef.current = null; }} aria-label="Dismiss">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <HardwareStatus />
 

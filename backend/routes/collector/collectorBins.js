@@ -244,6 +244,44 @@ router.get('/collection-history', requireAuth, async (req, res) => {
   }
 });
 
+// History of what was drained from bins (from history_binitem) — per collector, optional bin_id
+router.get('/drain-history', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { data: userRow } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+    if (!userRow) return res.status(403).json({ success: false, message: 'User not found' });
+    const binIdParam = req.query.bin_id != null ? parseInt(req.query.bin_id, 10) : null;
+
+    const { data: assignedBins } = await supabase
+      .from('bins')
+      .select('id')
+      .eq('assigned_collector_id', userRow.id)
+      .eq('status', 'ACTIVE');
+    const allowedBinIds = (assignedBins || []).map(b => b.id);
+    if (allowedBinIds.length === 0) return res.json({ items: [] });
+
+    let query = supabase
+      .from('history_binitem')
+      .select('id, bin_id, category, weight, processing_time, drained_at, created_at')
+      .eq('collector_id', userRow.id)
+      .in('bin_id', allowedBinIds)
+      .order('drained_at', { ascending: false });
+    if (Number.isInteger(binIdParam) && allowedBinIds.includes(binIdParam)) {
+      query = query.eq('bin_id', binIdParam);
+    }
+    const { data: items, error } = await query;
+    if (error) {
+      console.error('drain-history error:', error.message);
+      return res.json({ items: [] });
+    }
+    res.json({ items: items || [] });
+  } catch (err) {
+    console.error('drain-history error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Drain one or more bins: only bins assigned to this collector (per-collector activity)
 router.post('/drain', requireAuth, async (req, res) => {
   try {
@@ -265,6 +303,12 @@ router.post('/drain', requireAuth, async (req, res) => {
     const validIds = binIds.map(id => (typeof id === 'number' ? id : parseInt(id, 10))).filter(n => !isNaN(n));
     if (validIds.length === 0) return res.status(400).json({ success: false, message: 'Invalid bin_ids' });
 
+    // Categories being drained (e.g. ["Unsorted"] when user drains only Unsorted) — only those items move; others stay in waste_items
+    const rawCategories = req.body?.categories;
+    const drainedCategories = Array.isArray(rawCategories) && rawCategories.length > 0
+      ? rawCategories.map(c => normalizeCategory(c))
+      : null;
+
     // Only bins assigned to this collector (per-collector activity)
     const { data: ownedBins, error: ownedErr } = await supabase
       .from('bins')
@@ -277,11 +321,42 @@ router.post('/drain', requireAuth, async (req, res) => {
     const allowedIds = (ownedBins || []).map(b => b.id);
     if (allowedIds.length === 0) return res.status(403).json({ success: false, message: 'No bins assigned to this collector' });
 
-    const now = new Date().toISOString();
-    for (const bid of allowedIds) {
-      await supabase.from('bins').update({ fill_level: 0, last_update: now }).eq('id', bid);
+    const drainedAt = new Date().toISOString();
+
+    // Move only the drained category's items to history_binitem (e.g. only Unsorted, not Bio)
+    let selectQuery = supabase
+      .from('waste_items')
+      .select('id, bin_id, category, weight, processing_time')
+      .in('bin_id', allowedIds);
+    if (drainedCategories && drainedCategories.length > 0) {
+      selectQuery = selectQuery.in('category', drainedCategories);
     }
-    await supabase.from('waste_items').delete().in('bin_id', allowedIds);
+    const { data: itemsToMove, error: selectErr } = await selectQuery;
+    if (!selectErr && Array.isArray(itemsToMove) && itemsToMove.length > 0) {
+      const historyRows = itemsToMove.map((item) => ({
+        bin_id: item.bin_id,
+        category: item.category ?? 'Unsorted',
+        weight: item.weight != null ? item.weight : null,
+        processing_time: item.processing_time != null ? item.processing_time : null,
+        drained_at: drainedAt,
+        collector_id: userRow.id,
+      }));
+      const { error: historyErr } = await supabase.from('history_binitem').insert(historyRows);
+      if (historyErr) {
+        console.error('[history_binitem] insert error (run backend/scripts/add-history-binitem-columns.sql if needed):', historyErr.message, historyErr.details);
+      } else {
+        console.log('[history_binitem] inserted', historyRows.length, 'rows for drained category(ies)', drainedCategories || 'all');
+      }
+    }
+
+    for (const bid of allowedIds) {
+      await supabase.from('bins').update({ fill_level: 0, last_update: drainedAt }).eq('id', bid);
+    }
+    let deleteQuery = supabase.from('waste_items').delete().in('bin_id', allowedIds);
+    if (drainedCategories && drainedCategories.length > 0) {
+      deleteQuery = deleteQuery.in('category', drainedCategories);
+    }
+    await deleteQuery;
 
     // Insert into notification_bin for per-collector Collection History (real-time)
     const { data: collectorRow } = await supabase.from('users').select('first_name, middle_name, last_name').eq('id', userRow.id).maybeSingle();
@@ -319,6 +394,53 @@ router.post('/drain', requireAuth, async (req, res) => {
     res.json({ success: true, drained: allowedIds });
   } catch (err) {
     console.error('collector-bins drain error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Record a bin fill-level alert from Bin Monitoring → notification_bin (50%, 80%, 100%, Full - no more)
+router.post('/bin-alert', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { data: userRow, error: userError } = await supabase.from('users').select('id, first_name, middle_name, last_name').eq('auth_id', authId).maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+    const { bin_id, status, bin_category } = req.body || {};
+    const binIdVal = bin_id != null ? (typeof bin_id === 'number' ? bin_id : parseInt(bin_id, 10)) : null;
+    if (binIdVal == null || isNaN(binIdVal) || !status || typeof status !== 'string') {
+      return res.status(400).json({ success: false, message: 'bin_id and status are required' });
+    }
+    const { data: binRow } = await supabase.from('bins').select('id').eq('id', binIdVal).eq('assigned_collector_id', userRow.id).maybeSingle();
+    if (!binRow) {
+      const { data: anyAssigned } = await supabase.from('bins').select('id').eq('assigned_collector_id', userRow.id).limit(1).maybeSingle();
+      if (!anyAssigned) return res.status(403).json({ success: false, message: 'No bins assigned to this collector' });
+      return res.status(403).json({ success: false, message: 'bin_id must be assigned to this collector' });
+    }
+    const baseRow = {
+      bin_id: binIdVal,
+      status: String(status).trim(),
+      first_name: userRow.first_name ?? '',
+      last_name: userRow.last_name ?? '',
+      middle_name: userRow.middle_name ?? '',
+    };
+    const rowWithOptional = {
+      ...baseRow,
+      ...(userRow.id != null && { collector_id: userRow.id }),
+      ...(bin_category != null && bin_category !== '' && { bin_category: String(bin_category) }),
+    };
+    let { error: insErr } = await supabase.from('notification_bin').insert(rowWithOptional);
+    if (insErr) {
+      const fallback = await supabase.from('notification_bin').insert(baseRow);
+      insErr = fallback.error;
+      if (insErr) {
+        console.error('[notification_bin] bin-alert insert error:', insErr.message, insErr.details);
+        return res.status(500).json({ success: false, message: insErr.message });
+      }
+    }
+    console.log('[notification_bin] bin-alert inserted:', { bin_id: binIdVal, status: row.status });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('bin-alert error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

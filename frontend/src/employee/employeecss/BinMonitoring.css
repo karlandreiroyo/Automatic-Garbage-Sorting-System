@@ -23,6 +23,8 @@
 }
 .header-titles h1 { font-size: 2.2rem; font-weight: 800; color: #111827; margin: 0 0 5px 0; }
 .header-titles p { color: #6b7280; margin: 0; font-size: 1rem; }
+.header-titles .collector-name { color: #000; }
+.header-titles .collector-name strong { color: #000; }
 
 .header-actions {
   display: flex;
@@ -110,6 +112,89 @@
 }
 .notification-banner.success { background-color: #dcfce7; border: 1px solid #86efac; color: #166534; }
 .notification-banner.warning { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+
+/* Fill-level alert: full-width top banner that "lifts" in so notification is seen immediately; page adjusts below it */
+.bin-monitoring-container.has-fill-alert {
+  padding-top: 0;
+}
+.bin-fill-alert-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: bin-fill-alert-lift 0.4s ease-out;
+}
+.bin-fill-alert-popup.warning {
+  background: #fef3c7;
+  border-bottom: 3px solid #f59e0b;
+  color: #92400e;
+}
+.bin-fill-alert-popup.critical {
+  background: #fee2e2;
+  border-bottom: 3px solid #ef4444;
+  color: #991b1b;
+}
+.bin-fill-alert-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.bin-fill-alert-content strong {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.bin-fill-alert-content p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  flex: 1;
+}
+.bin-fill-alert-dismiss {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.bin-fill-alert-dismiss:hover {
+  background: #f3f4f6;
+}
+/* Lifted from above so it appears immediately and is visible full-width */
+@keyframes bin-fill-alert-lift {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Reserve space at top when alert is visible so page content doesn't sit under it */
+.bin-monitoring-container.has-fill-alert .header-section,
+.bin-monitoring-container.has-fill-alert .notification-banner,
+.bin-monitoring-container.has-fill-alert .hardware-status,
+.bin-monitoring-container.has-fill-alert .bin-grid-layout,
+.bin-monitoring-container.has-fill-alert .bin-levels-loading {
+  margin-top: 0;
+}
+.bin-monitoring-container.has-fill-alert {
+  padding-top: 80px;
+}
 
 /* =========================================
    3. CARD GRID
