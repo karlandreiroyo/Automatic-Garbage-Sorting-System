@@ -1,5 +1,14 @@
 /* Address dropdowns - custom select so option list stays inside modal (no native overflow) */
 
+.address-fields .address-api-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
 .address-fields .form-group {
   margin-bottom: 12px;
 }

@@ -477,11 +477,12 @@ router.post('/waste-item', requireAuth, async (req, res) => {
       if (!anyAssigned) return res.status(403).json({ error: 'No bins assigned to this collector' });
       return res.status(403).json({ error: 'bin_id must be assigned to this collector' });
     }
+    const processingTimeNum = processing_time != null && !Number.isNaN(Number(processing_time)) ? Number(processing_time) : 0;
     const row = {
       bin_id: binIdVal,
       category: String(category),
       weight: weight != null ? Number(weight) : null,
-      processing_time: processing_time != null ? Number(processing_time) : null,
+      processing_time: Math.max(0, Math.round(processingTimeNum * 10) / 10), // always store seconds, e.g. 0, 0.5; never null
       created_at: new Date().toISOString(),
       first_name: first_name != null ? String(first_name) : '',
       middle_name: middle_name != null ? String(middle_name) : '',

@@ -61,7 +61,7 @@ async function handleArduinoDetection(hardwareType, weightG = null) {
       bin_id: binId,
       category,
       weight: weightG != null ? Number(weightG) : null,
-      processing_time: null,
+      processing_time: 0,
       created_at: new Date().toISOString(),
       first_name: '',
       middle_name: '',

@@ -70,6 +70,12 @@ const GearIcon = ({ color = '#6b7280' }) => (
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [collectorsWithStats, setCollectorsWithStats] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(true);
+  const [selectedCollector, setSelectedCollector] = useState(null); // { id, name }
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const searchContainerRef = React.useRef(null);
   const [categoryAccuracy, setCategoryAccuracy] = useState({
   'Unsorted': 0,
   'Biodegradable': 0,
@@ -90,10 +96,56 @@ const [wasteDistribution, setWasteDistribution] = useState([
 
   const [loading, setLoading] = useState(false);
 
+  // Fetch collectors list for admin (analytics by collector only)
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingCollectors(true);
+    const run = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          if (!cancelled) setLoadingCollectors(false);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/api/admin/collectors-with-stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (json.success && Array.isArray(json.collectors)) {
+          setCollectorsWithStats(json.collectors);
+          if (json.collectors.length > 0 && !selectedCollector) {
+            const first = json.collectors[0];
+            setSelectedCollector({ id: first.id, name: first.name });
+          }
+        }
+      } catch (e) {
+        if (!cancelled) console.error('Fetch collectors-with-stats error:', e);
+      } finally {
+        if (!cancelled) setLoadingCollectors(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    if (!searchDropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [searchDropdownOpen]);
+
   useEffect(() => {
     fetchAnalyticsData();
     setSelectedBar(null); // Clear selection when filter changes
-  }, [timeFilter, selectedDate]);
+  }, [timeFilter, selectedDate, selectedCollector?.id]);
 
 const fetchAnalyticsData = async () => {
   setLoading(true);
@@ -112,7 +164,20 @@ const fetchAnalyticsData = async () => {
       setLoading(false);
       return;
     }
-    const params = new URLSearchParams({ timeFilter, selectedDate });
+    // Admin sees analytics by collector only; require a collector to be selected
+    if (!selectedCollector?.id) {
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
+    }
+    const params = new URLSearchParams({ timeFilter, selectedDate, collectorId: selectedCollector.id });
     const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -315,6 +380,13 @@ const calculateDailyTrend = async (filter, wasteData) => {
   const donutSegments = calculateDonutSegments();
   const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 100); // Minimum of 100 for better visualization
 
+  // Filter collectors by search for dropdown
+  const searchMatches = searchQuery.trim()
+    ? collectorsWithStats.filter((c) =>
+        (c.name || '').toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : collectorsWithStats;
+
 const calculateYAxisLabels = () => {
   const maxValue = Math.max(...dailyTrend.map(d => d.value), 0);
   
@@ -351,12 +423,86 @@ const calculateYAxisLabels = () => {
 
   return (
     <div className="data-analytics-container">
+      {/* Collector search – admin sees analytics by collector only (collectors only) */}
+      <div className="data-analytics-search-section" ref={searchContainerRef}>
+        <label className="data-analytics-search-label">Collectors</label>
+        <div className="data-analytics-search-bar-wrap">
+          <span className="data-analytics-search-icon" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            type="text"
+            className="data-analytics-search-input"
+            placeholder="Search by collector name..."
+            value={selectedCollector ? (searchQuery || selectedCollector.name) : searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchDropdownOpen(true);
+            }}
+            onFocus={() => setSearchDropdownOpen(true)}
+            aria-label="Search collectors only – select a collector to view their analytics"
+            aria-expanded={searchDropdownOpen}
+            aria-haspopup="listbox"
+          />
+          {searchDropdownOpen && (
+            <ul className="data-analytics-search-dropdown" role="listbox">
+              {searchMatches.length > 0 ? (
+                searchMatches.map((c) => (
+                  <li
+                    key={c.id}
+                    role="option"
+                    className="data-analytics-search-dropdown-item"
+                    onClick={() => {
+                      setSelectedCollector({ id: c.id, name: c.name });
+                      setSearchQuery('');
+                      setSearchDropdownOpen(false);
+                    }}
+                  >
+                    <span>{c.name}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="data-analytics-search-dropdown-item data-analytics-search-no-results" role="option">
+                  {loadingCollectors ? 'Loading collectors...' : collectorsWithStats.length === 0 ? 'No collectors found' : 'No matching collector'}
+                </li>
+              )}
+            </ul>
+          )}
+          {selectedCollector && (
+            <button
+              type="button"
+              className="data-analytics-search-clear"
+              onClick={() => {
+                setSelectedCollector(null);
+                setSearchQuery('');
+                setSearchDropdownOpen(false);
+              }}
+              aria-label="Clear collector selection"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
-          <p>Comprehensive waste sorting statistics and insights</p>
+          <p>
+            {selectedCollector
+              ? `${selectedCollector.name} – waste sorting analytics`
+              : 'Select a collector to view their analytics'}
+          </p>
         </div>
       </div>
+
+      {!selectedCollector && (
+        <div className="data-analytics-select-prompt">
+          <p>Choose a collector from the search bar above to see their waste sorting statistics and charts.</p>
+        </div>
+      )}
 
       {/* Time Filters + Calendar (same as superadmin Data Analytics) */}
       <div className="time-filters">
@@ -442,7 +588,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#10b981' }}>{categoryAccuracy['Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#10b981' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -458,7 +606,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#ef4444' }}>{categoryAccuracy['Non-Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#ef4444' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Non-Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -474,7 +624,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#f97316' }}>{categoryAccuracy['Recycle']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#f97316' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Recycle']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
@@ -490,7 +642,9 @@ const calculateYAxisLabels = () => {
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#6b7280' }}>{categoryAccuracy['Unsorted']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#6b7280' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Unsorted']}%`}
+            </div>
           </div>
         </div>
       </div>
@@ -520,6 +674,7 @@ const calculateYAxisLabels = () => {
               ))}
             </svg>
           </div>
+          {!loading && (
           <div className="chart-legend">
             {wasteDistribution.map((item, index) => (
               <div key={index} className="legend-item">
@@ -529,6 +684,7 @@ const calculateYAxisLabels = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
 
 {/* Daily Sorting Trend Bar Chart */}
