@@ -52,6 +52,11 @@ HX711 scale;
 // Change this after calibration
 float calibration_factor = -7050;
 
+// ===== PROCESSING TIME (optional; backend ignores "Time: X ms" but keeps same flow) =====
+unsigned long startTime;
+unsigned long endTime;
+unsigned long processingTime;
+
 // =========================================
 
 void setup() {
@@ -77,6 +82,8 @@ void setup() {
 // ================= MAIN LOOP =================
 void loop() {
 
+  startTime = millis();   // START TIMER
+
   long d1 = readDistance(TRIG1, ECHO1);
   long d2 = readDistance(TRIG2, ECHO2);
   long d3 = readDistance(TRIG3, ECHO3);
@@ -94,7 +101,7 @@ void loop() {
   }
 
   else if (d3 < DETECT_DISTANCE) {
-    Serial.println("BIO");   // Backend expects BIO (uppercase) – "bio" also works
+    Serial.println("BIO");
     moveServos(X_10_OCLOCK, Y_FRONT_TILT);
   }
 
@@ -114,6 +121,12 @@ void loop() {
       Serial.println(" g");
     }
   }
+
+  endTime = millis();
+  processingTime = endTime - startTime;
+  Serial.print("Time: ");
+  Serial.print(processingTime);
+  Serial.println(" ms");
 
   delay(300);
 }

@@ -31,7 +31,15 @@ export default function HardwareStatus() {
           {status.connected ? 'Connected' : 'Not connected'}
         </span>
       </div>
-      {status.error && <div className="hardware-status-error">{status.error}</div>}
+      {status.error && (
+        <div className="hardware-status-error">
+          {status.error}
+          <p className="hardware-hint">Check backend is running, Arduino is on the correct port (e.g. ARDUINO_PORT in backend .env), and Serial Monitor is closed.</p>
+        </div>
+      )}
+      {!status.connected && !status.error && (
+        <p className="hardware-hint">Connect Arduino and start the backend so fill levels and weight update from the collector bin monitoring system.</p>
+      )}
       <div className="hardware-cards">
         <div className="hardware-card">
           <span className="hardware-label">Detected type</span>
@@ -39,18 +47,25 @@ export default function HardwareStatus() {
           {status.lastUpdated && <span className="hardware-time">{formatTime(status.lastUpdated)}</span>}
         </div>
       </div>
-      {status.lastLine && (
-        <div className="hardware-events">
-          <h3>Last raw serial line</h3>
-          <ul className="hardware-events-list">
-            <li className="hardware-event-item">
-              <span className="event-type">Serial</span>
-              <span className="event-data">{status.lastLine}</span>
-              <span className="event-time">{formatTime(status.lastUpdated)}</span>
-            </li>
-          </ul>
-        </div>
-      )}
+      <div className="hardware-events">
+        <h3>Last raw serial line</h3>
+        <ul className="hardware-events-list">
+          <li className="hardware-event-item">
+            <span className="event-type">Serial</span>
+            <span className="event-data">
+              {status.lastLine
+                ? status.lastLine
+                : status.connected
+                  ? 'Waiting for serial data…'
+                  : '—'}
+            </span>
+            <span className="event-time">{formatTime(status.lastUpdated)}</span>
+          </li>
+        </ul>
+        {status.connected && !status.lastLine && (
+          <p className="hardware-hint">Arduino is connected. Place waste in front of the sensor or wait for Weight/Time lines.</p>
+        )}
+      </div>
     </div>
   );
 }
