@@ -37,36 +37,31 @@ const CalendarDatesIcon = () => (
   </svg>
 );
 
-// Icons matching bin monitoring
-const TrashIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+// Icons matching bin monitoring - accept color prop to match category numbers
+const TrashIcon = ({ color = '#ef4444' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M3 6h18"/>
     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
   </svg>
 );
 
-const LeafIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const LeafIcon = ({ color = '#10b981' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
     <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
   </svg>
 );
 
-const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+const RecycleIcon = ({ color = '#f97316' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
-const GearIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const GearIcon = ({ color = '#6b7280' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
     <circle cx="12" cy="12" r="3"/>
   </svg>
@@ -320,11 +315,6 @@ const calculateYAxisLabels = () => {
 
   return (
     <div className="data-analytics-container">
-      {loading && (
-      <div style={{ textAlign: 'center', padding: '20px' }}>
-        <p>Loading analytics data...</p>
-      </div>
-    )}
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
@@ -419,68 +409,72 @@ const calculateYAxisLabels = () => {
           <div
             className="accuracy-icon"
             style={{
-              color: '#10b981',
               background: 'rgba(16, 185, 129, 0.12)',
               borderColor: 'rgba(16, 185, 129, 0.35)'
             }}
           >
-            <LeafIcon />
+            <LeafIcon color="#10b981" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#10b981' }}>{categoryAccuracy['Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#10b981' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
           <div
             className="accuracy-icon"
             style={{
-              color: '#ef4444',
               background: 'rgba(239, 68, 68, 0.12)',
               borderColor: 'rgba(239, 68, 68, 0.35)'
             }}
           >
-            <TrashIcon />
+            <TrashIcon color="#ef4444" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#ef4444' }}>{categoryAccuracy['Non-Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#ef4444' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Non-Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
           <div
             className="accuracy-icon"
             style={{
-              color: '#f97316',
               background: 'rgba(249, 115, 22, 0.12)',
               borderColor: 'rgba(249, 115, 22, 0.35)'
             }}
           >
-            <RecycleIcon />
+            <RecycleIcon color="#f97316" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#f97316' }}>{categoryAccuracy['Recycle']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#f97316' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Recycle']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
           <div
             className="accuracy-icon"
             style={{
-              color: '#6b7280',
               background: 'rgba(107, 114, 128, 0.12)',
               borderColor: 'rgba(107, 114, 128, 0.35)'
             }}
           >
-            <GearIcon />
+            <GearIcon color="#6b7280" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value" style={{ color: '#6b7280' }}>{categoryAccuracy['Unsorted']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#6b7280' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Unsorted']}%`}
+            </div>
           </div>
         </div>
       </div>
@@ -491,6 +485,11 @@ const calculateYAxisLabels = () => {
         <div className="chart-card">
           <h3 className="chart-title">Waste Distribution</h3>
           <div className="donut-chart-container">
+            {loading ? (
+              <div className="analytics-loading-spinner" aria-label="Loading">
+                <div className="analytics-spinner" />
+              </div>
+            ) : (
             <svg className="donut-chart" viewBox="0 0 200 200">
               {donutSegments.map((segment, index) => (
                 <path
@@ -503,7 +502,9 @@ const calculateYAxisLabels = () => {
                 />
               ))}
             </svg>
+            )}
           </div>
+          {!loading && (
           <div className="chart-legend">
             {wasteDistribution.map((item, index) => (
               <div key={index} className="legend-item">
@@ -513,11 +514,17 @@ const calculateYAxisLabels = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
 
 {/* Daily Sorting Trend Bar Chart - horizontal scroll when many bars */}
 <div className="chart-card">
   <h3 className="chart-title">Daily Sorting Trend</h3>
+  {loading ? (
+    <div className="analytics-loading-spinner analytics-loading-trend" aria-label="Loading">
+      <div className="analytics-spinner" />
+    </div>
+  ) : (
   <div className="bar-chart-scroll-wrapper">
     <div className="bar-chart-container">
       <div className="bar-chart-y-axis">
@@ -542,6 +549,7 @@ const calculateYAxisLabels = () => {
       </div>
     </div>
   </div>
+  )}
 </div>
       </div>
     </div>

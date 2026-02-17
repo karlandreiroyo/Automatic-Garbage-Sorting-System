@@ -32,7 +32,7 @@ const formatLastCollection = (isoString) => {
   try {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   } catch {
     return '—';
   }
@@ -63,14 +63,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -193,11 +188,11 @@ const BinDetailCard = ({ bin, onDrain }) => {
           </div>
             </div>
           <div className="meta-info">
-            <div className="meta-row">
+            <div className="meta-row meta-row-stacked">
               <span className="meta-label">Last Collection</span>
               <strong className="meta-val">{bin.lastCollection}</strong>
+            </div>
           </div>
-        </div>
       </div>
       </div>
     </div>
@@ -238,8 +233,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: ''
-});
+    location: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -1052,16 +1048,19 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database (no assigned collector on add)
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select('*')
       .single();
 
@@ -1133,7 +1132,8 @@ const handleAddBin = async (e) => {
 
     // Reset form
     setBinFormData({
-      location: ''
+      location: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1344,6 +1344,18 @@ const handleAddBin = async (e) => {
         placeholder="e.g., Building A - 1st Floor"
         required
       />
+    </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
     </div>
   </div>
   

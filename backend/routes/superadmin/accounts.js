@@ -389,7 +389,7 @@ router.post('/resend-credentials-email', async (req, res) => {
 
     const { data: user, error: userErr } = await supabase
       .from('users')
-      .select('id, auth_id, email, first_name, last_name, middle_name, contact')
+      .select('id, auth_id, email, first_name, last_name, middle_name')
       .ilike('email', emailVal)
       .limit(1)
       .maybeSingle();

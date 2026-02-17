@@ -68,6 +68,7 @@ const AdminDash = ({ onNavigateTo }) => {
   const [employeesList, setEmployeesList] = useState([]);
   const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
   const employeesDropdownRef = React.useRef(null);
+  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -140,17 +141,31 @@ const fetchDashboardData = async () => {
     
     const { data: itemsData, error: itemsError } = await supabase
       .from('waste_items')
-      .select('*, bins(name)')
+      .select('id, processing_time, created_at, bin_id, bins(name)')
       .gte('created_at', today.toISOString());
 
     if (itemsError) throw itemsError;
 
     const overallItemsSorted = itemsData?.length || 0;
     
-    // Calculate average processing time
-    const avgTime = itemsData?.length > 0
-      ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
-      : 0;
+    // Calculate average processing time (seconds) from items that have processing_time
+    const itemsWithTime = itemsData?.filter((item) => item != null) || [];
+    const sumTime = itemsWithTime.reduce((sum, item) => sum + (Number(item.processing_time) || 0), 0);
+    const avgTime = itemsWithTime.length > 0 ? Number((sumTime / itemsWithTime.length).toFixed(1)) : 0;
+
+    // Total Collection = count of notification_bin where status = 'Drained' (via backend to bypass RLS)
+    let totalCollection = 0;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const res = await fetch(`${API_BASE}/api/admin/total-collection`, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.totalCollection != null) totalCollection = Number(json.totalCollection) || 0;
+      }
+    } catch (_) {}
 
     // Get current admin (logged-in user) for recent activity filter
     let currentAdminUser = null;
@@ -216,7 +231,7 @@ const fetchDashboardData = async () => {
     }
 
     setStats({
-      totalCollection: 0,
+      totalCollection,
       totalBins: activeBins,
       totalBinsAll,
       archivedBins,
@@ -368,7 +383,7 @@ const fetchDashboardData = async () => {
           <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
           <div className="stat-info">
             <span className="stat-label">Average Processing Time</span>
-            <h2 className="stat-value">{stats.avgProcessingTime}s</h2>
+            <h2 className="stat-value">{stats.avgProcessingTime != null ? `${stats.avgProcessingTime}s` : '0s'}</h2>
           </div>
         </div>
 
@@ -549,7 +564,12 @@ const fetchDashboardData = async () => {
     <div className="bars-flex-container">
       {distribution.length > 0 && distribution.some((d) => d.count > 0) ? (
         distribution.map((item, index) => (
-          <div key={index} className="single-bar-column">
+          <div
+            key={index}
+            className="single-bar-column"
+            onMouseEnter={() => setHoveredBarIndex(index)}
+            onMouseLeave={() => setHoveredBarIndex(null)}
+          >
             {item.count > 0 && (
               <div 
                 className="actual-bar" 
@@ -557,7 +577,16 @@ const fetchDashboardData = async () => {
                   height: `${(item.count / calculateYAxisLabels()[0]) * 100}%`,
                   backgroundColor: '#10b981'
                 }}
-              ></div>
+              >
+                {hoveredBarIndex === index && (
+                  <span className="bar-tooltip">{item.count}</span>
+                )}
+              </div>
+            )}
+            {item.count === 0 && hoveredBarIndex === index && (
+              <div className="bar-tooltip-wrapper-zero">
+                <span className="bar-tooltip">0</span>
+              </div>
             )}
             <span className="bar-name">{item.name}</span>
           </div>

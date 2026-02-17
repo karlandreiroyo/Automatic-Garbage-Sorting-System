@@ -287,7 +287,7 @@ const Accounts = () => {
         }
         break;
       case 'backup_email': {
-        // Optional email; if provided, must be valid email format
+        // Optional email; if provided, must be valid email format with complete domain (.com not .co)
         if (value && value.trim()) {
           const emailVal = value.trim();
           const atCount = (emailVal.match(/@/g) || []).length;
@@ -300,6 +300,8 @@ const Accounts = () => {
           } else if (atCount === 1) {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
               error = 'Email cannot end with @ or a period';
+            } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+              error = 'Use gmail.com for complete domain';
             } else if (!emailRegex.test(emailVal)) {
               error = 'Invalid domain format (e.g., .com)';
             }
@@ -322,6 +324,8 @@ const Accounts = () => {
           // If there is exactly one @, check for valid domain structure
           if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
             error = 'Email cannot end with @ or a period';
+          } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+            error = 'Use gmail.com for complete domain';
           } else if (!emailRegex.test(emailVal)) {
             error = 'Invalid domain format (e.g., .com)';
           }
@@ -389,6 +393,21 @@ const Accounts = () => {
           else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
+      case 'backup_email': {
+        if (value && value.trim()) {
+          const emailVal = value.trim();
+          const atCount = (emailVal.match(/@/g) || []).length;
+          const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+          if (atCount === 0) error = 'You need to put @';
+          else if (atCount > 1) error = 'Email must contain exactly one @ symbol';
+          else if (atCount === 1) {
+            if (emailVal.endsWith('@') || emailVal.endsWith('.')) error = 'Email cannot end with @ or a period';
+            else if (emailVal.toLowerCase().endsWith('@gmail.co')) error = 'Use gmail.com for complete domain';
+            else if (!emailRegex.test(emailVal)) error = 'Invalid domain format (e.g., .com)';
+          }
+        }
+        break;
+      }
       default: break;
     }
     return error;
@@ -472,16 +491,6 @@ const Accounts = () => {
     // Keep names Uppercase and letters only
     if (['first_name', 'last_name', 'middle_name'].includes(name)) {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
-    }
-
-    // Contact: digits only, must start with 09, max 11 digits
-    if (name === 'contact') {
-      let digits = value.replace(/\D/g, '');
-      if (digits.length && !digits.startsWith('09')) {
-        if (digits.startsWith('9')) digits = '0' + digits;
-        else digits = '09' + digits;
-      }
-      finalValue = digits.slice(0, 11);
     }
 
     setEditingUser(prev => ({ ...prev, [name]: finalValue }));
@@ -647,7 +656,7 @@ const handleConfirmCreate = async () => {
       if (newUser) {
         await supabase
           .from('bins')
-          .update({ assigned_collector_id: newUser.id })
+          .update({ assigned_collector_id: newUser.id, assigned_at: new Date().toISOString() })
           .eq('id', pendingCreateData.assigned_bin_id);
       }
     }
@@ -733,14 +742,9 @@ const handleUpdateEmployee = async (e) => {
     if (err) newErrors['middle_name'] = err;
   }
 
-  if (editingUser.contact != null && String(editingUser.contact).replace(/\D/g, '').length > 0) {
-    const err = validateEditField('contact', editingUser.contact);
-    if (err) newErrors['contact'] = err;
-  }
-
   if (Object.keys(newErrors).length > 0) {
     setEditErrors(newErrors);
-    setEditTouched({ first_name: true, last_name: true, middle_name: true, contact: true });
+    setEditTouched({ first_name: true, last_name: true, middle_name: true });
     return;
   }
 
@@ -755,20 +759,12 @@ const handleConfirmSave = async () => {
   try {
     setLoading(true);
 
-    let contactValue = (pendingSaveData.contact ?? '').toString().replace(/\D/g, '');
-    if (contactValue.length && !contactValue.startsWith('09')) {
-      if (contactValue.startsWith('9')) contactValue = '0' + contactValue;
-      else contactValue = '09' + contactValue;
-    }
-    contactValue = contactValue.slice(0, 11) || null;
-
     const { error } = await supabase
       .from('users')
       .update({
         first_name: pendingSaveData.first_name.trim(),
         last_name: pendingSaveData.last_name.trim(),
         middle_name: pendingSaveData.middle_name?.trim() || '',
-        contact: contactValue,
         role: pendingSaveData.role
       })
       .eq('auth_id', pendingSaveData.auth_id);
@@ -778,12 +774,12 @@ const handleConfirmSave = async () => {
     // Update bin assignment: unassign old bin(s) for this user, assign new bin if selected
     await supabase
       .from('bins')
-      .update({ assigned_collector_id: null })
+      .update({ assigned_collector_id: null, assigned_at: null })
       .eq('assigned_collector_id', pendingSaveData.id);
     if (pendingSaveData.assigned_bin_id) {
       await supabase
         .from('bins')
-        .update({ assigned_collector_id: pendingSaveData.id })
+        .update({ assigned_collector_id: pendingSaveData.id, assigned_at: new Date().toISOString() })
         .eq('id', pendingSaveData.assigned_bin_id);
     }
 
@@ -1055,7 +1051,7 @@ const handleCancelSave = () => {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -1255,7 +1251,7 @@ const handleCancelSave = () => {
                   {editErrors.last_name && <span className="error-message">{editErrors.last_name}</span>}
                 </div>
                 <div className={`form-group ${editErrors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name"

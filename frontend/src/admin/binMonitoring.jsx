@@ -34,7 +34,7 @@ const formatLastCollection = (isoString) => {
   try {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   } catch {
     return '—';
   }
@@ -57,14 +57,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -187,7 +182,7 @@ const BinDetailCard = ({ bin, onDrain }) => {
           </div>
             </div>
           <div className="meta-info">
-            <div className="meta-row">
+            <div className="meta-row meta-row-stacked">
               <span className="meta-label">Last Collection</span>
               <strong className="meta-val">{bin.lastCollection}</strong>
             </div>
@@ -224,9 +219,10 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal (kept for code; no button to open in admin)
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: '',
-  assigned_collector_id: ''
-});
+    location: '',
+    assigned_collector_id: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -236,6 +232,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
+  // Unassign collector confirmation
+  const [showUnassignConfirmModal, setShowUnassignConfirmModal] = useState(false);
+  const [binToUnassign, setBinToUnassign] = useState(null);
 
   // Collection history modal (Recent button on list view) and inline section (Recent on detail view)
   const [showCollectionHistoryModal, setShowCollectionHistoryModal] = useState(false);
@@ -689,6 +688,46 @@ await supabase.from('activity_logs').insert([{
 }]);
   };
 
+  const handleUnassignBin = (bin, e) => {
+    if (e) e.stopPropagation();
+    if (!bin?.id || !bin.assigned_collector_id) return;
+    setBinToUnassign(bin);
+    setShowUnassignConfirmModal(true);
+  };
+
+  const confirmUnassignBin = async () => {
+    const bin = binToUnassign;
+    if (!bin?.id) {
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('bins')
+        .update({ assigned_collector_id: null, assigned_at: null })
+        .eq('id', bin.id);
+      if (error) throw error;
+      setBins(prevBins =>
+        prevBins.map(b =>
+          b.id === bin.id
+            ? { ...b, assigned_collector_id: null, assigned_collector_name: 'Unassigned' }
+            : b
+        )
+      );
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      showSuccessNotification('Collector unassigned from bin.');
+    } catch (err) {
+      console.error('Error unassigning bin:', err);
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Failed to unassign bin.');
+      setShowAlertModal(true);
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+    }
+  };
+
   /**
    * Shows the drain all confirmation modal
    * Called when user clicks "Drain All" button
@@ -982,17 +1021,21 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      assigned_collector_id: parseInt(binFormData.assigned_collector_id),
+      assigned_at: new Date().toISOString(),
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select(`
         *,
         assigned_collector:users!bins_assigned_collector_id_fkey(
@@ -1073,7 +1116,8 @@ const handleAddBin = async (e) => {
     // Reset form
     setBinFormData({
       location: '',
-      assigned_collector_id: ''
+      assigned_collector_id: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1141,6 +1185,18 @@ const handleAddBin = async (e) => {
         ))}
       </select>
     </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
+    </div>
   </div>
   
   <div className="modal-footer">
@@ -1152,6 +1208,33 @@ const handleAddBin = async (e) => {
     </button>
   </div>
 </form>
+          </div>
+        </div>
+      )}
+
+      {/* Unassign collector confirmation modal */}
+      {showUnassignConfirmModal && binToUnassign && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-icon-wrapper">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3>Unassign collector?</h3>
+            <p>
+              Are you sure you want to unassign <strong>{binToUnassign.assigned_collector_name || 'the collector'}</strong> from <strong>{binToUnassign.name || 'this bin'}</strong>? The bin will become unassigned.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => { setShowUnassignConfirmModal(false); setBinToUnassign(null); }}>
+                Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={confirmUnassignBin}>
+                Yes, unassign
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1205,6 +1288,8 @@ const handleAddBin = async (e) => {
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
             assignedPosition="header"
+            showUnassignButton={!isArchiveView}
+            onUnassign={handleUnassignBin}
           />
         ))}
       </div>

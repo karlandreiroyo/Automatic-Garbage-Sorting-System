@@ -1110,6 +1110,29 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+.bin-list-assign-in-header {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #047857;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 1200px) {
   .bin-list-cards {
     grid-template-columns: 1fr;
@@ -2140,10 +2163,11 @@
 .meta-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-size: 1rem;
   gap: 10px;
   padding: 12px 0;
+  min-width: 0;
 }
 
 .meta-row .meta-label {
@@ -2155,7 +2179,29 @@
 .meta-row .meta-val {
   color: #374151;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.meta-row-stacked {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+  font-size: 0.8rem !important;
+}
+
+.meta-row-stacked .meta-val {
+  text-align: left !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.meta-info {
+  overflow: visible;
+  min-width: 0;
 }
 
 /* Bottom Button */
