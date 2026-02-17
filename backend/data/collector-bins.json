@@ -1,20 +1,20 @@
 [
   {
     "id": "Biodegradable",
-    "fillLevel": 0,
-    "status": "Empty",
-    "lastCollection": "Just now"
+    "fillLevel": 100,
+    "status": "Full",
+    "lastCollection": "46h ago"
   },
   {
     "id": "Non Biodegradable",
-    "fillLevel": 30,
+    "fillLevel": 20,
     "status": "Empty",
-    "lastCollection": "Just now"
+    "lastCollection": "46h ago"
   },
   {
     "id": "Recyclable",
-    "fillLevel": 0,
-    "status": "Empty",
+    "fillLevel": 80,
+    "status": "Almost Full",
     "lastCollection": "Just now"
   },
   {

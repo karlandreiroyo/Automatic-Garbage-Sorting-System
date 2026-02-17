@@ -97,5 +97,149 @@
     "collector_name": "KARL ANREI WEMBY ROYO",
     "drained_at": "2026-02-13T19:23:16.623Z",
     "status": "Completed"
+  },
+  {
+    "id": "cl-1771012527205-0-rq72qeh",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-13T19:55:27.205Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771012536641-0-o0bp1ii",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-13T19:55:36.641Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771013074018-0-bwwhyax",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-13T20:04:34.018Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771013547526-0-ujfl5sg",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-13T20:12:27.526Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771013712819-0-svmgulx",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-13T20:15:12.819Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771052333867-0-gv4q0bb",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T06:58:53.867Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771052473895-0-6lzxydt",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-14T07:01:13.895Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771052475087-0-7siqgkl",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-14T07:01:15.087Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054146021-0-865a2ss",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:29:06.021Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054148121-0-dpwrw2k",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:29:08.121Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054148377-0-pbcsqot",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:29:08.377Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054283076-0-oeppqh3",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:31:23.076Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054284219-0-ps2dptg",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:31:24.218Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771054302055-0-tz7xhm8",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-14T07:31:42.055Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771221451158-0-s4g0wqq",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-16T05:57:31.158Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771221530714-0-spnl7r6",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 62,
+    "collector_name": "JOHN MARK BAUTISTA",
+    "drained_at": "2026-02-16T05:58:50.714Z",
+    "status": "Completed"
   }
 ]

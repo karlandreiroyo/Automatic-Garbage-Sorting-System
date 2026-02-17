@@ -129,8 +129,7 @@
 }
 
 .collector-logs-table .table-body {
-  max-height: 600px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .collector-logs-table .table-row {
