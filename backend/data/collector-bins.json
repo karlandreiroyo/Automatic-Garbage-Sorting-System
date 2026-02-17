@@ -3,24 +3,24 @@
     "id": "Biodegradable",
     "fillLevel": 100,
     "status": "Full",
-    "lastCollection": "Just now"
+    "lastCollection": "18 minutes ago"
   },
   {
     "id": "Non Biodegradable",
     "fillLevel": 50,
     "status": "Normal",
-    "lastCollection": "16 minutes ago"
+    "lastCollection": "25 minutes ago"
   },
   {
     "id": "Recyclable",
-    "fillLevel": 0,
-    "status": "Empty",
-    "lastCollection": "Just now"
+    "fillLevel": 70,
+    "status": "Normal",
+    "lastCollection": "18 minutes ago"
   },
   {
     "id": "Unsorted",
-    "fillLevel": 100,
-    "status": "Full",
-    "lastCollection": "12 minutes ago"
+    "fillLevel": 50,
+    "status": "Normal",
+    "lastCollection": "18 minutes ago"
   }
 ]

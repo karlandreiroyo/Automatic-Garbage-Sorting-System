@@ -2,7 +2,7 @@
  * AGSS Arduino – Automatic Garbage Sorting System
  * 
  * Output format (backend expects these exact strings, one per line):
- *   RECYCABLE   – sensor 1 (d1) detects object
+ *   RECYCLABLE  – sensor 1 (d1) detects object
  *   NON_BIO     – sensor 2 (d2) detects object
  *   BIO         – sensor 3 (d3) detects object
  *   UNSORTED    – sensor 4 (d4) detects object
@@ -91,7 +91,7 @@ void loop() {
 
   // ===== ULTRASONIC HAS PRIORITY =====
   if (d1 < DETECT_DISTANCE) {
-    Serial.println("RECYCABLE");
+    Serial.println("RECYCLABLE");
     moveServos(X_2_OCLOCK, Y_FRONT_TILT);
   }
 
