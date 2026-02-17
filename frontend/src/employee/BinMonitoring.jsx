@@ -527,7 +527,7 @@ const BinMonitoring = () => {
     return () => { cancelled = true; clearInterval(id); };
   }, [collectorInfo, collectorBins]);
 
-  // Poll per-collector fill levels from DB (waste_items for this collector's bins) every 2s
+  // Per-collector fill levels: poll every 3s + real-time when waste_items or bins change
   useEffect(() => {
     let cancelled = false;
     const pollLevels = async () => {
@@ -540,14 +540,12 @@ const BinMonitoring = () => {
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (!data.success) return;
-        // Prefer 4 category cards (Biodegradable, Non-Bio, Recyclable, Unsorted)
         if (Array.isArray(data.categories) && data.categories.length === 0) return;
         setBins((prev) =>
           prev.map((base) => {
             const cat = data.categories.find((c) => c.id === base.id);
             if (!cat) return base;
             const apiFill = cat.fillLevel ?? 0;
-            // Use binsRef so we never overwrite hardware-driven updates (prev can be stale due to batching)
             const localFill = binsRef.current.find((b) => b.id === base.id)?.fillLevel ?? base.fillLevel ?? 0;
             const fill = Math.max(localFill, apiFill);
             const status = fill >= 90 ? 'Full' : fill >= 75 ? 'Almost Full' : fill >= 50 ? 'Normal' : 'Empty';
@@ -563,8 +561,24 @@ const BinMonitoring = () => {
       } catch {}
     };
     pollLevels();
-    const id = setInterval(pollLevels, 2000);
-    return () => { cancelled = true; clearInterval(id); };
+    const id = setInterval(pollLevels, 3000);
+    const channel = supabase
+      .channel('collector_bin_levels_realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waste_items' }, () => {
+        if (!cancelled) pollLevels();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'waste_items' }, () => {
+        if (!cancelled) pollLevels();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bins' }, () => {
+        if (!cancelled) pollLevels();
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Persist to localStorage so tab switch preserves state (DB is source of truth for /levels, but localStorage survives navigation)
