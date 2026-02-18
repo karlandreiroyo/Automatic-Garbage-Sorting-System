@@ -124,6 +124,87 @@
   transition: all 0.3s ease;
 }
 
+.stats-box[role="button"],
+.stats-box-clickable {
+  cursor: pointer;
+}
+
+.stats-box[role="button"]:hover,
+.stats-box-clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.stats-box-selected {
+  outline: 2px solid var(--green-text, #0d9488);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.2);
+}
+
+.stats-hint {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.period-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0.25rem;
+}
+
+.period-tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.period-tab:hover {
+  background: rgba(5, 150, 105, 0.08);
+  color: var(--text-primary);
+}
+
+.period-tab.active {
+  background: linear-gradient(135deg, var(--green-text, #0d9488) 0%, #047857 100%);
+  color: white;
+}
+
+.period-badge {
+  margin-bottom: 0.5rem;
+}
+
+.sub-period-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sub-period-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+  margin-right: 0.25rem;
+}
+
+.sub-period-tabs .sub-tab {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.sub-tab-detail,
+.sub-tab-count {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
 .stats-icon-bg {
   width: 32px;
   height: 32px;
