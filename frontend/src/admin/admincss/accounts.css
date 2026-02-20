@@ -64,6 +64,29 @@ body.modal-open {
   overscroll-behavior: contain;
 }
 
+/* Add New Collector modal: wider, same layout as superadmin Add Admin */
+.modal-add-collector.modal-content.maximized {
+  max-width: min(1600px, 98vw) !important;
+  width: min(1600px, 98vw) !important;
+  max-height: 96vh !important;
+}
+
+/* First, Last, Middle name on one row */
+.employee-form .form-grid .form-row-names {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Email Address and Back up Email on one row */
+.employee-form .form-grid .form-row-emails {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
 @keyframes modalSlideDown {
   from {
     opacity: 0;
@@ -148,6 +171,14 @@ body.modal-open {
   
   .form-grid {
     grid-template-columns: 1fr !important;
+  }
+  
+  .employee-form .form-grid .form-row-names {
+    grid-template-columns: 1fr;
+  }
+  
+  .employee-form .form-grid .form-row-emails {
+    grid-template-columns: 1fr;
   }
   
   .full-width-group {

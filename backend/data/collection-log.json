@@ -421,5 +421,32 @@
     "collector_name": "KARL ANREI WEMBY ROYO",
     "drained_at": "2026-02-17T11:53:02.896Z",
     "status": "Completed"
+  },
+  {
+    "id": "cl-1771406732135-0-24nadgk",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:25:32.135Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771406793936-0-wn27pxt",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:26:33.936Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771407092474-0-a6q6zr3",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:31:32.474Z",
+    "status": "Completed"
   }
 ]

@@ -256,7 +256,29 @@ function Login({ setIsLoggedIn, setUserRole }) {
         authId: authData.user.id
       };
 
-      // 7. Send verification code (to backup email if they logged in with backup), then go to verification page
+      // 7. Check if we can skip email verification (verified within last 1 week for this email)
+      const loginEmail = (backupEmailUsed || userData.email || '').toLowerCase();
+      const cooldownRes = await fetch(`${API_BASE_URL}/api/login/check-cooldown?loginEmail=${encodeURIComponent(loginEmail)}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+      const cooldownData = cooldownRes.ok ? await cooldownRes.json() : {};
+
+      if (cooldownData.skipVerification) {
+        // Skip verification: complete login and go straight to dashboard
+        localStorage.setItem('userRole', reactRole);
+        localStorage.setItem('userEmail', userData.email);
+        localStorage.setItem('userName', `${userData.first_name} ${userData.last_name}`);
+        setIsLoggedIn(true);
+        setUserRole(reactRole);
+        if (reactRole === 'admin') navigate('/admin');
+        else if (reactRole === 'supervisor') navigate('/supervisor');
+        else if (reactRole === 'superadmin') navigate('/superadmin');
+        else navigate('/');
+        setLoading(false);
+        return;
+      }
+
+      // 8. Send verification code (to backup email if they logged in with backup), then go to verification page
       try {
         const response = await fetch(`${API_BASE_URL}/api/login/send-verification`, {
           method: 'POST',
