@@ -564,12 +564,6 @@ const Accounts = () => {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    if (!emailVerified) {
-      setAlertTitle('Verification Required');
-      setAlertMessage('Please verify the email address before creating the account.');
-      setShowAlertModal(true);
-      return;
-    }
     const newErrors = {};
     ['first_name', 'last_name', 'email', 'role', 'assigned_bin_id'].forEach(f => {
       const err = validateField(f, formData[f]);
@@ -621,7 +615,6 @@ const handleConfirmCreate = async () => {
         backup_email: (pendingCreateData.backup_email || '').trim(),
         second_email: (pendingCreateData.backup_email || '').trim(),
         role: 'COLLECTOR',
-        password: generatedPassword, // Use password from verification
         region: pendingCreateData.address?.region || '',
         province: pendingCreateData.address?.province || '',
         city_municipality: pendingCreateData.address?.city_municipality || '',
@@ -1066,29 +1059,19 @@ const handleCancelSave = () => {
                 <div className="form-row-emails">
                   <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
                     <label>Email Address *</label>
-                    <div className="input-with-verify">
-                      <input 
-                        type="text" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleInputChange} 
-                        onBlur={handleBlur}
-                      />
-                      <button
-                        type="button"
-                        className={`verify-btn-inline email ${emailVerified ? 'verified' : ''}`}
-                        onClick={handleVerifyEmail}
-                        disabled={verifyingEmail || !formData.email.trim() || emailVerified}
-                        title={emailVerified ? 'Email already verified' : 'Verify email'}
-                      >
-                        {verifyingEmail ? 'Verifying...' : emailVerified ? 'Verified ✓' : 'Verify'}
-                      </button>
-                      {emailVerified && <span className="verified-badge-inline">✓</span>}
-                    </div>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                      placeholder="Collector's email address"
+                      autoComplete="email"
+                    />
                     {errors.email && <span className="error-message">{errors.email}</span>}
                   </div>
                   <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
-                    <label>Back up Email</label>
+                    <label>Back up Email (Optional)</label>
                     <input 
                       type="email" 
                       name="backup_email" 
@@ -1207,8 +1190,8 @@ const handleCancelSave = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading || !emailVerified}>
-                  {loading ? 'Creating...' : emailVerified ? 'Create Account' : 'Verify email first'}
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Account'}
                 </button>
               </div>
             </form>
