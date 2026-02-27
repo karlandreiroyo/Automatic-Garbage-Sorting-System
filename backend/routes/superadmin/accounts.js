@@ -471,6 +471,60 @@ router.patch('/user-status', async (req, res) => {
 });
 
 /**
+ * PATCH /api/accounts/update-user
+ * Body: { userId } or { auth_id }, plus { first_name, last_name, middle_name?, role }
+ * Updates the user's profile and role in the database (service_role, bypasses RLS).
+ * Use userId (users.id) when auth_id is not available on the client (e.g. RLS).
+ */
+router.patch('/update-user', async (req, res) => {
+  try {
+    const { userId, auth_id, first_name, last_name, middle_name, role } = req.body;
+    if (!userId && !auth_id) {
+      return res.status(400).json({ success: false, message: 'userId or auth_id is required.' });
+    }
+    if (!first_name || !last_name) {
+      return res.status(400).json({ success: false, message: 'first_name and last_name are required.' });
+    }
+    const roleUpper = (role || '').toUpperCase();
+    if (roleUpper !== 'COLLECTOR' && roleUpper !== 'ADMIN') {
+      return res.status(400).json({ success: false, message: 'role must be COLLECTOR or ADMIN.' });
+    }
+
+    let query = supabase
+      .from('users')
+      .update({
+        first_name: String(first_name).trim(),
+        last_name: String(last_name).trim(),
+        middle_name: middle_name != null ? String(middle_name).trim() : '',
+        role: roleUpper
+      });
+
+    if (userId != null && userId !== '') {
+      query = query.eq('id', userId);
+    } else {
+      query = query.eq('auth_id', auth_id);
+    }
+
+    const { data, error } = await query
+      .select('id, first_name, last_name, middle_name, role')
+      .maybeSingle();
+
+    if (error) {
+      console.error('update-user error:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Failed to update user.' });
+    }
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    return res.status(200).json({ success: true, data });
+  } catch (e) {
+    console.error('update-user error:', e);
+    return res.status(500).json({ success: false, message: e.message || 'Failed to update user.' });
+  }
+});
+
+/**
  * GET /api/accounts/verify-second-email
  * Query params: { token, email }
  * Verifies second email when user clicks Accept button in email

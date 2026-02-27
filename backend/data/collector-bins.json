@@ -1,44 +1,26 @@
 [
   {
     "id": "Biodegradable",
-<<<<<<< HEAD
-    "fillLevel": 70,
-    "status": "Normal",
-    "lastCollection": "1h ago"
-  },
-  {
-    "id": "Non Biodegradable",
-    "fillLevel": 60,
-    "status": "Normal",
-    "lastCollection": "1h ago"
-=======
-    "fillLevel": 100,
-    "status": "Full",
-    "lastCollection": "Just now"
-  },
-  {
-    "id": "Non Biodegradable",
-    "fillLevel": 50,
-    "status": "Normal",
-    "lastCollection": "16 minutes ago"
->>>>>>> a555eb4d9d889ddb93f48713f09c47a82adc2a14
-  },
-  {
-    "id": "Recyclable",
     "fillLevel": 0,
     "status": "Empty",
     "lastCollection": "Just now"
   },
   {
-    "id": "Unsorted",
-<<<<<<< HEAD
-    "fillLevel": 20,
+    "id": "Non Biodegradable",
+    "fillLevel": 10,
     "status": "Empty",
-    "lastCollection": "2h ago"
-=======
-    "fillLevel": 100,
+    "lastCollection": "44h ago"
+  },
+  {
+    "id": "Recyclable",
+    "fillLevel": 50,
+    "status": "Normal",
+    "lastCollection": "44h ago"
+  },
+  {
+    "id": "Unsorted",
+    "fillLevel": 90,
     "status": "Full",
-    "lastCollection": "12 minutes ago"
->>>>>>> a555eb4d9d889ddb93f48713f09c47a82adc2a14
+    "lastCollection": "44h ago"
   }
 ]

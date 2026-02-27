@@ -93,6 +93,9 @@ const CollectionHistory = () => {
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [periodFilter, setPeriodFilter] = useState('all'); // 'all' | 'weekly' | 'monthly'
+  const [selectedWeekKey, setSelectedWeekKey] = useState(null); // 'YYYY-MM-DD' (Sunday of week)
+  const [selectedMonthKey, setSelectedMonthKey] = useState(null); // 'YYYY-MM'
   const itemsPerPage = 4;
 
   // Real-time collection history: fetch from API + Supabase Realtime on notification_bin
@@ -149,13 +152,115 @@ const CollectionHistory = () => {
   // Filter types (no "All" – multi-select like Notifications). Includes Unsorted.
   const filterTypes = ['Biodegradable', 'Non-Biodegradable', 'Recyclable', 'Unsorted'];
 
-  // Filter logic: no filters = show all; one or more = show items matching any selected type
-  const filteredList = useMemo(() => {
-    if (activeFilters.length === 0) return [...historyData];
-    return historyData.filter(item => activeFilters.includes(item.type));
-  }, [activeFilters, historyData]);
+  // Build list of weeks (Week 1, Week 2, …) and months from data – each with key and label
+  const { weeklyList, monthlyList, weeksList, monthsList } = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const weekly = historyData.filter(item => {
+      if (!item.drainedAt) return false;
+      const t = new Date(item.drainedAt).getTime();
+      return t >= sevenDaysAgo.getTime() && t <= now.getTime();
+    });
+    const monthly = historyData.filter(item => {
+      if (!item.drainedAt) return false;
+      const t = new Date(item.drainedAt).getTime();
+      return t >= thirtyDaysAgo.getTime() && t <= now.getTime();
+    });
 
-  // Calculate statistics from real-time data (using drained_at)
+    const weekKeyToItems = new Map();
+    const monthKeyToItems = new Map();
+    historyData.forEach(item => {
+      if (!item.drainedAt) return;
+      const d = new Date(item.drainedAt);
+      const weekStart = new Date(d);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      const weekKey = weekStart.toISOString().slice(0, 10);
+      if (!weekKeyToItems.has(weekKey)) weekKeyToItems.set(weekKey, []);
+      weekKeyToItems.get(weekKey).push(item);
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthKeyToItems.has(monthKey)) monthKeyToItems.set(monthKey, []);
+      monthKeyToItems.get(monthKey).push(item);
+    });
+    const weeksList = [...weekKeyToItems.entries()]
+      .map(([key, items]) => ({
+        key,
+        label: `Week of ${new Date(key + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+        count: items.length,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+    const monthsList = [...monthKeyToItems.entries()]
+      .map(([key, items]) => ({
+        key,
+        label: new Date(key + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        count: items.length,
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key));
+
+    return { weeklyList: weekly, monthlyList: monthly, weeksList, monthsList };
+  }, [historyData]);
+
+  // When Weekly/Monthly is selected and data loads, pick first week/month if none selected
+  useEffect(() => {
+    if (periodFilter === 'weekly' && weeksList.length > 0 && !selectedWeekKey)
+      setSelectedWeekKey(weeksList[0].key);
+    if (periodFilter === 'monthly' && monthsList.length > 0 && !selectedMonthKey)
+      setSelectedMonthKey(monthsList[0].key);
+  }, [periodFilter, weeksList, monthsList, selectedWeekKey, selectedMonthKey]);
+
+  // Apply period filter: by selected week (Week 1, 2, …) or by selected month, then type filters
+  const periodFilteredList = useMemo(() => {
+    if (periodFilter === 'weekly' && selectedWeekKey) {
+      return historyData.filter(item => {
+        if (!item.drainedAt) return false;
+        const d = new Date(item.drainedAt);
+        const weekStart = new Date(d);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        return weekStart.toISOString().slice(0, 10) === selectedWeekKey;
+      });
+    }
+    if (periodFilter === 'monthly' && selectedMonthKey) {
+      return historyData.filter(item => {
+        if (!item.drainedAt) return false;
+        const d = new Date(item.drainedAt);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === selectedMonthKey;
+      });
+    }
+    if (periodFilter === 'weekly' && weeksList.length > 0 && !selectedWeekKey) {
+      const key = weeksList[0].key;
+      return historyData.filter(item => {
+        if (!item.drainedAt) return false;
+        const d = new Date(item.drainedAt);
+        const weekStart = new Date(d);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        return weekStart.toISOString().slice(0, 10) === key;
+      });
+    }
+    if (periodFilter === 'monthly' && monthsList.length > 0 && !selectedMonthKey) {
+      const key = monthsList[0].key;
+      return historyData.filter(item => {
+        if (!item.drainedAt) return false;
+        const d = new Date(item.drainedAt);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return monthKey === key;
+      });
+    }
+    if (periodFilter === 'weekly' || periodFilter === 'monthly') return [];
+    return [...historyData];
+  }, [historyData, periodFilter, selectedWeekKey, selectedMonthKey, weeksList, monthsList]);
+
+  const filteredList = useMemo(() => {
+    if (activeFilters.length === 0) return [...periodFilteredList];
+    return periodFilteredList.filter(item => activeFilters.includes(item.type));
+  }, [activeFilters, periodFilteredList]);
+
+  // Stats: Daily = today; Weekly = total in 7 days ÷ 7 (avg/day); Monthly = total in 30 days ÷ 30 (avg/day)
   const stats = useMemo(() => {
     const totalCollections = historyData.length;
     const today = new Date();
@@ -169,32 +274,45 @@ const CollectionHistory = () => {
       return d.getTime() === today.getTime();
     }).length;
 
-    const oneWeekAgo = new Date(today);
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const weekly = historyData.filter(item => {
-      const itemDate = item.drainedAt;
-      if (!itemDate) return false;
-      const d = new Date(itemDate);
-      d.setHours(0, 0, 0, 0);
-      return d >= oneWeekAgo && d <= today;
-    }).length;
-
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    const monthly = historyData.filter(item => {
-      const itemDate = item.drainedAt;
-      if (!itemDate) return false;
-      const d = new Date(itemDate);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    }).length;
+    const weeklyCount = weeklyList.length;
+    const monthlyCount = monthlyList.length;
+    const weeklyAvg = weeklyCount > 0 ? Math.round((weeklyCount / 7) * 10) / 10 : 0;
+    const monthlyAvg = monthlyCount > 0 ? Math.round((monthlyCount / 30) * 10) / 10 : 0;
 
     return {
       totalCollections: totalCollections || 0,
       daily: daily || 0,
-      weekly: weekly || 0,
-      monthly: monthly || 0
+      weeklyCount,
+      weeklyAvg,
+      monthlyCount,
+      monthlyAvg
     };
-  }, [historyData]);
+  }, [historyData, weeklyList.length, monthlyList.length]);
+
+  const handlePeriodClick = (period) => {
+    setPeriodFilter(period);
+    setCurrentPage(1);
+    if (period === 'all') {
+      setSelectedWeekKey(null);
+      setSelectedMonthKey(null);
+    } else if (period === 'weekly') {
+      setSelectedMonthKey(null);
+      if (weeksList.length > 0) setSelectedWeekKey(weeksList[0].key);
+    } else if (period === 'monthly') {
+      setSelectedWeekKey(null);
+      if (monthsList.length > 0) setSelectedMonthKey(monthsList[0].key);
+    }
+  };
+
+  const handleWeekClick = (key) => {
+    setSelectedWeekKey(key);
+    setCurrentPage(1);
+  };
+
+  const handleMonthClick = (key) => {
+    setSelectedMonthKey(key);
+    setCurrentPage(1);
+  };
 
   // Pagination logic
   const totalPages = Math.max(1, Math.ceil(filteredList.length / itemsPerPage));
@@ -275,7 +393,14 @@ const CollectionHistory = () => {
       {/* Statistics */}
       {hasData && !loading && (
         <div className="stats-row">
-          <div className="stats-box">
+          <div
+            className={`stats-box ${periodFilter === 'all' ? 'stats-box-selected' : ''}`}
+            onClick={() => handlePeriodClick('all')}
+            onKeyDown={(e) => e.key === 'Enter' && handlePeriodClick('all')}
+            role="button"
+            tabIndex={0}
+            aria-label="Show all collections"
+          >
             <div className="stats-icon-bg bg-green-light">
               <TrashIcon />
             </div>
@@ -293,28 +418,94 @@ const CollectionHistory = () => {
               <span className="stats-value">{stats.daily}</span>
             </div>
           </div>
-          <div className="stats-box">
+          <div
+            className={`stats-box stats-box-clickable ${periodFilter === 'weekly' ? 'stats-box-selected' : ''}`}
+            onClick={() => handlePeriodClick('weekly')}
+            onKeyDown={(e) => e.key === 'Enter' && handlePeriodClick('weekly')}
+            role="button"
+            tabIndex={0}
+            aria-label="Show weekly – last 7 days (total ÷ 7)"
+          >
             <div className="stats-icon-bg bg-purple-light">
               <CalendarIcon />
             </div>
             <div className="stats-content">
               <span className="stats-label">Weekly</span>
-              <span className="stats-value">{stats.weekly}</span>
+              <span className="stats-value">{stats.weeklyAvg}</span>
             </div>
           </div>
-          <div className="stats-box">
+          <div
+            className={`stats-box stats-box-clickable ${periodFilter === 'monthly' ? 'stats-box-selected' : ''}`}
+            onClick={() => handlePeriodClick('monthly')}
+            onKeyDown={(e) => e.key === 'Enter' && handlePeriodClick('monthly')}
+            role="button"
+            tabIndex={0}
+            aria-label="Show monthly – last 30 days (total ÷ 30)"
+          >
             <div className="stats-icon-bg bg-orange-light">
               <CalendarIcon />
             </div>
             <div className="stats-content">
               <span className="stats-label">Monthly</span>
-              <span className="stats-value">{stats.monthly}</span>
+              <span className="stats-value">{stats.monthlyAvg}</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Filter Tabs – by bin type (Biodegradable, Non-Biodegradable, Recyclable, Unsorted) */}
+      {/* Week selector – Week 1, Week 2, … when Weekly is selected */}
+      {hasData && !loading && periodFilter === 'weekly' && weeksList.length > 0 && (
+        <div className="sub-period-tabs">
+          <span className="sub-period-label">By week:</span>
+          {weeksList.map((w, i) => (
+            <button
+              key={w.key}
+              type="button"
+              className={`period-tab sub-tab ${selectedWeekKey === w.key ? 'active' : ''}`}
+              onClick={() => handleWeekClick(w.key)}
+            >
+              Week {i + 1}
+              <span className="sub-tab-detail">({w.label})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Month selector – by month when Monthly is selected */}
+      {hasData && !loading && periodFilter === 'monthly' && monthsList.length > 0 && (
+        <div className="sub-period-tabs">
+          <span className="sub-period-label">By month:</span>
+          {monthsList.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className={`period-tab sub-tab ${selectedMonthKey === m.key ? 'active' : ''}`}
+              onClick={() => handleMonthClick(m.key)}
+            >
+              {m.label}
+              <span className="sub-tab-count">({m.count})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Viewing period badge */}
+      {hasData && !loading && periodFilter !== 'all' && (
+        <div className="active-filter-badge period-badge">
+          <span>
+            {periodFilter === 'weekly' && selectedWeekKey
+              ? `Viewing: ${weeksList.find(w => w.key === selectedWeekKey)?.label ?? 'Weekly'} (${filteredList.length} collections)`
+              : periodFilter === 'monthly' && selectedMonthKey
+                ? `Viewing: ${monthsList.find(m => m.key === selectedMonthKey)?.label ?? 'Monthly'} (${filteredList.length} collections)`
+                : `Viewing: ${periodFilter === 'weekly' ? 'Weekly' : 'Monthly'} (${filteredList.length} collections)`}
+          </span>
+          <button type="button" onClick={() => handlePeriodClick('all')} className="clear-filter-btn">
+            Show all
+          </button>
+        </div>
+      )}
+
+      {/* Filter Tabs – by bin type (like Non-Bio etc.); counts reflect current period */}
       {!loading && (
       <div className="filter-tabs">
         {filterTypes.map(type => (
@@ -325,14 +516,14 @@ const CollectionHistory = () => {
           >
             {type}
             <span className="filter-count">
-              ({historyData.filter(item => item.type === type).length})
+              ({periodFilteredList.filter(item => item.type === type).length})
             </span>
           </button>
         ))}
       </div>
       )}
 
-      {/* Active filter badge – inline, like Notifications */}
+      {/* Active filter badge – type filter */}
       {activeFilters.length > 0 && (
         <div className="active-filter-badge">
           <span>

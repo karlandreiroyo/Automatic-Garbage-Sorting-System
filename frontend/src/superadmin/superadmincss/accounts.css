@@ -43,12 +43,12 @@ body.modal-open {
   height: 100%;
 }
 
-/* Modal Content Box */
+/* Modal Content Box - wider to reduce vertical scroll */
 .modal-content.maximized {
   background: white;
   width: 100%;
-  max-width: 700px;
-  max-height: 90vh;
+  max-width: min(1400px, 96vw);
+  max-height: 94vh;
   border-radius: 20px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
@@ -62,6 +62,13 @@ body.modal-open {
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+}
+
+/* Add New Admin modal: force larger size so it's visibly wider */
+.modal-add-admin.modal-content.maximized {
+  max-width: min(1600px, 98vw) !important;
+  width: min(1600px, 98vw) !important;
+  max-height: 96vh !important;
 }
 
 @keyframes modalSlideDown {
@@ -114,10 +121,56 @@ body.modal-open {
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* First, Last, Middle name always on one row */
+.employee-form .form-grid .form-row-names {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Email Address and Backup Email always on one row */
+.employee-form .form-grid .form-row-emails {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Address section: 2 columns on wide modal to shorten form */
+.employee-form .address-fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.employee-form .address-fields .form-group {
+  margin-bottom: 0;
+}
+
+/* Tablet: 2 columns, address in 1 column */
+@media (max-width: 992px) {
+  .modal-content.maximized {
+    max-width: min(900px, 95vw);
+  }
+  
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .employee-form .form-grid .form-group-email {
+    grid-column: span 1;
+  }
+  
+  .employee-form .address-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -133,6 +186,7 @@ body.modal-open {
   }
   
   .modal-content.maximized {
+    max-width: 95%;
     max-height: 95vh;
     margin: 0;
     pointer-events: auto;
@@ -148,6 +202,22 @@ body.modal-open {
   
   .form-grid {
     grid-template-columns: 1fr !important;
+  }
+  
+  .employee-form .form-grid .form-group-email {
+    grid-column: span 1 !important;
+  }
+  
+  .employee-form .address-fields {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .employee-form .form-grid .form-row-names {
+    grid-template-columns: 1fr;
+  }
+  
+  .employee-form .form-grid .form-row-emails {
+    grid-template-columns: 1fr;
   }
   
   .full-width-group {

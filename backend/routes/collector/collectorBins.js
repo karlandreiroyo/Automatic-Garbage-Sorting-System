@@ -416,9 +416,24 @@ router.post('/bin-alert', requireAuth, async (req, res) => {
       if (!anyAssigned) return res.status(403).json({ success: false, message: 'No bins assigned to this collector' });
       return res.status(403).json({ success: false, message: 'bin_id must be assigned to this collector' });
     }
+    const statusVal = String(status).trim();
+    // Only insert once per bin+status within cooldown so the DB is not spammed (e.g. bin at 100% every poll)
+    const COOLDOWN_MINUTES = 10;
+    const since = new Date(Date.now() - COOLDOWN_MINUTES * 60 * 1000).toISOString();
+    const { data: recentList } = await supabase
+      .from('notification_bin')
+      .select('id')
+      .eq('bin_id', binIdVal)
+      .eq('status', statusVal)
+      .gte('created_at', since)
+      .limit(1);
+    if (recentList && recentList.length > 0) {
+      return res.json({ ok: true, skipped: true });
+    }
+
     const baseRow = {
       bin_id: binIdVal,
-      status: String(status).trim(),
+      status: statusVal,
       first_name: userRow.first_name ?? '',
       last_name: userRow.last_name ?? '',
       middle_name: userRow.middle_name ?? '',
@@ -437,7 +452,7 @@ router.post('/bin-alert', requireAuth, async (req, res) => {
         return res.status(500).json({ success: false, message: insErr.message });
       }
     }
-    console.log('[notification_bin] bin-alert inserted:', { bin_id: binIdVal, status: row.status });
+    console.log('[notification_bin] bin-alert inserted:', { bin_id: binIdVal, status: baseRow.status });
     res.json({ ok: true });
   } catch (err) {
     console.error('bin-alert error:', err);

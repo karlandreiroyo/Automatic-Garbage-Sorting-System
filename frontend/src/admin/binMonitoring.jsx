@@ -372,10 +372,27 @@ const [collectors, setCollectors] = useState([]);
   fetchCollectors();
   
   const interval = setInterval(() => {
-    updateBinFillLevelsFromWasteItems();
-  }, 2000);
+    updateBinFillLevelsFromBackend();
+  }, 5000);
 
-  return () => clearInterval(interval);
+  // Real-time: update bin levels as soon as waste_items or bins change in the database
+  const channel = supabase
+    .channel('admin_bin_levels_realtime')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waste_items' }, () => {
+      updateBinFillLevelsFromBackend();
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'waste_items' }, () => {
+      updateBinFillLevelsFromBackend();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bins' }, () => {
+      updateBinFillLevelsFromBackend();
+    })
+    .subscribe();
+
+  return () => {
+    clearInterval(interval);
+    supabase.removeChannel(channel);
+  };
 }, [isArchiveView]);
 
   // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
@@ -461,7 +478,7 @@ const fetchBinData = async () => {
       }));
       
       setBins(updatedBins);
-      updateBinFillLevelsFromWasteItems(updatedBins);
+      updateBinFillLevelsFromBackend(updatedBins);
     } else {
       // No bins in database
       setBins([]);
@@ -493,60 +510,48 @@ const normalizeCategory = (cat) => {
   return 'Unsorted';
 };
 
-/** Fetch waste_items counts per bin and update fill levels from real data */
-const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
+/** Fetch fill levels from backend (same source as database) so admin matches collector/DB */
+const updateBinFillLevelsFromBackend = async (binsOverride) => {
   const currentBins = binsOverride ?? binsRef.current;
-  const binIds = (currentBins || []).map(b => b.id);
-  if (binIds.length === 0) return;
+  if (!currentBins || currentBins.length === 0) return;
   try {
-    const { data, error } = await supabase
-      .from('waste_items')
-      .select('bin_id, category, created_at')
-      .in('bin_id', binIds);
-
-    if (error) {
-      console.warn('Error fetching waste_items for fill levels:', error);
-      return;
-    }
-    const byBin = {};
-    binIds.forEach(id => {
-      byBin[id] = { total: 0, byCategory: { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 }, lastAt: null };
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
+    const status = isArchiveView ? 'INACTIVE' : 'ACTIVE';
+    const res = await fetch(`${API_BASE}/api/admin/bin-levels?status=${status}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    (data || []).forEach(item => {
-      const bid = item.bin_id;
-      if (byBin[bid]) {
-        byBin[bid].total++;
-        const key = normalizeCategory(item.category);
-        if (byBin[bid].byCategory[key] !== undefined) byBin[bid].byCategory[key]++;
-        const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
-        if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
-      }
-    });
-    const merged = (currentBins || []).map(bin => {
-      const stats = byBin[bin.id] || { total: 0, byCategory: {}, lastAt: null };
-      const mainFill = Math.min(100, Math.round((stats.total / ITEMS_FOR_FULL_BIN) * 100));
-      const categoryMap = {
-        'Biodegradable': stats.byCategory.Biodegradable || 0,
-        'Non Biodegradable': stats.byCategory['Non Biodegradable'] || 0,
-        Recyclable: stats.byCategory.Recyclable || 0,
-        Unsorted: stats.byCategory.Unsorted || 0
-      };
-      const lastUpdateStr = stats.lastAt ? formatLastCollection(new Date(stats.lastAt).toISOString()) : bin.lastUpdate;
-      const updatedCategoryBins = bin.categoryBins.map(cb => {
-        const count = categoryMap[cb.category] || 0;
-        const catFill = Math.min(100, Math.round((count / ITEMS_FOR_FULL_CATEGORY) * 100));
-        return { ...cb, fillLevel: roundToTen(catFill) };
+    if (!res.ok) return;
+    const json = await res.json().catch(() => ({}));
+    if (!json.success || !Array.isArray(json.bins)) return;
+    const levelsByBin = {};
+    json.bins.forEach(b => { levelsByBin[b.id] = b; });
+    const merged = currentBins.map(bin => {
+      const fromApi = levelsByBin[bin.id];
+      if (!fromApi) return bin;
+      const lastUpdateStr = fromApi.last_update ? formatLastCollection(fromApi.last_update) : bin.lastUpdate;
+      const categoryFillByCat = {};
+      const categoryLastCollectionByCat = {};
+      (fromApi.byCategory || []).forEach(c => {
+        categoryFillByCat[c.category] = c.fillLevel;
+        categoryLastCollectionByCat[c.category] = c.last_update ? formatLastCollection(c.last_update) : '—';
       });
+      const updatedCategoryBins = bin.categoryBins.map(cb => ({
+        ...cb,
+        fillLevel: categoryFillByCat[cb.category] ?? cb.fillLevel,
+        lastCollection: categoryLastCollectionByCat[cb.category] ?? cb.lastCollection ?? '—'
+      }));
       return {
         ...bin,
-        fillLevel: roundToTen(mainFill),
+        fillLevel: fromApi.fillLevel ?? bin.fillLevel,
         lastUpdate: lastUpdateStr,
         categoryBins: updatedCategoryBins
       };
     });
     setBins(merged);
   } catch (err) {
-    console.warn('updateBinFillLevelsFromWasteItems:', err);
+    console.warn('updateBinFillLevelsFromBackend:', err);
   }
 };
 

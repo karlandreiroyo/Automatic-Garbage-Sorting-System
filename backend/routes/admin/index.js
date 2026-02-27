@@ -9,12 +9,14 @@ const adminWasteRoutes = require('./adminWaste');
 const adminDataAnalyticsRoutes = require('./adminDataAnalytics');
 const adminRecordedItemsRoutes = require('./adminRecordedItems');
 const adminWasteDistributionRoutes = require('./adminWasteDistribution');
+const adminBinLevelsRoutes = require('./adminBinLevels');
 const adminCollectorsRoutes = require('./adminCollectors');
 
 router.use('/waste-categories', adminWasteRoutes);
 router.use('/data-analytics', adminDataAnalyticsRoutes);
 router.use('/recorded-items', adminRecordedItemsRoutes);
 router.use('/waste-distribution', adminWasteDistributionRoutes);
+router.use('/bin-levels', adminBinLevelsRoutes);
 router.use('/', adminCollectorsRoutes);
 
 module.exports = router;

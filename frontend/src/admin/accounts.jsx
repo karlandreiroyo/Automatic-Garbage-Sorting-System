@@ -564,12 +564,6 @@ const Accounts = () => {
 
   const handleAddEmployee = async (e) => {
     e.preventDefault();
-    if (!emailVerified) {
-      setAlertTitle('Verification Required');
-      setAlertMessage('Please verify the email address before creating the account.');
-      setShowAlertModal(true);
-      return;
-    }
     const newErrors = {};
     ['first_name', 'last_name', 'email', 'role', 'assigned_bin_id'].forEach(f => {
       const err = validateField(f, formData[f]);
@@ -621,7 +615,6 @@ const handleConfirmCreate = async () => {
         backup_email: (pendingCreateData.backup_email || '').trim(),
         second_email: (pendingCreateData.backup_email || '').trim(),
         role: 'COLLECTOR',
-        password: generatedPassword, // Use password from verification
         region: pendingCreateData.address?.region || '',
         province: pendingCreateData.address?.province || '',
         city_municipality: pendingCreateData.address?.city_municipality || '',
@@ -1021,83 +1014,77 @@ const handleCancelSave = () => {
 
       {/* --- ADD MODAL --- */}
       {showAddModal && !showCreateConfirmModal && (
-        <div className="modal-overlay">
-          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay modal-add-collector">
+          <div className="modal-content maximized modal-add-collector" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Collector</h2>
             </div>
             <form onSubmit={handleAddEmployee} className="employee-form">
               <div className="form-grid">
-                <div className={`form-group ${errors.first_name ? 'has-error' : ''}`}>
-                  <label>First Name *</label>
-                  <input 
-                    type="text" 
-                    name="first_name" 
-                    value={formData.first_name} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur} 
-                  />
-                  {errors.first_name && <span className="error-message">{errors.first_name}</span>}
-                </div>
-                <div className={`form-group ${errors.last_name ? 'has-error' : ''}`}>
-                  <label>Last Name *</label>
-                  <input 
-                    type="text" 
-                    name="last_name" 
-                    value={formData.last_name} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur} 
-                  />
-                  {errors.last_name && <span className="error-message">{errors.last_name}</span>}
-                </div>
-                <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name (optional)</label>
-                  <input 
-                    type="text" 
-                    name="middle_name" 
-                    value={formData.middle_name} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur} 
-                  />
-                  {errors.middle_name && <span className="error-message">{errors.middle_name}</span>}
-                </div>
-                <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
-                  <label>Email Address *</label>
-                  <div className="input-with-verify">
+                <div className="form-row-names">
+                  <div className={`form-group ${errors.first_name ? 'has-error' : ''}`}>
+                    <label>First Name *</label>
                     <input 
                       type="text" 
+                      name="first_name" 
+                      value={formData.first_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.first_name && <span className="error-message">{errors.first_name}</span>}
+                  </div>
+                  <div className={`form-group ${errors.last_name ? 'has-error' : ''}`}>
+                    <label>Last Name *</label>
+                    <input 
+                      type="text" 
+                      name="last_name" 
+                      value={formData.last_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.last_name && <span className="error-message">{errors.last_name}</span>}
+                  </div>
+                  <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
+                    <label>Middle Name (optional)</label>
+                    <input 
+                      type="text" 
+                      name="middle_name" 
+                      value={formData.middle_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.middle_name && <span className="error-message">{errors.middle_name}</span>}
+                  </div>
+                </div>
+                <div className="form-row-emails">
+                  <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
+                    <label>Email Address *</label>
+                    <input 
+                      type="email" 
                       name="email" 
                       value={formData.email} 
                       onChange={handleInputChange} 
                       onBlur={handleBlur}
+                      placeholder="Collector's email address"
+                      autoComplete="email"
                     />
-                    <button
-                      type="button"
-                      className={`verify-btn-inline email ${emailVerified ? 'verified' : ''}`}
-                      onClick={handleVerifyEmail}
-                      disabled={verifyingEmail || !formData.email.trim() || emailVerified}
-                      title={emailVerified ? 'Email already verified' : 'Verify email'}
-                    >
-                      {verifyingEmail ? 'Verifying...' : emailVerified ? 'Verified ✓' : 'Verify'}
-                    </button>
-                    {emailVerified && <span className="verified-badge-inline">✓</span>}
+                    {errors.email && <span className="error-message">{errors.email}</span>}
                   </div>
-                  {errors.email && <span className="error-message">{errors.email}</span>}
+                  <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
+                    <label>Back up Email (Optional)</label>
+                    <input 
+                      type="email" 
+                      name="backup_email" 
+                      value={formData.backup_email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                      placeholder="Optional backup email (e.g. user@gmail.com)"
+                      autoComplete="email"
+                    />
+                    {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
+                  </div>
                 </div>
-                <div className={`form-group full-width-group ${errors.backup_email ? 'has-error' : ''}`}>
-                  <label>Back up Email</label>
-                  <input 
-                    type="email" 
-                    name="backup_email" 
-                    value={formData.backup_email} 
-                    onChange={handleInputChange} 
-                    onBlur={handleBlur}
-                    placeholder="Optional backup email (e.g. user@gmail.com)"
-                    autoComplete="email"
-                  />
-                  {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
-                </div>
-                <div className={`form-group ${errors.assigned_bin_id ? 'has-error' : ''}`}>
+                <div className={`form-group full-width-group ${errors.assigned_bin_id ? 'has-error' : ''}`}>
                   <label>Assign Bin *</label>
                   {(() => {
                     const q = binSearchQuery.trim().toLowerCase();
@@ -1203,8 +1190,8 @@ const handleCancelSave = () => {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={loading || !emailVerified}>
-                  {loading ? 'Creating...' : emailVerified ? 'Create Account' : 'Verify email first'}
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Account'}
                 </button>
               </div>
             </form>

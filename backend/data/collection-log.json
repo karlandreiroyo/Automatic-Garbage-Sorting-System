@@ -322,5 +322,131 @@
     "collector_name": "KARL ANREI WEMBY ROYO",
     "drained_at": "2026-02-17T05:48:33.568Z",
     "status": "Completed"
+  },
+  {
+    "id": "cl-1771308912780-0-5m8vp7y",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T06:15:12.780Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771308930507-0-9yf6l8e",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T06:15:30.507Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771326739493-0-fe1ls77",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:12:19.493Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771326740716-0-4ssrdsn",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:12:20.716Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771326801293-0-i8kui2i",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:13:21.293Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771326998538-0-ku1zzzc",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:16:38.538Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771327111439-0-f7cr2dy",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:18:31.439Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771327113762-0-wz3ltyp",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:18:33.762Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771327349044-0-etxe1kq",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:22:29.044Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771329181155-0-6hc05ln",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:53:01.155Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771329182896-0-cnpn3ky",
+    "bin_category": "Unsorted",
+    "bin_name": "Unsorted",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-17T11:53:02.896Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771406732135-0-24nadgk",
+    "bin_category": "Recyclable",
+    "bin_name": "Recyclable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:25:32.135Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771406793936-0-wn27pxt",
+    "bin_category": "Biodegradable",
+    "bin_name": "Biodegradable",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:26:33.936Z",
+    "status": "Completed"
+  },
+  {
+    "id": "cl-1771407092474-0-a6q6zr3",
+    "bin_category": "Non Biodegradable",
+    "bin_name": "Non-Bio",
+    "collector_id": 28,
+    "collector_name": "KARL ANREI WEMBY ROYO",
+    "drained_at": "2026-02-18T09:31:32.474Z",
+    "status": "Completed"
   }
 ]

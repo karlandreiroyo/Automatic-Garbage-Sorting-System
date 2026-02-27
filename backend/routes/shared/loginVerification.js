@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../../utils/supabase');
+const supabaseAdmin = supabase.supabaseAdmin;
 const { generateVerificationCode, verificationCodes } = require('../../utils/verification');
 const { getSmtpConfig, sendLoginVerificationEmail } = require('../../utils/mailer');
 const requireAuth = require('../../middleware/requireAuth');
 
-const COOLDOWN_HOURS = 3;
+const COOLDOWN_HOURS = 24 * 7; // 1 week: after verifying once, skip email verification for 1 week
 
 // Route: Resolve backup email to primary email (for login with backup email)
 // If the given email is a verified second_email, returns primary email so frontend can sign in with it
@@ -38,15 +39,21 @@ router.get('/resolve-backup-email', async (req, res) => {
   }
 });
 
-// Route: Check if email verification can be skipped (cooldown active)
-// Call this after password login; if skipVerification is true, go straight to dashboard
+// Route: Check if email verification can be skipped (cooldown active for this login email)
+// Call this after password login with loginEmail = the email they typed (primary or backup).
+// Skip only if that same email verified within the last week (per-email cooldown).
 router.get('/check-cooldown', requireAuth, async (req, res) => {
   try {
     const authId = req.authUser.id;
+    const loginEmail = (req.query.loginEmail && String(req.query.loginEmail).trim().toLowerCase()) || req.authUser.email;
+    const db = supabaseAdmin || supabase;
+    if (!supabaseAdmin) {
+      console.warn('[check-cooldown] SUPABASE_SERVICE_KEY not set; cooldown read may fail due to RLS.');
+    }
 
-    const { data: userRow, error } = await supabase
+    const { data: userRow, error } = await db
       .from('users')
-      .select('last_verified_at')
+      .select('last_verified_at, last_verified_email')
       .eq('auth_id', authId)
       .maybeSingle();
 
@@ -59,13 +66,23 @@ router.get('/check-cooldown', requireAuth, async (req, res) => {
       return res.status(200).json({ skipVerification: false });
     }
 
+    // Per-email cooldown: skip only if the email they're logging in with verified recently
+    const lastVerifiedEmail = (userRow.last_verified_email || '').toLowerCase();
+    const primaryEmail = (req.authUser.email || '').toLowerCase();
+    if (lastVerifiedEmail) {
+      if (lastVerifiedEmail !== loginEmail) return res.status(200).json({ skipVerification: false });
+    } else {
+      // Legacy: no last_verified_email — skip only if logging in with primary
+      if (loginEmail !== primaryEmail) return res.status(200).json({ skipVerification: false });
+    }
+
     const lastVerified = new Date(userRow.last_verified_at).getTime();
     const now = Date.now();
     const hoursSince = (now - lastVerified) / (1000 * 60 * 60);
 
     if (hoursSince < COOLDOWN_HOURS) {
       const cooldownMinutesLeft = Math.ceil((COOLDOWN_HOURS * 60) - (hoursSince * 60));
-      console.log(`✅ Cooldown active for ${req.authUser.email}, ${cooldownMinutesLeft} min left`);
+      console.log(`✅ Cooldown active for ${loginEmail}, ${cooldownMinutesLeft} min left`);
       return res.status(200).json({ skipVerification: true, cooldownMinutesLeft });
     }
 
@@ -120,7 +137,8 @@ router.post('/send-verification', requireAuth, async (req, res) => {
       code,
       expiresAt,
       userId: userData.auth_id,
-      email: authenticatedUserEmail
+      email: authenticatedUserEmail,
+      recipientEmail: recipientEmail.toLowerCase()
     });
 
     // Record verification_sent_at in database (for tracking / cooldown)
@@ -284,11 +302,16 @@ router.post('/verify-code', requireAuth, async (req, res) => {
       });
     }
 
-    // Code is valid - update last_verified_at in database for cooldown
+    // Code is valid - update last_verified_at and last_verified_email for per-email cooldown
     const verifiedAt = new Date().toISOString();
-    const { data: updatedRow, error: updateError } = await supabase
+    const verifiedEmail = (storedData.recipientEmail || authenticatedUserEmail).toLowerCase();
+    const dbForUpdate = supabaseAdmin || supabase;
+    if (!supabaseAdmin) {
+      console.warn('[verify-code] SUPABASE_SERVICE_KEY not set; last_verified_at update may fail (cooldown will not work).');
+    }
+    const { data: updatedRow, error: updateError } = await dbForUpdate
       .from('users')
-      .update({ last_verified_at: verifiedAt })
+      .update({ last_verified_at: verifiedAt, last_verified_email: verifiedEmail })
       .eq('auth_id', storedData.userId)
       .select('id')
       .maybeSingle();
@@ -298,9 +321,9 @@ router.post('/verify-code', requireAuth, async (req, res) => {
       console.error('→ Ensure backend/.env has SUPABASE_SERVICE_KEY (service_role key).');
       console.error('→ If column missing, run SQL in backend/VERIFICATION_COOLDOWN_SETUP.md');
     } else if (!updatedRow) {
-      console.warn('last_verified_at: no row updated (auth_id may not match).');
+      console.warn('last_verified_at: no row updated (auth_id may not match). Set SUPABASE_SERVICE_KEY for cooldown.');
     } else {
-      console.log(`✅ last_verified_at set — cooldown ${COOLDOWN_HOURS}h for user: ${authenticatedUserEmail}`);
+      console.log(`✅ last_verified_at set — cooldown 1 week for email: ${verifiedEmail}`);
     }
 
     // Generate login token

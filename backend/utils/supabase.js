@@ -29,4 +29,12 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+// Admin client: only when service_role key is set (bypasses RLS).
+// Use for cooldown (last_verified_at read/update) so it works reliably.
+const hasServiceKey = supabaseServiceKey && supabaseServiceKey !== 'your_service_role_key_here';
+const supabaseAdmin = hasServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+  : null;
+
 module.exports = supabase;
+module.exports.supabaseAdmin = supabaseAdmin;

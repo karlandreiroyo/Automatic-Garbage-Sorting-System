@@ -1,6 +1,6 @@
 /**
  * Arduino serial reader. Parses new Arduino output:
- * - RECYCABLE, NON-BIO, BIO, UNSORTED (waste type detected)
+ * - RECYCLABLE (or RECYCABLE), NON-BIO, BIO, UNSORTED (waste type detected)
  * - "Weight: X.X g" (no object → NORMAL)
  * If configured port (e.g. COM3) is not found, tries first available port.
  * GET /api/hardware/status for frontend.
@@ -33,7 +33,8 @@ function attachParser(portInstance) {
     const upper = clean.toUpperCase();
     let detectedType = null;
     let weightG = null;
-    if (upper === 'RECYCABLE') { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
+    // Recyclable: accept both RECYCABLE (Arduino typo) and RECYCLABLE (correct spelling)
+    if (upper === 'RECYCABLE' || upper === 'RECYCLABLE') { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
     else if (upper === 'NON-BIO') { hardwareState.lastType = 'NON_BIO'; detectedType = 'NON_BIO'; }
     else if (upper === 'BIO') { hardwareState.lastType = 'BIO'; detectedType = 'BIO'; }
     else if (upper === 'UNSORTED') { hardwareState.lastType = 'UNSORTED'; detectedType = 'UNSORTED'; }
@@ -45,8 +46,9 @@ function attachParser(portInstance) {
         if (!Number.isNaN(val)) { hardwareState.lastWeight = val; weightG = val; }
       }
     }
+    else if (upper.startsWith('TIME:')) { /* keep current lastType — do not overwrite with NORMAL */ }
     else if (upper.startsWith('TYPE:')) { hardwareState.lastType = (clean.split(':')[1] || '').trim().toUpperCase().replace('-', '_') || 'NORMAL'; }
-    else if (upper.includes('RECYCABLE')) { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
+    else if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) { hardwareState.lastType = 'RECYCABLE'; detectedType = 'RECYCABLE'; }
     else if (upper.includes('NON-BIO') || upper.includes('NON_BIO')) { hardwareState.lastType = 'NON_BIO'; detectedType = 'NON_BIO'; }
     else if (upper.includes('BIO') && !upper.includes('NON')) { hardwareState.lastType = 'BIO'; detectedType = 'BIO'; }
     else if (upper.includes('UNSORTED')) { hardwareState.lastType = 'UNSORTED'; detectedType = 'UNSORTED'; }
