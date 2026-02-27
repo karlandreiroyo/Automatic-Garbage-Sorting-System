@@ -2,9 +2,9 @@
 
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { sendNewEmployeeCredentialsEmail, sendSecondEmailVerification } = require('../utils/mailer');
-const { generateSecondEmailToken, secondEmailTokens } = require('../utils/verification');
+const supabase = require('../../utils/supabase');
+const { sendNewEmployeeCredentialsEmail, sendSecondEmailVerification } = require('../../utils/mailer');
+const { generateSecondEmailToken, secondEmailTokens } = require('../../utils/verification');
 // SMS functionality removed - using email only
 // const { getSmsConfig, sendCredentialsSms } = require('../utils/sms');
 
@@ -389,7 +389,7 @@ router.post('/resend-credentials-email', async (req, res) => {
 
     const { data: user, error: userErr } = await supabase
       .from('users')
-      .select('id, auth_id, email, first_name, last_name, middle_name, contact')
+      .select('id, auth_id, email, first_name, last_name, middle_name')
       .ilike('email', emailVal)
       .limit(1)
       .maybeSingle();

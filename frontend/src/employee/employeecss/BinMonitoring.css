@@ -23,6 +23,57 @@
 }
 .header-titles h1 { font-size: 2.2rem; font-weight: 800; color: #111827; margin: 0 0 5px 0; }
 .header-titles p { color: #6b7280; margin: 0; font-size: 1rem; }
+.header-titles .collector-name { color: #000; }
+.header-titles .collector-name strong { color: #000; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.drain-bin-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #047857;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(4, 120, 87, 0.3);
+}
+
+.drain-bin-header-btn:hover:not(:disabled) {
+  background: #065f46;
+  transform: translateY(-1px);
+}
+
+.drain-bin-header-btn:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.drain-bin-header-btn-confirm {
+  background: #2563eb;
+}
+.drain-bin-header-btn-confirm:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.drain-bin-header-btn svg {
+  flex-shrink: 0;
+}
 
 .assigned-bin-location-card {
   margin-top: 10px;
@@ -62,6 +113,89 @@
 .notification-banner.success { background-color: #dcfce7; border: 1px solid #86efac; color: #166534; }
 .notification-banner.warning { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
 
+/* Fill-level alert: full-width top banner that "lifts" in so notification is seen immediately; page adjusts below it */
+.bin-monitoring-container.has-fill-alert {
+  padding-top: 0;
+}
+.bin-fill-alert-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: bin-fill-alert-lift 0.4s ease-out;
+}
+.bin-fill-alert-popup.warning {
+  background: #fef3c7;
+  border-bottom: 3px solid #f59e0b;
+  color: #92400e;
+}
+.bin-fill-alert-popup.critical {
+  background: #fee2e2;
+  border-bottom: 3px solid #ef4444;
+  color: #991b1b;
+}
+.bin-fill-alert-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.bin-fill-alert-content strong {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.bin-fill-alert-content p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  flex: 1;
+}
+.bin-fill-alert-dismiss {
+  flex-shrink: 0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.bin-fill-alert-dismiss:hover {
+  background: #f3f4f6;
+}
+/* Lifted from above so it appears immediately and is visible full-width */
+@keyframes bin-fill-alert-lift {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Reserve space at top when alert is visible so page content doesn't sit under it */
+.bin-monitoring-container.has-fill-alert .header-section,
+.bin-monitoring-container.has-fill-alert .notification-banner,
+.bin-monitoring-container.has-fill-alert .hardware-status,
+.bin-monitoring-container.has-fill-alert .bin-grid-layout,
+.bin-monitoring-container.has-fill-alert .bin-levels-loading {
+  margin-top: 0;
+}
+.bin-monitoring-container.has-fill-alert {
+  padding-top: 80px;
+}
+
 /* =========================================
    3. CARD GRID
    ========================================= */
@@ -95,8 +229,27 @@
   display: flex; flex-direction: column; align-items: center; 
   justify-content: center; text-align: center; color: white; gap: 12px; 
   flex-shrink: 0; 
-  /* Height Management */
   min-height: 180px;
+  position: relative;
+}
+
+/* Checkbox on card when Drain All selection mode is on */
+.bin-card-checkbox-wrapper {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+.bin-card-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  margin: 0;
 }
 
 /* Dynamic Backgrounds */
@@ -155,13 +308,51 @@
 .progress-track { width: 100%; height: 12px; background-color: #f3f4f6; border-radius: 6px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
 
+/* Weight sensor inside each bin card (reads from serial) */
+.bin-weight-sensor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bin-weight-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bin-weight-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bin-weight-progress-track {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.bin-weight-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+.bin-weight-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #047857;
+  text-align: center;
+}
+
 .meta-info {
   display: flex; flex-direction: column; gap: 10px;
   background: #f9fafb; padding: 16px; border-radius: 12px; margin-bottom: auto; margin-top: 10px;
 }
-.meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; gap: 10px; }
+.meta-row { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.95rem; gap: 10px; min-width: 0; }
 .meta-row span { color: #6b7280; font-weight: 500; white-space: nowrap; }
-.meta-row strong { color: #374151; font-weight: 700; white-space: nowrap; }
+.meta-row strong { color: #374151; font-weight: 700; white-space: normal; word-break: break-word; flex: 1; min-width: 0; text-align: right; }
 
 /* Bottom Button */
 .drain-btn {
@@ -172,6 +363,42 @@
 }
 .drain-btn:hover:not(:disabled) { background: #1f2937; transform: scale(1.02); }
 .drain-btn:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; border: 1px solid #e5e7eb; transform: none; }
+
+/* Drain Bin button on each card */
+.bin-card-drain-btn {
+  width: 100%;
+  margin-top: auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #374151;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.bin-card-drain-btn:hover:not(:disabled) {
+  background: #1f2937;
+  transform: scale(1.02);
+}
+
+.bin-card-drain-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border: 1px solid #e5e7eb;
+  transform: none;
+}
+
+.bin-card-drain-btn svg {
+  flex-shrink: 0;
+}
 
 /* =========================================
    6. RESPONSIVE

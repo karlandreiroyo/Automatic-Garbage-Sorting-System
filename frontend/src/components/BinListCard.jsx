@@ -4,7 +4,7 @@
  * white body (Fill Level, progress bar, Last Collection).
  * Can optionally show assigned employee in body instead of header (Admin format).
  *
- * @param {Object} bin - { name, fillLevel, lastUpdate, assigned_collector_name, category }
+ * @param {Object} bin - { id, name, fillLevel, lastUpdate, assigned_collector_name, category, location }
  * @param {Function} onClick - Optional click handler
  * @param {boolean} isArchived - Optional, applies archived styling
  * @param {'header'|'body'} assignedPosition - 'header' = "Assign For: name" in green header (image format); 'body' = "Assigned Employee" row in white body
@@ -34,29 +34,69 @@ function getColorClass(category) {
   return 'lime';
 }
 
-export default function BinListCard({ bin, onClick, isArchived = false, assignedPosition = 'header' }) {
+export default function BinListCard({
+  bin,
+  onClick,
+  isArchived = false,
+  assignedPosition = 'header',
+  showArchiveCheckbox = false,
+  isSelectedForArchive = false,
+  onArchiveCheckboxChange,
+  showUnassignButton = false,
+  onUnassign
+}) {
   const assignedName = bin.assigned_collector_name ?? 'Unassigned';
   const colorClass = getColorClass(bin.category);
   const fillColor = getFillLevelColor(bin.fillLevel ?? 0);
   const level = bin.fillLevel ?? 0;
+  const hasAssignedCollector = bin.assigned_collector_id != null;
 
   return (
     <div
-      className={`bin-list-card ${isArchived ? 'archived' : colorClass}`}
+      className={`bin-list-card ${isArchived ? 'archived' : colorClass} ${showArchiveCheckbox ? 'bin-list-card-has-archive-checkbox' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
     >
+      {showArchiveCheckbox && (
+        <div
+          className="bin-list-card-archive-checkbox-wrap"
+          onClick={(e) => e.stopPropagation()}
+          role="presentation"
+        >
+          <input
+            type="checkbox"
+            className="bin-list-card-archive-checkbox"
+            checked={isSelectedForArchive}
+            onChange={onArchiveCheckboxChange}
+            aria-label={`Select ${bin.name || 'bin'} for ${isArchived ? 'unarchive' : 'archive'}`}
+          />
+        </div>
+      )}
       <div className="bin-list-header">
         <div className="bin-list-icon-wrapper">
           <TrashIcon />
         </div>
         <h3 className="bin-list-category-name">{bin.name}</h3>
         {assignedPosition === 'header' && (
-          <p className="bin-list-assigned-for">
-            Assign For: <span className="assign-for-name">{assignedName}</span>
-          </p>
+          <>
+            <p className="bin-list-assigned-for">
+              Assign For: <span className="assign-for-name">{assignedName}</span>
+            </p>
+            {showUnassignButton && hasAssignedCollector && onUnassign && (
+              <div className="bin-list-assign-in-header" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  className="bin-list-unassign-btn"
+                  onClick={(e) => onUnassign(bin, e)}
+                  aria-label={`Unassign ${assignedName} from ${bin.name || 'bin'}`}
+                >
+                  Unassign Collector
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -80,6 +120,12 @@ export default function BinListCard({ bin, onClick, isArchived = false, assigned
             </p>
           )}
           <div className="bin-list-meta-info">
+            {bin.id != null && (
+              <div className="bin-list-info-row">
+                <span className="info-label">Bin ID</span>
+                <span className="info-value">{bin.id}</span>
+              </div>
+            )}
             {assignedPosition === 'body' && (
               <div className="bin-list-info-row">
                 <span className="info-label">Assigned Employee</span>

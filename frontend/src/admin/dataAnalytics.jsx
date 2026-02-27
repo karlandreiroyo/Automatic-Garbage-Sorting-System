@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/dataAnalytics.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Time filter icons
 const ClockIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -35,36 +37,31 @@ const CalendarDatesIcon = () => (
   </svg>
 );
 
-// Icons matching bin monitoring
-const TrashIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+// Icons matching bin monitoring - accept color prop to match category numbers
+const TrashIcon = ({ color = '#ef4444' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M3 6h18"/>
     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
   </svg>
 );
 
-const LeafIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const LeafIcon = ({ color = '#10b981' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
     <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
   </svg>
 );
 
-const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+const RecycleIcon = ({ color = '#f97316' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
-const GearIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+const GearIcon = ({ color = '#6b7280' }) => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
     <circle cx="12" cy="12" r="3"/>
   </svg>
@@ -73,6 +70,12 @@ const GearIcon = () => (
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [collectorsWithStats, setCollectorsWithStats] = useState([]);
+  const [loadingCollectors, setLoadingCollectors] = useState(true);
+  const [selectedCollector, setSelectedCollector] = useState(null); // { id, name }
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const searchContainerRef = React.useRef(null);
   const [categoryAccuracy, setCategoryAccuracy] = useState({
   'Unsorted': 0,
   'Biodegradable': 0,
@@ -88,52 +91,113 @@ const [wasteDistribution, setWasteDistribution] = useState([
 ]);
   const [dailyTrend, setDailyTrend] = useState([]);
   const [selectedBar, setSelectedBar] = useState(null);
+  const [hoveredBar, setHoveredBar] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const [loading, setLoading] = useState(false);
+
+  // Fetch collectors list for admin (analytics by collector only)
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingCollectors(true);
+    const run = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          if (!cancelled) setLoadingCollectors(false);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/api/admin/collectors-with-stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (json.success && Array.isArray(json.collectors)) {
+          setCollectorsWithStats(json.collectors);
+          if (json.collectors.length > 0 && !selectedCollector) {
+            const first = json.collectors[0];
+            setSelectedCollector({ id: first.id, name: first.name });
+          }
+        }
+      } catch (e) {
+        if (!cancelled) console.error('Fetch collectors-with-stats error:', e);
+      } finally {
+        if (!cancelled) setLoadingCollectors(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    if (!searchDropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setSearchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [searchDropdownOpen]);
 
   useEffect(() => {
     fetchAnalyticsData();
     setSelectedBar(null); // Clear selection when filter changes
-  }, [timeFilter, selectedDate]);
+  }, [timeFilter, selectedDate, selectedCollector?.id]);
 
 const fetchAnalyticsData = async () => {
   setLoading(true);
   try {
-    let query = supabase
-      .from('waste_items')
-      .select('*');
-
-    // Apply time filter based on selected date (same logic as superadmin Data Analytics)
-    const dateObj = new Date(selectedDate);
-
-    if (timeFilter === 'daily') {
-      dateObj.setHours(0, 0, 0, 0);
-      const startOfDay = dateObj.toISOString();
-      const endOfDay = new Date(dateObj);
-      endOfDay.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfDay).lte('created_at', endOfDay.toISOString());
-    } else if (timeFilter === 'weekly') {
-      const dayOfWeek = dateObj.getDay();
-      const startOfWeek = new Date(dateObj);
-      startOfWeek.setDate(dateObj.getDate() - dayOfWeek);
-      startOfWeek.setHours(0, 0, 0, 0);
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfWeek.toISOString()).lte('created_at', endOfWeek.toISOString());
-    } else if (timeFilter === 'monthly') {
-      const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-      query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
     }
+    // Admin sees analytics by collector only; require a collector to be selected
+    if (!selectedCollector?.id) {
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
+    }
+    const params = new URLSearchParams({ timeFilter, selectedDate, collectorId: selectedCollector.id });
+    const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error('Data analytics API error:', json.message || res.statusText);
+      setWasteDistribution([
+        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+      ]);
+      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+      setDailyTrend([]);
+      setLoading(false);
+      return;
+    }
+    const data = json.success && Array.isArray(json.data) ? json.data : [];
 
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Calculate distribution from actual data
+    // Calculate distribution from backend data (normalize DB category values)
     if (data && data.length > 0) {
       const categoryCounts = {
         'Biodegradable': 0,
@@ -142,13 +206,19 @@ const fetchAnalyticsData = async () => {
         'Unsorted': 0
       };
 
+      const normalizeCategory = (cat) => {
+        if (!cat) return 'Unsorted';
+        const c = String(cat).trim().toLowerCase();
+        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
+        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
+        return 'Unsorted';
+      };
+
       data.forEach(item => {
-        const category = item.category || 'Unsorted';
-        if (categoryCounts.hasOwnProperty(category)) {
-          categoryCounts[category]++;
-        } else {
-          categoryCounts['Unsorted']++;
-        }
+        const key = normalizeCategory(item.category);
+        if (categoryCounts.hasOwnProperty(key)) categoryCounts[key]++;
+        else categoryCounts['Unsorted']++;
       });
 
       const total = data.length;
@@ -186,13 +256,13 @@ const fetchAnalyticsData = async () => {
         { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
         { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
       ]);
-      
       setCategoryAccuracy({
         'Biodegradable': 0,
         'Non-Biodegradable': 0,
         'Recycle': 0,
         'Unsorted': 0
       });
+      setDailyTrend([]);
     }
   } catch (error) {
     console.error('Error fetching analytics data:', error);
@@ -310,6 +380,13 @@ const calculateDailyTrend = async (filter, wasteData) => {
   const donutSegments = calculateDonutSegments();
   const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 100); // Minimum of 100 for better visualization
 
+  // Filter collectors by search for dropdown
+  const searchMatches = searchQuery.trim()
+    ? collectorsWithStats.filter((c) =>
+        (c.name || '').toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : collectorsWithStats;
+
 const calculateYAxisLabels = () => {
   const maxValue = Math.max(...dailyTrend.map(d => d.value), 0);
   
@@ -346,17 +423,86 @@ const calculateYAxisLabels = () => {
 
   return (
     <div className="data-analytics-container">
-      {loading && (
-      <div style={{ textAlign: 'center', padding: '20px' }}>
-        <p>Loading analytics data...</p>
+      {/* Collector search – admin sees analytics by collector only (collectors only) */}
+      <div className="data-analytics-search-section" ref={searchContainerRef}>
+        <label className="data-analytics-search-label">Collectors</label>
+        <div className="data-analytics-search-bar-wrap">
+          <span className="data-analytics-search-icon" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            type="text"
+            className="data-analytics-search-input"
+            placeholder="Search by collector name..."
+            value={selectedCollector ? (searchQuery || selectedCollector.name) : searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchDropdownOpen(true);
+            }}
+            onFocus={() => setSearchDropdownOpen(true)}
+            aria-label="Search collectors only – select a collector to view their analytics"
+            aria-expanded={searchDropdownOpen}
+            aria-haspopup="listbox"
+          />
+          {searchDropdownOpen && (
+            <ul className="data-analytics-search-dropdown" role="listbox">
+              {searchMatches.length > 0 ? (
+                searchMatches.map((c) => (
+                  <li
+                    key={c.id}
+                    role="option"
+                    className="data-analytics-search-dropdown-item"
+                    onClick={() => {
+                      setSelectedCollector({ id: c.id, name: c.name });
+                      setSearchQuery('');
+                      setSearchDropdownOpen(false);
+                    }}
+                  >
+                    <span>{c.name}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="data-analytics-search-dropdown-item data-analytics-search-no-results" role="option">
+                  {loadingCollectors ? 'Loading collectors...' : collectorsWithStats.length === 0 ? 'No collectors found' : 'No matching collector'}
+                </li>
+              )}
+            </ul>
+          )}
+          {selectedCollector && (
+            <button
+              type="button"
+              className="data-analytics-search-clear"
+              onClick={() => {
+                setSelectedCollector(null);
+                setSearchQuery('');
+                setSearchDropdownOpen(false);
+              }}
+              aria-label="Clear collector selection"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
-    )}
+
       <div className="data-analytics-header">
         <div>
           <h1>Data Analytics</h1>
-          <p>Comprehensive waste sorting statistics and insights</p>
+          <p>
+            {selectedCollector
+              ? `${selectedCollector.name} – waste sorting analytics`
+              : 'Select a collector to view their analytics'}
+          </p>
         </div>
       </div>
+
+      {!selectedCollector && (
+        <div className="data-analytics-select-prompt">
+          <p>Choose a collector from the search bar above to see their waste sorting statistics and charts.</p>
+        </div>
+      )}
 
       {/* Time Filters + Calendar (same as superadmin Data Analytics) */}
       <div className="time-filters">
@@ -427,46 +573,78 @@ const calculateYAxisLabels = () => {
         </div>
       </div>
 
-      {/* Sorting Accuracy Metrics */}
+      {/* Sorting Accuracy Metrics - icon circle and % match pie graph bin colors (Waste Distribution) */}
       <div className="accuracy-metrics">
         <div className="accuracy-card">
-          <div className="accuracy-icon">
-            <LeafIcon />
+          <div
+            className="accuracy-icon"
+            style={{
+              background: 'rgba(16, 185, 129, 0.12)',
+              borderColor: 'rgba(16, 185, 129, 0.35)'
+            }}
+          >
+            <LeafIcon color="#10b981" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#10b981' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
-            <TrashIcon />
+          <div
+            className="accuracy-icon"
+            style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              borderColor: 'rgba(239, 68, 68, 0.35)'
+            }}
+          >
+            <TrashIcon color="#ef4444" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Non-Biodegradable</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Non-Biodegradable']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#ef4444' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Non-Biodegradable']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
-            <RecycleIcon />
+          <div
+            className="accuracy-icon"
+            style={{
+              background: 'rgba(249, 115, 22, 0.12)',
+              borderColor: 'rgba(249, 115, 22, 0.35)'
+            }}
+          >
+            <RecycleIcon color="#f97316" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Recycle</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Recycle']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#f97316' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Recycle']}%`}
+            </div>
           </div>
         </div>
         <div className="accuracy-card">
-          <div className="accuracy-icon">
-            <GearIcon />
+          <div
+            className="accuracy-icon"
+            style={{
+              background: 'rgba(107, 114, 128, 0.12)',
+              borderColor: 'rgba(107, 114, 128, 0.35)'
+            }}
+          >
+            <GearIcon color="#6b7280" />
           </div>
           <div className="accuracy-content">
             <h3 className="accuracy-title">Unsorted</h3>
             <p className="accuracy-label">Sorting Percentage</p>
-            <div className="accuracy-value">{categoryAccuracy['Unsorted']}%</div>
+            <div className="accuracy-value accuracy-value-wrap" style={{ color: '#6b7280' }}>
+              {loading ? <span className="analytics-value-spinner" aria-hidden /> : `${categoryAccuracy['Unsorted']}%`}
+            </div>
           </div>
         </div>
       </div>
@@ -474,9 +652,15 @@ const calculateYAxisLabels = () => {
       {/* Charts Section */}
       <div className="charts-section">
         {/* Waste Distribution Donut Chart */}
-        <div className="chart-card">
+        <div className="chart-card chart-card-loadable">
           <h3 className="chart-title">Waste Distribution</h3>
-          <div className="donut-chart-container">
+          {loading && (
+            <div className="chart-loading-overlay">
+              <div className="chart-loading-spinner" aria-hidden="true"></div>
+              <span className="chart-loading-text">Loading...</span>
+            </div>
+          )}
+          <div className={`donut-chart-container ${loading ? 'chart-loading-content' : ''}`}>
             <svg className="donut-chart" viewBox="0 0 200 200">
               {donutSegments.map((segment, index) => (
                 <path
@@ -490,6 +674,7 @@ const calculateYAxisLabels = () => {
               ))}
             </svg>
           </div>
+          {!loading && (
           <div className="chart-legend">
             {wasteDistribution.map((item, index) => (
               <div key={index} className="legend-item">
@@ -499,11 +684,18 @@ const calculateYAxisLabels = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
 
 {/* Daily Sorting Trend Bar Chart */}
-<div className="chart-card">
+<div className="chart-card chart-card-with-tooltip chart-card-loadable">
   <h3 className="chart-title">Daily Sorting Trend</h3>
+  {loading && (
+    <div className="chart-loading-overlay">
+      <div className="chart-loading-spinner" aria-hidden="true"></div>
+      <span className="chart-loading-text">Loading...</span>
+    </div>
+  )}
   {selectedBar && (
     <div className="bar-selection-info">
       <p><strong>{selectedBar.day}:</strong> {selectedBar.value} items sorted</p>
@@ -516,7 +708,15 @@ const calculateYAxisLabels = () => {
       </button>
     </div>
   )}
-  <div className="bar-chart-container">
+  <div
+    className={`bar-chart-container ${loading ? 'chart-loading-content' : ''}`}
+    onMouseMove={(e) => {
+      if (hoveredBar) {
+        setTooltipPos({ x: e.clientX + 10, y: e.clientY });
+      }
+    }}
+    onMouseLeave={() => setHoveredBar(null)}
+  >
     <div className="bar-chart-y-axis">
       {calculateYAxisLabels().map((label, index) => (
         <span key={index} className="y-axis-label">{label}</span>
@@ -533,6 +733,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'pointer'
               }}
               onClick={() => setSelectedBar(item)}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`Click to view details: ${item.day} - ${item.value} items`}
             >
               <span className="bar-value">{item.value}</span>
@@ -546,6 +754,14 @@ const calculateYAxisLabels = () => {
                 cursor: 'default',
                 opacity: 0.3
               }}
+              onMouseEnter={(e) => {
+                setHoveredBar(item);
+                setTooltipPos({
+                  x: e.clientX + 10,
+                  y: e.clientY
+                });
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
               title={`${item.day}: No items`}
             />
           )}
@@ -553,6 +769,19 @@ const calculateYAxisLabels = () => {
         </div>
       ))}
     </div>
+    {hoveredBar && (
+      <div
+        className="bar-chart-tooltip"
+        style={{
+          left: tooltipPos.x,
+          top: tooltipPos.y
+        }}
+        role="tooltip"
+      >
+        <span className="tooltip-period">{hoveredBar.day}</span>
+        <span className="tooltip-value">{hoveredBar.value} items sorted</span>
+      </div>
+    )}
   </div>
 </div>
       </div>

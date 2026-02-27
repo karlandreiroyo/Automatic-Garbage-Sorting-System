@@ -105,6 +105,63 @@
   flex-wrap: nowrap;
 }
 
+/* Right side of header: search + Add Bin in one row (same as superadmin) */
+.bin-header-right-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.bin-monitoring-header .bin-search-and-archive-row.bin-search-and-archive-in-header {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-bar-above-cards {
+  width: 320px;
+  max-width: 400px;
+  display: flex;
+  align-items: stretch;
+  height: 44px;
+  margin-bottom: 0;
+}
+
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-input-inner,
+.bin-monitoring-header .bin-search-and-archive-in-header .bin-search-input {
+  height: 44px;
+  min-height: 44px;
+}
+
+/* Add Bin button inline (same row as search) */
+.bin-add-bin-button-inline {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: #047857;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bin-add-bin-button-inline:hover {
+  background: #065f46;
+}
+
 /* Style the h1 and p in bin-monitoring-header to make them visible */
 .bin-monitoring-header h1 {
   font-size: 1.75rem;
@@ -170,6 +227,34 @@
     align-items: center !important;
     text-align: center !important;
     width: 100%;
+  }
+  
+  .bin-header-right-column {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    align-items: stretch;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header {
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    gap: 10px;
+    justify-content: center;
+    align-items: stretch;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header .bin-search-bar-above-cards {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  
+  .bin-monitoring-header .bin-search-and-archive-in-header .bin-add-bin-button-inline {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   
   .header-left-detail {
@@ -726,6 +811,47 @@
   gap: 10px;
 }
 
+/* Search bar above the cards (outside dropdown) */
+.bin-search-bar-above-cards {
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.bin-search-bar-above-cards .bin-search-input-inner {
+  position: relative;
+  display: block;
+}
+
+.bin-search-bar-above-cards .bin-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #374151;
+  background: white;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.bin-search-bar-above-cards .bin-search-input:focus {
+  outline: none;
+  border-color: #047857;
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+}
+
+.bin-search-bar-above-cards .bin-search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+}
+
 .bin-search-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -982,6 +1108,29 @@
 .bin-list-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.bin-list-assign-in-header {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #047857;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.bin-list-assign-in-header .bin-list-unassign-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1200px) {
@@ -2014,10 +2163,11 @@
 .meta-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-size: 1rem;
   gap: 10px;
   padding: 12px 0;
+  min-width: 0;
 }
 
 .meta-row .meta-label {
@@ -2029,7 +2179,29 @@
 .meta-row .meta-val {
   color: #374151;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.meta-row-stacked {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+  font-size: 0.8rem !important;
+}
+
+.meta-row-stacked .meta-val {
+  text-align: left !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.meta-info {
+  overflow: visible;
+  min-width: 0;
 }
 
 /* Bottom Button */

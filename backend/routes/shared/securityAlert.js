@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const supabase = require('../utils/supabase');
-const { getSmtpConfig, sendSecurityAlertEmail } = require('../utils/mailer');
+const supabase = require('../../utils/supabase');
+const { getSmtpConfig, sendSecurityAlertEmail } = require('../../utils/mailer');
 
 // Route: Send security alert email after multiple failed login attempts
 router.post('/send-alert', async (req, res) => {

@@ -1,8 +1,9 @@
 .admin-logs-container {
-  padding: 0;
+  padding: 24px;
   width: 100%;
   max-width: 100%;
   margin: 0;
+  box-sizing: border-box;
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
@@ -12,7 +13,7 @@
 }
 
 .admin-logs-header {
-  margin-bottom: 25px;
+  margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -37,7 +38,6 @@
   grid-template-columns: auto auto minmax(380px, 1fr) minmax(220px, 240px);
   gap: 16px 24px;
   align-items: center;
-  padding: 0 4px 0 0;
 }
 
 .admin-logs-search-row .search-input {
@@ -250,8 +250,8 @@
   color: #475569;
   margin: 0;
   line-height: 1.5;
-  white-space: nowrap;
-  overflow: visible;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .admin-logs-cards .log-date {
@@ -317,14 +317,29 @@
   text-align: center;
 }
 
-/* Responsive */
+/* Responsive - proper spacing and margin from all sides */
 @media (max-width: 1024px) {
+  .admin-logs-container {
+    padding: 20px 20px 24px;
+    margin: 0;
+  }
+
   .admin-logs-table {
     display: none;
   }
 
   .admin-logs-cards {
     display: block;
+    margin-bottom: 20px;
+  }
+
+  .admin-logs-cards .log-card {
+    margin-bottom: 14px;
+  }
+
+  .admin-logs-header {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
   }
 
   .admin-logs-header h1 {
@@ -336,23 +351,42 @@
     display: flex;
     flex-wrap: wrap;
     grid-template-columns: none;
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
   .admin-logs-search-row .search-input {
     grid-column: auto;
-    flex: 1;
-    min-width: 200px;
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .admin-logs-date-filter {
     grid-column: auto;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-logs-date-filter .admin-logs-date-input {
+    flex: 1;
+    max-width: 240px;
+  }
+
+  .admin-logs-container .pagination-container {
+    margin-top: 24px;
+    padding: 0;
   }
 }
 
 @media (max-width: 768px) {
+  .admin-logs-container {
+    padding: 18px 16px 22px;
+    margin: 0;
+  }
+
   .admin-logs-header {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
   }
 
   .admin-logs-header h1 {
@@ -363,6 +397,53 @@
     font-size: 0.95rem;
   }
 
+  .admin-logs-search-row {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .admin-logs-search-row .search-input {
+    padding: 10px 14px;
+    height: 42px;
+    font-size: 0.9rem;
+  }
+
+  .admin-logs-date-filter .admin-logs-date-input {
+    padding: 8px 12px;
+    height: 42px;
+    font-size: 0.9rem;
+  }
+
+  .admin-logs-cards .log-card {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+
+  .admin-logs-cards .log-card-header {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
+  .admin-logs-cards .log-admin,
+  .admin-logs-cards .log-description {
+    font-size: 0.9rem;
+  }
+
+  .admin-logs-cards .log-date {
+    font-size: 0.8rem;
+  }
+
+  .admin-logs-container .loading-state,
+  .admin-logs-container .empty-state {
+    padding: 40px 16px;
+    font-size: 1rem;
+  }
+
+  .admin-logs-container .pagination-container {
+    margin-top: 20px;
+    gap: 12px;
+  }
+
   .admin-logs-container .pagination {
     gap: 6px;
   }
@@ -371,5 +452,88 @@
     padding: 6px 12px;
     font-size: 0.85rem;
     min-width: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-logs-container {
+    padding: 14px 12px 18px;
+    margin: 0;
+  }
+
+  .admin-logs-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .admin-logs-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .admin-logs-header p {
+    font-size: 0.9rem;
+  }
+
+  .admin-logs-search-row {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .admin-logs-search-row .search-input {
+    padding: 10px 12px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
+
+  .admin-logs-date-filter .admin-logs-date-input {
+    max-width: 100%;
+    padding: 8px 12px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
+
+  .admin-logs-cards .log-card {
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .admin-logs-cards .log-card-header {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
+
+  .admin-logs-cards .log-admin {
+    font-size: 0.875rem;
+  }
+
+  .admin-logs-cards .log-description {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .admin-logs-cards .log-date {
+    font-size: 0.75rem;
+  }
+
+  .admin-logs-container .loading-state,
+  .admin-logs-container .empty-state {
+    padding: 32px 12px;
+    font-size: 0.95rem;
+  }
+
+  .admin-logs-container .pagination-container {
+    margin-top: 16px;
+    gap: 10px;
+  }
+
+  .admin-logs-container .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    min-width: 32px;
+  }
+
+  .admin-logs-container .pagination-info {
+    font-size: 0.8rem;
   }
 }

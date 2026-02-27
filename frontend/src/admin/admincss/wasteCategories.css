@@ -1,5 +1,7 @@
 .waste-categories-container {
-  padding: 0;
+  margin: 28px;
+  padding: 28px;
+  padding-right: 36px;
   width: 100%;
   max-width: 100%;
   animation: fadeInUp 0.4s ease-out forwards;
@@ -22,8 +24,11 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 36px;
+  margin-right: 32px;
   width: 100%;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
 }
 
 .waste-categories-header > div {
@@ -38,7 +43,7 @@
   font-size: 2.2rem;
   font-weight: 800;
   color: #111;
-  margin: 0 0 5px 0;
+  margin: 0 0 10px 0;
   text-align: center;
   width: 100%;
 }
@@ -49,15 +54,19 @@
   font-weight: 500;
   text-align: center;
   width: 100%;
+  margin: 0;
 }
 
 .time-filters {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 35px;
+  gap: 18px;
+  margin-bottom: 40px;
+  margin-right: 32px;
   flex-wrap: wrap;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
 }
 
 .time-filters-left {
@@ -72,7 +81,7 @@
 .date-selector-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .date-nav-btn {
@@ -120,7 +129,7 @@
 }
 
 .waste-categories-date-input {
-  padding: 10px 16px;
+  padding: 12px 18px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -179,8 +188,10 @@
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px; /* Reduced from 24px */
+  gap: 18px;
   width: 100%;
+  max-width: calc(100% - 32px);
+  margin-right: 32px;
   box-sizing: border-box;
 }
 
@@ -227,7 +238,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
   border-bottom: 2px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -249,7 +260,7 @@
 /* Bottom Content Section - Like bin body */
 .category-content {
   flex: 1;
-  padding: 28px 24px;
+  padding: 32px 28px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -260,7 +271,7 @@
   font-size: 1.35rem;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 16px 0;
+  margin: 0 0 20px 0;
   text-align: center;
 }
 

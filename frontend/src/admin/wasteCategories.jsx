@@ -8,6 +8,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/wasteCategories.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Time Filter Icons
 const DailyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
 const WeeklyIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
@@ -30,14 +32,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -64,113 +61,65 @@ const WasteCategories = () => {
   }, [timeFilter, selectedDate]);
 
   /**
-   * Fetches waste items from database and calculates category counts
+   * Fetches waste items from backend (Supabase waste_items). Backend connects to DB so
+   * when the system detects waste and records it, counts show here automatically.
    */
+  const EMPTY_CATEGORIES = [
+    { name: 'Biodegradable', count: 0, color: '#10b981', icon: 'leaf' },
+    { name: 'Non-Biodegradable', count: 0, color: '#ef4444', icon: 'trash' },
+    { name: 'Recycle', count: 0, color: '#f97316', icon: 'recycle' },
+    { name: 'Unsorted', count: 0, color: '#6b7280', icon: 'gear' }
+  ];
+
   const fetchWasteData = async () => {
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('*');
-
-      // Apply time filter based on selected date (same logic as superadmin waste categories)
-      const dateObj = new Date(selectedDate);
-
-      if (timeFilter === 'daily') {
-        dateObj.setHours(0, 0, 0, 0);
-        const startOfDay = dateObj.toISOString();
-        const endOfDay = new Date(dateObj);
-        endOfDay.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfDay).lte('created_at', endOfDay.toISOString());
-      } else if (timeFilter === 'weekly') {
-        const dayOfWeek = dateObj.getDay();
-        const startOfWeek = new Date(dateObj);
-        startOfWeek.setDate(dateObj.getDate() - dayOfWeek);
-        startOfWeek.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfWeek.toISOString()).lte('created_at', endOfWeek.toISOString());
-      } else if (timeFilter === 'monthly') {
-        const startOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        const endOfMonth = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0);
-        endOfMonth.setHours(23, 59, 59, 999);
-        query = query.gte('created_at', startOfMonth.toISOString()).lte('created_at', endOfMonth.toISOString());
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setWasteData(EMPTY_CATEGORIES);
+        setTotalItems(0);
+        return;
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const categoryCounts = {
-        Biodegradable: 0,
-        'Non-Biodegradable': 0,
-        Recycle: 0,
-        Unsorted: 0
-      };
-
-      if (data) {
-        data.forEach(item => {
-          const category = item.category || 'Unsorted';
-          if (categoryCounts.hasOwnProperty(category)) {
-            categoryCounts[category]++;
-          } else {
-            categoryCounts.Unsorted++;
-          }
-        });
+      const params = new URLSearchParams({ timeFilter, selectedDate });
+      const res = await fetch(`${API_BASE}/api/admin/waste-categories?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Waste categories API error:', json.message || res.statusText);
+        setWasteData(EMPTY_CATEGORIES);
+        setTotalItems(0);
+        return;
       }
-
-      const total = data ? data.length : 0;
-      setTotalItems(total);
-
-      const formattedData = [
-        {
-          name: 'Biodegradable',
-          count: categoryCounts.Biodegradable,
-          color: '#10b981',
-          icon: 'leaf'
-        },
-        {
-          name: 'Non-Biodegradable',
-          count: categoryCounts['Non-Biodegradable'],
-          color: '#ef4444',
-          icon: 'trash'
-        },
-        {
-          name: 'Recycle',
-          count: categoryCounts.Recycle,
-          color: '#f97316',
-          icon: 'recycle'
-        },
-        {
-          name: 'Unsorted',
-          count: categoryCounts.Unsorted,
-          color: '#6b7280',
-          icon: 'gear'
-        }
-      ];
-
-      setWasteData(formattedData);
+      if (json.success && Array.isArray(json.wasteData) && json.wasteData.length > 0) {
+        setWasteData(json.wasteData);
+        setTotalItems(json.totalItems ?? 0);
+      } else {
+        setWasteData(EMPTY_CATEGORIES);
+        setTotalItems(0);
+      }
     } catch (error) {
       console.error('Error fetching waste data:', error);
-      setWasteData([
-        { name: 'Biodegradable', count: 10, color: '#10b981', icon: 'leaf' },
-        { name: 'Non-Biodegradable', count: 15, color: '#ef4444', icon: 'trash' },
-        { name: 'Recycle', count: 30, color: '#f97316', icon: 'recycle' },
-        { name: 'Unsorted', count: 2, color: '#6b7280', icon: 'gear' }
-      ]);
-      setTotalItems(39);
+      setWasteData(EMPTY_CATEGORIES);
+      setTotalItems(0);
     }
   };
 
   /**
-   * Gets the maximum count from all categories
-   * Used to calculate progress bar percentages
+   * Display value by period: daily ÷ 1, weekly ÷ 7, monthly ÷ 30.
+   * Progress bar and shown count use this value.
    */
-  const getMaxCount = () => {
-    if (wasteData.length === 0) return 1;
-    return Math.max(...wasteData.map(item => item.count), 1);
+  const getDisplayValue = (rawCount) => {
+    if (timeFilter === 'daily') return rawCount;
+    if (timeFilter === 'weekly') return rawCount / 7;
+    return rawCount / 30; // monthly
   };
+
+  /** Total items text: same divisor as per-category */
+  const displayTotalItems = timeFilter === 'daily' ? totalItems : timeFilter === 'weekly' ? totalItems / 7 : totalItems / 30;
+
+  /** Level indicator: displayed number = % of bar (4 items → 4%), max 100%. */
+  const getCategoryPercentage = (count) => Math.min(100, count);
 
   /**
    * Gets the appropriate icon component based on category
@@ -196,7 +145,7 @@ const WasteCategories = () => {
       <div className="waste-categories-header">
         <div>
           <h1>Waste Categories</h1>
-          <p className="total-items-text">{totalItems} items sorted</p>
+          <p className="total-items-text">{Number(displayTotalItems.toFixed(1))} items sorted</p>
         </div>
       </div>
 
@@ -269,8 +218,8 @@ const WasteCategories = () => {
       {/* Category Cards Grid - Now optimized for 2 columns */}
       <div className="categories-grid">
         {wasteData.map((category, index) => {
-          const maxCount = getMaxCount();
-          const percentage = maxCount > 0 ? (category.count / maxCount) * 100 : 0;
+          const displayValue = getDisplayValue(category.count);
+          const percentage = getCategoryPercentage(displayValue);
           const progressColor = category.color === '#6b7280' ? '#4b5563' : category.color;
 
           return (
@@ -281,7 +230,7 @@ const WasteCategories = () => {
               <div className="category-content">
                 <h3 className="category-name">{category.name}</h3>
                 <div className="category-count">
-                  <span className="count-number">{category.count}</span>
+                  <span className="count-number">{Number(displayValue.toFixed(1))}</span>
                   <span className="count-label">items sorted</span>
                 </div>
                 <div className="progress-bar-container">

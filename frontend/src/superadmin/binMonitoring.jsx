@@ -1,15 +1,15 @@
 /**
- * Bin Monitoring Component
- * Real-time monitoring of waste bin fill levels with two views:
- * 1. List View: Shows all bins with system power indicators
- * 2. Detail View: Shows category-specific bins with drain functionality
- * Features: Click bins to view details, drain individual or all bins
+ * Super Admin Bin Monitoring
+ * Same UI and behavior as Admin Bin Monitoring; standalone code for Super Admin only.
+ * Recorded Items (collection history) from backend GET /api/admin/recorded-items.
  */
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import BinListCard from '../components/BinListCard';
 import './superadmincss/binMonitoring.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
@@ -32,7 +32,7 @@ const formatLastCollection = (isoString) => {
   try {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   } catch {
     return '—';
   }
@@ -63,14 +63,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -193,11 +188,11 @@ const BinDetailCard = ({ bin, onDrain }) => {
           </div>
             </div>
           <div className="meta-info">
-            <div className="meta-row">
+            <div className="meta-row meta-row-stacked">
               <span className="meta-label">Last Collection</span>
               <strong className="meta-val">{bin.lastCollection}</strong>
+            </div>
           </div>
-        </div>
       </div>
       </div>
     </div>
@@ -219,6 +214,8 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
   // State for selected bins (for archiving)
   const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
+  const [showArchiveCheckboxesOnCards, setShowArchiveCheckboxesOnCards] = useState(false);
+  const [awaitingArchiveConfirm, setAwaitingArchiveConfirm] = useState(false);
   // State for bin search term
   const [binSearchTerm, setBinSearchTerm] = useState('');
   // State to track if we're viewing archived bins
@@ -236,8 +233,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: ''
-});
+    location: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -273,6 +271,8 @@ const fetchCollectors = async () => {
 
   // State for list view bins, each with its own independent category bins
 const [bins, setBins] = useState([]);
+const binsRef = React.useRef(bins);
+binsRef.current = bins;
 const [collectors, setCollectors] = useState([]);
 
   const showSuccessNotification = (message) => {
@@ -304,22 +304,33 @@ const [collectors, setCollectors] = useState([]);
     setCollectionHistoryBin(binToUse);
     setCollectionHistoryCategory(categoryLabel);
     if (showOnPage) setShowCollectionHistoryInline(true);
+    else setShowCollectionHistoryModal(true);
     setLoadingCollectionHistory(true);
     setCollectionHistoryItems([]);
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('id, category, processing_time, created_at')
-        .eq('bin_id', binToUse.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      const params = new URLSearchParams({ bin_id: String(binToUse.id) });
       if (categoryLabel) {
         const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
-        query = query.eq('category', dbCategory);
+        params.set('category', dbCategory);
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      setCollectionHistoryItems(data || []);
+      const res = await fetch(`${API_BASE}/api/admin/recorded-items?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Recorded items API error:', json.message || res.statusText);
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      setCollectionHistoryItems(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       console.error('Error fetching collection history:', err);
       setCollectionHistoryItems([]);
@@ -363,19 +374,19 @@ const [collectors, setCollectors] = useState([]);
   // Fetch bin data on component mount and when archive view toggles
   useEffect(() => {
   fetchBinData();
-  fetchCollectors(); // Add this line
+  fetchCollectors();
   
   const interval = setInterval(() => {
-    updateBinFillLevels();
+    updateBinFillLevelsFromWasteItems();
   }, 2000);
 
   return () => clearInterval(interval);
 }, [isArchiveView]);
 
-  // Reset to page 1 when filter selection (Search Bin checkboxes) changes
+  // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBinsForArchive]);
+  }, [selectedBinsForArchive, binSearchTerm]);
 
   /**
    * Fetches bin data from Supabase database
@@ -455,8 +466,8 @@ const fetchBinData = async () => {
       }));
       
       setBins(updatedBins);
+      updateBinFillLevelsFromWasteItems(updatedBins);
     } else {
-      // No bins in database
       setBins([]);
     }
   } catch (error) {
@@ -465,44 +476,73 @@ const fetchBinData = async () => {
   }
 };
 
-  /**
-   * Updates bin fill levels in real-time based on category bins
-   * Calculates the overall fill level as the maximum fill level among category bins
-   * Simulates natural decrease over time (waste being processed/removed)
-   * Bins decrease gradually unless manually drained or new waste is added
-   */
-  // Then in your updateBinFillLevels function, update this part:
+const ITEMS_FOR_FULL_BIN = 50;
+const ITEMS_FOR_FULL_CATEGORY = 20;
 
-const updateBinFillLevels = () => {
-  setBins(prevBins =>
-    prevBins.map(bin => {
-      const updatedCategoryBins = bin.categoryBins.map(catBin => {
-        if (catBin.fillLevel > 0) {
-          const decreaseAmount = 0.1 + (Math.random() * 0.2);
-          const newCatFillLevel = Math.max(0, catBin.fillLevel - decreaseAmount);
-          // Round to nearest 10
-          return {
-            ...catBin,
-            fillLevel: roundToTen(newCatFillLevel)
-          };
-        }
-        return {
-          ...catBin,
-          fillLevel: 0
-        };
+const normalizeCategory = (cat) => {
+  if (!cat) return 'Unsorted';
+  const s = String(cat).toLowerCase();
+  if (s.includes('bio') && !s.includes('non')) return 'Biodegradable';
+  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
+  if (s.includes('recycl')) return 'Recyclable';
+  return 'Unsorted';
+};
+
+/** Fill levels from Supabase waste_items table (same as admin) */
+const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
+  const currentBins = binsOverride ?? binsRef.current;
+  const binIds = (currentBins || []).map(b => b.id);
+  if (binIds.length === 0) return;
+  try {
+    const { data, error } = await supabase
+      .from('waste_items')
+      .select('bin_id, category, created_at')
+      .in('bin_id', binIds);
+
+    if (error) {
+      console.warn('Error fetching waste_items for fill levels:', error);
+      return;
+    }
+    const byBin = {};
+    binIds.forEach(id => {
+      byBin[id] = { total: 0, byCategory: { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 }, lastAt: null };
+    });
+    (data || []).forEach(item => {
+      const bid = item.bin_id;
+      if (byBin[bid]) {
+        byBin[bid].total++;
+        const key = normalizeCategory(item.category);
+        if (byBin[bid].byCategory[key] !== undefined) byBin[bid].byCategory[key]++;
+        const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
+        if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
+      }
+    });
+    const merged = (currentBins || []).map(bin => {
+      const stats = byBin[bin.id] || { total: 0, byCategory: {}, lastAt: null };
+      const mainFill = Math.min(100, Math.round((stats.total / ITEMS_FOR_FULL_BIN) * 100));
+      const categoryMap = {
+        'Biodegradable': stats.byCategory.Biodegradable || 0,
+        'Non Biodegradable': stats.byCategory['Non Biodegradable'] || 0,
+        Recyclable: stats.byCategory.Recyclable || 0,
+        Unsorted: stats.byCategory.Unsorted || 0
+      };
+      const lastUpdateStr = stats.lastAt ? formatLastCollection(new Date(stats.lastAt).toISOString()) : bin.lastUpdate;
+      const updatedCategoryBins = bin.categoryBins.map(cb => {
+        const count = categoryMap[cb.category] || 0;
+        const catFill = Math.min(100, Math.round((count / ITEMS_FOR_FULL_CATEGORY) * 100));
+        return { ...cb, fillLevel: roundToTen(catFill) };
       });
-
-      const maxFillLevel = updatedCategoryBins.length > 0
-        ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
-        : bin.fillLevel;
-
       return {
         ...bin,
-        fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
+        fillLevel: roundToTen(mainFill),
+        lastUpdate: lastUpdateStr,
         categoryBins: updatedCategoryBins
       };
-    })
-  );
+    });
+    setBins(merged);
+  } catch (err) {
+    console.warn('updateBinFillLevelsFromWasteItems:', err);
+  }
 };
 
   /**
@@ -532,23 +572,20 @@ const updateBinFillLevels = () => {
   };
 
   /**
-   * Drains a specific category bin by setting fill level to 0%
-   * Only affects the category bin for the currently selected bin
-   * @param {string} categoryBinId - The ID of the category bin to drain (e.g., 'non-bio-1')
+   * Drains a specific category bin: delete waste_items for that bin/category, update bins table (same as admin).
    */
   const handleDrain = async (categoryBinId) => {
     try {
-      // Update in Supabase if you have a bins table (for category bins)
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', categoryBinId);
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 means table doesn't exist, which is okay for now
-        console.warn('Bins table may not exist:', error);
+      const match = categoryBinId?.match(/^(bio|non-bio|recycle|unsorted)-(\d+)$/i);
+      const physicalBinId = match ? parseInt(match[2], 10) : null;
+      const catKey = match ? { bio: 'Biodegradable', 'non-bio': 'Non Biodegradable', recycle: 'Recyclable', unsorted: 'Unsorted' }[match[1].toLowerCase()] : null;
+      if (physicalBinId && catKey) {
+        const variants = catKey === 'Non Biodegradable' ? ['Non Biodegradable', 'Non-Bio'] : catKey === 'Recyclable' ? ['Recyclable', 'Recycle'] : [catKey];
+        await supabase.from('waste_items').delete().eq('bin_id', physicalBinId).in('category', variants);
       }
-
+      if (selectedBinId) {
+        await supabase.from('bins').update({ last_update: new Date().toISOString() }).eq('id', selectedBinId);
+      }
       const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
@@ -591,21 +628,12 @@ const updateBinFillLevels = () => {
   };
 
   /**
-   * Drains a specific list view bin (Bin 1, Bin 2, etc.)
-   * Only affects the specific bin in the list view
-   * @param {number} binId - The ID of the list view bin to drain
+   * Drains a specific list view bin: delete all waste_items for that bin, update bins table (same as admin).
    */
   const handleDrainListBin = async (binId) => {
     try {
-      // Update in Supabase if you have a bins table
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', binId);
-
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Bins table may not exist:', error);
-      }
+      await supabase.from('waste_items').delete().eq('bin_id', binId);
+      await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', binId);
 
       const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
@@ -954,10 +982,22 @@ const updateBinFillLevels = () => {
     );
   }
 
-  // When checkboxes in Search Bin are selected, show only those bins on the page; when none selected, show all
-  const displayBins = selectedBinsForArchive.length > 0
+  // When archive checkboxes are on cards, always show all bins (filtered by search). Otherwise when Search Bin dropdown selection is used, show only selected bins when any are selected.
+  const binsBySelection = selectedBinsForArchive.length > 0 && !showArchiveCheckboxesOnCards
     ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
     : bins;
+  const searchTerms = binSearchTerm
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(s => /^\d+$/.test(s));
+  const displayBins = searchTerms.length === 0
+    ? binsBySelection
+    : binsBySelection.filter(bin => {
+        const binNumber = (bin.name || '').replace(/[^0-9]/g, '');
+        const binNum = binNumber ? parseInt(binNumber, 10) : NaN;
+        if (Number.isNaN(binNum)) return false;
+        return searchTerms.some(term => binNum === parseInt(term, 10));
+      });
 
   // Calculate pagination from displayBins
   const totalPages = Math.max(1, Math.ceil(displayBins.length / binsPerPage));
@@ -1008,16 +1048,19 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database (no assigned collector on add)
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select('*')
       .single();
 
@@ -1089,7 +1132,8 @@ const handleAddBin = async (e) => {
 
     // Reset form
     setBinFormData({
-      location: ''
+      location: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1186,6 +1230,7 @@ const handleAddBin = async (e) => {
             <div className="modal-actions">
               <button className="btn-modal btn-cancel" onClick={() => {
                 setShowArchiveModal(false);
+                setAwaitingArchiveConfirm(false);
               }}>
                 No, Cancel
               </button>
@@ -1216,6 +1261,7 @@ const handleAddBin = async (e) => {
                     // Remove unarchived bins from local state (they'll appear in active view)
                     setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
                     setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
                     setIsBinDropdownOpen(false);
                     setShowArchiveModal(false);
                     showSuccessNotification(`${selectedBinsForArchive.length} bin(s) unarchived successfully!`);
@@ -1243,6 +1289,7 @@ const handleAddBin = async (e) => {
                     // Remove archived bins from local state
                     setBins(prevBins => prevBins.filter(b => !selectedBinsForArchive.includes(b.id)));
                     setSelectedBinsForArchive([]);
+                    setShowArchiveCheckboxesOnCards(false);
                     setIsBinDropdownOpen(false);
                     setShowArchiveModal(false);
                     showSuccessNotification(`${selectedBinsForArchive.length} bin(s) archived successfully!`);
@@ -1253,6 +1300,7 @@ const handleAddBin = async (e) => {
                   setAlertMessage(`Error ${isArchiveView ? 'unarchiving' : 'archiving'} bins: ` + error.message);
                   setShowAlertModal(true);
                   setShowArchiveModal(false);
+                  setAwaitingArchiveConfirm(false);
                 } finally {
                   setLoading(false);
                 }
@@ -1297,6 +1345,18 @@ const handleAddBin = async (e) => {
         required
       />
     </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
+    </div>
   </div>
   
   <div className="modal-footer">
@@ -1312,32 +1372,102 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header */}
+      {/* List View Header - title left, search + Archive + Add Bin right */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-        {/* Search Bin Dropdown Button - same style as Add Bin */}
-        <div className="bin-search-dropdown-wrapper">
+        <div className="bin-header-right-column">
+        <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+        <div className="bin-search-bar-above-cards">
+          <div className="bin-search-input-inner">
+            <input
+              type="text"
+              className="bin-search-input"
+              placeholder="Search by bin # (e.g. 4, 9, 10)"
+              value={binSearchTerm}
+              onChange={(e) => setBinSearchTerm(e.target.value)}
+              aria-label="Search bins"
+            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="bin-search-icon"
+            >
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`bin-archive-button bin-archive-button-inline ${isArchiveView ? 'bin-unarchive-button' : ''} ${awaitingArchiveConfirm ? 'bin-archive-button-confirm' : ''}`}
+          onClick={() => {
+            if (!showArchiveCheckboxesOnCards) {
+              setShowArchiveCheckboxesOnCards(true);
+              setAwaitingArchiveConfirm(true);
+              return;
+            }
+            if (selectedBinsForArchive.length === 0) {
+              setShowArchiveCheckboxesOnCards(false);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            if (awaitingArchiveConfirm) {
+              setShowArchiveModal(true);
+              setAwaitingArchiveConfirm(false);
+              return;
+            }
+            setAwaitingArchiveConfirm(true);
+          }}
+          disabled={loading}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {isArchiveView ? (
+              <>
+                <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
+                <path d="M21 9l-9-6-9 6"/>
+                <path d="M12 3v12"/>
+              </>
+            ) : (
+              <>
+                <polyline points="21 8 21 21 3 21 3 8"/>
+                <rect x="1" y="3" width="22" height="5"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+              </>
+            )}
+          </svg>
+          {showArchiveCheckboxesOnCards
+              ? (selectedBinsForArchive.length === 0
+                  ? 'Return'
+                  : (isArchiveView ? 'Confirm? (Click to Unarchive)' : 'Confirm? (Click to Archive)'))
+              : (isArchiveView ? 'Unarchive' : 'Archive')}
+        </button>
+        {!isArchiveView && (
           <button
-            className="add-bin-header-button"
-            onClick={() => {
-              setIsBinDropdownOpen((prev) => {
-                if (!prev) {
-                  // Opening dropdown - keep search term
-                  return true;
-                } else {
-                  // Closing dropdown - reset search term
-                  setBinSearchTerm('');
-                  return false;
-                }
-              });
-            }}
+            type="button"
+            className="bin-add-bin-button-inline"
+            onClick={() => setShowAddBinModal(true)}
           >
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1345,236 +1475,53 @@ const handleAddBin = async (e) => {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M4 8h16" />
-              <path d="M4 16h16" />
-              <path d="M10 12h10" />
+              <path d="M12 5v14M5 12h14"/>
             </svg>
-            Search Bin
-            <span className="bin-search-caret">▾</span>
+            Add Bin
           </button>
-
-          {isBinDropdownOpen && (
-            <div className="bin-search-dropdown">
-              {/* Search bar at the top */}
-              <div className="bin-search-input-wrapper">
-                <input
-                  type="text"
-                  className="bin-search-input"
-                  placeholder="Search Bin #"
-                  value={binSearchTerm}
-                  onChange={(e) => setBinSearchTerm(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="bin-search-icon"
-                >
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
-                </svg>
-              </div>
-              {/* Archive button as second item */}
-              <div className="bin-search-dropdown-item bin-search-archive-item">
-                <button
-                  className={`bin-archive-button ${isArchiveView ? 'bin-unarchive-button' : ''}`}
-                  onClick={() => {
-                    if (selectedBinsForArchive.length === 0) {
-                      setAlertTitle('No Selection');
-                      setAlertMessage(`Please select at least one bin to ${isArchiveView ? 'unarchive' : 'archive'}.`);
-                      setShowAlertModal(true);
-                      return;
-                    }
-                    // Show confirmation modal
-                    setShowArchiveModal(true);
-                  }}
-                  disabled={loading || selectedBinsForArchive.length === 0}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {isArchiveView ? (
-                      <>
-                        <path d="M3 9v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
-                        <path d="M21 9l-9-6-9 6"/>
-                        <path d="M12 3v12"/>
-                      </>
-                    ) : (
-                      <>
-                        <polyline points="21 8 21 21 3 21 3 8"/>
-                        <rect x="1" y="3" width="22" height="5"/>
-                        <line x1="10" y1="12" x2="14" y2="12"/>
-                      </>
-                    )}
-                  </svg>
-                  {isArchiveView ? `Unarchive (${selectedBinsForArchive.length})` : `Archive (${selectedBinsForArchive.length})`}
-                </button>
-              </div>
-              {/* Add Bin button as second item (hidden in archive view) */}
-              {!isArchiveView && (
-                <button
-                  className="bin-search-dropdown-item bin-search-add-item"
-                  onClick={() => {
-                    setShowAddBinModal(true);
-                    setIsBinDropdownOpen(false);
-                  }}
-                >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                >
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-                Add Bin
-              </button>
-              )}
-              {(() => {
-                // Filter bins based on search term (bin number only)
-                const filteredBins = bins.filter(bin => {
-                  if (!binSearchTerm.trim()) return true;
-                  // Extract number from bin name (e.g., "Bin 6" -> "6")
-                  const binNumber = bin.name.replace(/[^0-9]/g, '');
-                  return binNumber.includes(binSearchTerm.trim());
-                });
-
-                // Check if all filtered bins are selected
-                const allFilteredSelected = filteredBins.length > 0 && filteredBins.every(bin => selectedBinsForArchive.includes(bin.id));
-                const someFilteredSelected = filteredBins.some(bin => selectedBinsForArchive.includes(bin.id));
-
-                if (filteredBins.length === 0) {
-                  return (
-                    <>
-                      {/* Select All button - appears when at least one checkbox is selected */}
-                      {selectedBinsForArchive.length > 0 && (
-                        <button
-                          className="bin-search-dropdown-item bin-search-select-all-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBinsForArchive([]);
-                          }}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                          >
-                            <polyline points="9 11 12 14 22 4"/>
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                          </svg>
-                          Deselect All
-                        </button>
-                      )}
-                      <div className="bin-search-dropdown-item bin-search-empty">
-                        {bins.length === 0 ? 'No bins available' : 'No bins found'}
-                      </div>
-                    </>
-                  );
-                }
-
-                return (
-                  <>
-                    {/* Select All button - appears when at least one checkbox is selected */}
-                    {selectedBinsForArchive.length > 0 && (
-                      <button
-                        className="bin-search-dropdown-item bin-search-select-all-item"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (allFilteredSelected) {
-                            // Deselect all filtered bins
-                            setSelectedBinsForArchive(prev => prev.filter(id => !filteredBins.some(b => b.id === id)));
-                          } else {
-                            // Select all filtered bins
-                            const filteredBinIds = filteredBins.map(b => b.id);
-                            setSelectedBinsForArchive(prev => {
-                              const newSelection = [...prev];
-                              filteredBinIds.forEach(id => {
-                                if (!newSelection.includes(id)) {
-                                  newSelection.push(id);
-                                }
-                              });
-                              return newSelection;
-                            });
-                          }
-                        }}
-                      >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{ marginRight: '8px', verticalAlign: 'middle' }}
-                        >
-                          {allFilteredSelected ? (
-                            <>
-                              <polyline points="9 11 12 14 22 4"/>
-                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                            </>
-                          ) : (
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          )}
-                        </svg>
-                        {allFilteredSelected ? 'Deselect All' : 'Select All'}
-                      </button>
-                    )}
-                    {filteredBins.map((bin) => (
-                        <div
-                          key={bin.id}
-                          className="bin-search-dropdown-item bin-search-item-with-checkbox"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedBinsForArchive.includes(bin.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              if (e.target.checked) {
-                                setSelectedBinsForArchive(prev => [...prev, bin.id]);
-                              } else {
-                                setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bin-checkbox"
-                          />
-                          <span className="bin-name-text">{bin.name}</span>
-                        </div>
-                      ))}
-                  </>
-                );
-              })()}
-            </div>
-          )}
+        )}
+        </div>
         </div>
       </div>
+
+        {showArchiveCheckboxesOnCards && (
+          <div className="bin-select-all-row bin-select-all-below-search">
+            <button
+              type="button"
+              className="bin-select-all-btn"
+              onClick={() => {
+                const ids = displayBins.map(b => b.id);
+                setSelectedBinsForArchive(prev => {
+                  const next = new Set(prev);
+                  ids.forEach(id => next.add(id));
+                  return [...next];
+                });
+              }}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="bin-unselect-all-btn"
+              onClick={() => setSelectedBinsForArchive([])}
+            >
+              Unselect all
+            </button>
+            {selectedBinsForArchive.length > 0 && (
+              <div className="bin-selected-summary bin-selected-summary-inline">
+                <span className="bin-selected-count">
+                  {selectedBinsForArchive.length} bin{selectedBinsForArchive.length !== 1 ? 's' : ''} selected:
+                </span>
+                <span className="bin-selected-names">
+                  {bins
+                    .filter(b => selectedBinsForArchive.includes(b.id))
+                    .map(b => b.name)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
       {/* Bin List Cards - Clickable to view details */}
       <div className="bin-list-cards">
@@ -1585,6 +1532,16 @@ const handleAddBin = async (e) => {
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
             assignedPosition="header"
+            showArchiveCheckbox={showArchiveCheckboxesOnCards}
+            isSelectedForArchive={selectedBinsForArchive.includes(bin.id)}
+            onArchiveCheckboxChange={(e) => {
+              e.stopPropagation();
+              if (e.target.checked) {
+                setSelectedBinsForArchive(prev => [...prev, bin.id]);
+              } else {
+                setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
+              }
+            }}
           />
         ))}
       </div>

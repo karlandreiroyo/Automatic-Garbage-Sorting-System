@@ -11,6 +11,8 @@ import { supabase } from '../supabaseClient';
 import BinListCard from '../components/BinListCard';
 import './admincss/binMonitoring.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
 /**
@@ -32,7 +34,7 @@ const formatLastCollection = (isoString) => {
   try {
     const d = new Date(isoString);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   } catch {
     return '—';
   }
@@ -55,14 +57,9 @@ const TrashIcon = () => (
 );
 
 const RecycleIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-    <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/>
-    <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/>
-    <path d="m14 5 2.39 4.143"/>
-    <path d="M8.293 13.53 11 19"/>
-    <path d="M19.324 11.06 14 5"/>
-    <path d="m3.727 6.465 1.272-2.119a1.84 1.84 0 0 1 1.565-.891H11.25"/>
-    <path d="m14 5-2.707 4.53"/>
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
   </svg>
 );
 
@@ -185,7 +182,7 @@ const BinDetailCard = ({ bin, onDrain }) => {
           </div>
             </div>
           <div className="meta-info">
-            <div className="meta-row">
+            <div className="meta-row meta-row-stacked">
               <span className="meta-label">Last Collection</span>
               <strong className="meta-val">{bin.lastCollection}</strong>
             </div>
@@ -209,8 +206,7 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [selectedBinId, setSelectedBinId] = useState(null);
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
-  // State for Search Bin dropdown
-  const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
+  // selectedBinsForArchive kept for filter logic (admin: no dropdown, so always show all bins)
   const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
   const [binSearchTerm, setBinSearchTerm] = useState('');
   const [isArchiveView, setIsArchiveView] = useState(false);
@@ -223,9 +219,10 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State for Add Bin modal (kept for code; no button to open in admin)
   const [showAddBinModal, setShowAddBinModal] = useState(false);
   const [binFormData, setBinFormData] = useState({
-  location: '',
-  assigned_collector_id: ''
-});
+    location: '',
+    assigned_collector_id: '',
+    device_id: ''
+  });
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -235,6 +232,9 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('Alert');
+  // Unassign collector confirmation
+  const [showUnassignConfirmModal, setShowUnassignConfirmModal] = useState(false);
+  const [binToUnassign, setBinToUnassign] = useState(null);
 
   // Collection history modal (Recent button on list view) and inline section (Recent on detail view)
   const [showCollectionHistoryModal, setShowCollectionHistoryModal] = useState(false);
@@ -262,6 +262,8 @@ const fetchCollectors = async () => {
 
   // State for list view bins, each with its own independent category bins
 const [bins, setBins] = useState([]);
+const binsRef = React.useRef(bins);
+binsRef.current = bins;
 const [collectors, setCollectors] = useState([]);
 
   const showSuccessNotification = (message) => {
@@ -300,19 +302,29 @@ const [collectors, setCollectors] = useState([]);
     setLoadingCollectionHistory(true);
     setCollectionHistoryItems([]);
     try {
-      let query = supabase
-        .from('waste_items')
-        .select('id, category, processing_time, created_at')
-        .eq('bin_id', binToUse.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      const params = new URLSearchParams({ bin_id: String(binToUse.id) });
       if (categoryLabel) {
         const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
-        query = query.eq('category', dbCategory);
+        params.set('category', dbCategory);
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      setCollectionHistoryItems(data || []);
+      const res = await fetch(`${API_BASE}/api/admin/recorded-items?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error('Recorded items API error:', json.message || res.statusText);
+        setCollectionHistoryItems([]);
+        setLoadingCollectionHistory(false);
+        return;
+      }
+      setCollectionHistoryItems(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       console.error('Error fetching collection history:', err);
       setCollectionHistoryItems([]);
@@ -360,16 +372,16 @@ const [collectors, setCollectors] = useState([]);
   fetchCollectors();
   
   const interval = setInterval(() => {
-    updateBinFillLevels();
+    updateBinFillLevelsFromWasteItems();
   }, 2000);
 
   return () => clearInterval(interval);
 }, [isArchiveView]);
 
-  // Reset to page 1 when filter selection (Search Bin checkboxes) changes
+  // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBinsForArchive]);
+  }, [selectedBinsForArchive, binSearchTerm]);
 
   /**
    * Fetches bin data from Supabase database
@@ -449,6 +461,7 @@ const fetchBinData = async () => {
       }));
       
       setBins(updatedBins);
+      updateBinFillLevelsFromWasteItems(updatedBins);
     } else {
       // No bins in database
       setBins([]);
@@ -467,36 +480,74 @@ const fetchBinData = async () => {
    */
   // Then in your updateBinFillLevels function, update this part:
 
-const updateBinFillLevels = () => {
-  setBins(prevBins =>
-    prevBins.map(bin => {
-      const updatedCategoryBins = bin.categoryBins.map(catBin => {
-        if (catBin.fillLevel > 0) {
-          const decreaseAmount = 0.1 + (Math.random() * 0.2);
-          const newCatFillLevel = Math.max(0, catBin.fillLevel - decreaseAmount);
-          // Round to nearest 10
-          return {
-            ...catBin,
-            fillLevel: roundToTen(newCatFillLevel)
-          };
-        }
-        return {
-          ...catBin,
-          fillLevel: 0
-        };
+const ITEMS_FOR_FULL_BIN = 50;   // 50 waste items = 100% fill level
+const ITEMS_FOR_FULL_CATEGORY = 20; // 20 items per category = 100%
+
+/** Normalize waste_items category to our category bin key */
+const normalizeCategory = (cat) => {
+  if (!cat) return 'Unsorted';
+  const s = String(cat).toLowerCase();
+  if (s.includes('bio') && !s.includes('non')) return 'Biodegradable';
+  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
+  if (s.includes('recycl')) return 'Recyclable';
+  return 'Unsorted';
+};
+
+/** Fetch waste_items counts per bin and update fill levels from real data */
+const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
+  const currentBins = binsOverride ?? binsRef.current;
+  const binIds = (currentBins || []).map(b => b.id);
+  if (binIds.length === 0) return;
+  try {
+    const { data, error } = await supabase
+      .from('waste_items')
+      .select('bin_id, category, created_at')
+      .in('bin_id', binIds);
+
+    if (error) {
+      console.warn('Error fetching waste_items for fill levels:', error);
+      return;
+    }
+    const byBin = {};
+    binIds.forEach(id => {
+      byBin[id] = { total: 0, byCategory: { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 }, lastAt: null };
+    });
+    (data || []).forEach(item => {
+      const bid = item.bin_id;
+      if (byBin[bid]) {
+        byBin[bid].total++;
+        const key = normalizeCategory(item.category);
+        if (byBin[bid].byCategory[key] !== undefined) byBin[bid].byCategory[key]++;
+        const ts = item.created_at ? new Date(item.created_at).getTime() : 0;
+        if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
+      }
+    });
+    const merged = (currentBins || []).map(bin => {
+      const stats = byBin[bin.id] || { total: 0, byCategory: {}, lastAt: null };
+      const mainFill = Math.min(100, Math.round((stats.total / ITEMS_FOR_FULL_BIN) * 100));
+      const categoryMap = {
+        'Biodegradable': stats.byCategory.Biodegradable || 0,
+        'Non Biodegradable': stats.byCategory['Non Biodegradable'] || 0,
+        Recyclable: stats.byCategory.Recyclable || 0,
+        Unsorted: stats.byCategory.Unsorted || 0
+      };
+      const lastUpdateStr = stats.lastAt ? formatLastCollection(new Date(stats.lastAt).toISOString()) : bin.lastUpdate;
+      const updatedCategoryBins = bin.categoryBins.map(cb => {
+        const count = categoryMap[cb.category] || 0;
+        const catFill = Math.min(100, Math.round((count / ITEMS_FOR_FULL_CATEGORY) * 100));
+        return { ...cb, fillLevel: roundToTen(catFill) };
       });
-
-      const maxFillLevel = updatedCategoryBins.length > 0
-        ? Math.max(...updatedCategoryBins.map(cb => cb.fillLevel))
-        : bin.fillLevel;
-
       return {
         ...bin,
-        fillLevel: roundToTen(maxFillLevel), // Round to nearest 10
+        fillLevel: roundToTen(mainFill),
+        lastUpdate: lastUpdateStr,
         categoryBins: updatedCategoryBins
       };
-    })
-  );
+    });
+    setBins(merged);
+  } catch (err) {
+    console.warn('updateBinFillLevelsFromWasteItems:', err);
+  }
 };
 
   /**
@@ -511,6 +562,8 @@ const updateBinFillLevels = () => {
     } else {
       setSelectedBinId(bin.id);
       setView('detail');
+      setShowCollectionHistoryInline(true);
+      openCollectionHistory(bin, null, true);
     }
   };
 
@@ -529,17 +582,16 @@ const updateBinFillLevels = () => {
    */
   const handleDrain = async (categoryBinId) => {
     try {
-      // Update in Supabase if you have a bins table (for category bins)
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', categoryBinId);
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 means table doesn't exist, which is okay for now
-        console.warn('Bins table may not exist:', error);
+      const match = categoryBinId?.match(/^(bio|non-bio|recycle|unsorted)-(\d+)$/i);
+      const physicalBinId = match ? parseInt(match[2], 10) : null;
+      const catKey = match ? { bio: 'Biodegradable', 'non-bio': 'Non Biodegradable', recycle: 'Recyclable', unsorted: 'Unsorted' }[match[1].toLowerCase()] : null;
+      if (physicalBinId && catKey) {
+        const variants = catKey === 'Non Biodegradable' ? ['Non Biodegradable', 'Non-Bio'] : catKey === 'Recyclable' ? ['Recyclable', 'Recycle'] : [catKey];
+        await supabase.from('waste_items').delete().eq('bin_id', physicalBinId).in('category', variants);
       }
-
+      if (selectedBinId) {
+        await supabase.from('bins').update({ last_update: new Date().toISOString() }).eq('id', selectedBinId);
+      }
       const formattedNow = formatLastCollection(new Date().toISOString());
       if (selectedBinId) {
         setBins(prevBins =>
@@ -588,16 +640,8 @@ const updateBinFillLevels = () => {
    */
   const handleDrainListBin = async (binId) => {
     try {
-      // Update in Supabase if you have a bins table
-      const { error } = await supabase
-        .from('bins')
-        .update({ fill_level: 0, last_update: new Date().toISOString() })
-        .eq('id', binId);
-
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Bins table may not exist:', error);
-      }
-
+      await supabase.from('waste_items').delete().eq('bin_id', binId);
+      await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', binId);
       // Update the bin and all its category bins
       const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
@@ -644,6 +688,46 @@ await supabase.from('activity_logs').insert([{
 }]);
   };
 
+  const handleUnassignBin = (bin, e) => {
+    if (e) e.stopPropagation();
+    if (!bin?.id || !bin.assigned_collector_id) return;
+    setBinToUnassign(bin);
+    setShowUnassignConfirmModal(true);
+  };
+
+  const confirmUnassignBin = async () => {
+    const bin = binToUnassign;
+    if (!bin?.id) {
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('bins')
+        .update({ assigned_collector_id: null, assigned_at: null })
+        .eq('id', bin.id);
+      if (error) throw error;
+      setBins(prevBins =>
+        prevBins.map(b =>
+          b.id === bin.id
+            ? { ...b, assigned_collector_id: null, assigned_collector_name: 'Unassigned' }
+            : b
+        )
+      );
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+      showSuccessNotification('Collector unassigned from bin.');
+    } catch (err) {
+      console.error('Error unassigning bin:', err);
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Failed to unassign bin.');
+      setShowAlertModal(true);
+      setShowUnassignConfirmModal(false);
+      setBinToUnassign(null);
+    }
+  };
+
   /**
    * Shows the drain all confirmation modal
    * Called when user clicks "Drain All" button
@@ -664,23 +748,8 @@ await supabase.from('activity_logs').insert([{
     if (!selectedBinId) return;
 
     try {
-      // Update all category bins for the selected bin in Supabase
-      const selectedBin = bins.find(b => b.id === selectedBinId);
-      if (selectedBin) {
-        const categoryBinIds = selectedBin.categoryBins.map(cb => cb.id);
-        for (const catBinId of categoryBinIds) {
-          const { error } = await supabase
-            .from('bins')
-            .update({ fill_level: 0, last_update: new Date().toISOString() })
-            .eq('id', catBinId);
-
-          if (error && error.code !== 'PGRST116') {
-            // PGRST116 means table doesn't exist, which is okay for now
-            console.warn('Bins table may not exist:', error);
-          }
-        }
-      }
-
+      await supabase.from('waste_items').delete().eq('bin_id', selectedBinId);
+      await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', selectedBinId);
       const formattedNow = formatLastCollection(new Date().toISOString());
       setBins(prevBins =>
         prevBins.map(bin =>
@@ -698,6 +767,12 @@ await supabase.from('activity_logs').insert([{
         )
       );
 
+      const selectedBin = bins.find(b => b.id === selectedBinId);
+      await supabase.from('activity_logs').insert([{
+        activity_type: 'BIN_DRAINED_ALL',
+        description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
+        bin_id: selectedBinId
+      }]);
       setShowDrainAllModal(false);
     } catch (error) {
       console.error('Error draining all category bins:', error);
@@ -719,15 +794,6 @@ await supabase.from('activity_logs').insert([{
       );
       setShowDrainAllModal(false);
     }
-
-      // After closing the modal, add:
-      const selectedBin = bins.find(b => b.id === selectedBinId);
-        await supabase.from('activity_logs').insert([{
-          activity_type: 'BIN_DRAINED_ALL',
-          description: `Drained all category bins for ${selectedBin?.name || 'Bin'}`,
-          bin_id: selectedBinId
-      }]);
-
   };
 
   /**
@@ -818,7 +884,7 @@ await supabase.from('activity_logs').insert([{
         <div className="bin-monitoring-header">
           <div className="header-left-detail">
             <h1 className="bin-name-header">{selectedBin?.name || 'BIN'}</h1>
-            <p>Monitor bin fill levels</p>
+            <p>Monitor bin fill levels {selectedBin?.id != null && `· Bin ID: ${selectedBin.id}`}</p>
           </div>
           <div className="header-actions">
             <button
@@ -849,17 +915,17 @@ await supabase.from('activity_logs').insert([{
           ))}
         </div>
 
-        {/* Collection History section (shown on page when Recent is clicked) */}
+        {/* Recorded Items / Collection History (shown when bin is clicked) */}
         {showCollectionHistoryInline && collectionHistoryBin && (
           <div className="collection-history-inline">
             <div className="collection-history-inline-header">
-              <h3>Collection History – {collectionHistoryBin.name}{collectionHistoryCategory ? ` (${collectionHistoryCategory})` : ''}</h3>
+              <h3>Recorded Items – {collectionHistoryBin.name}{collectionHistoryCategory ? ` (${collectionHistoryCategory})` : ''}</h3>
               <button type="button" className="collection-history-inline-close" onClick={() => setShowCollectionHistoryInline(false)} aria-label="Hide collection history">×</button>
             </div>
             {loadingCollectionHistory ? (
               <div className="collection-history-inline-loading">Loading collection history...</div>
             ) : collectionHistoryItems.length === 0 ? (
-              <div className="collection-history-inline-empty">No collection history for this bin yet.</div>
+              <div className="collection-history-inline-empty">No items recorded in this bin yet.</div>
             ) : (
               <div className="collection-history-inline-list-wrap">
                 <ul className="collection-history-inline-list">
@@ -883,13 +949,24 @@ await supabase.from('activity_logs').insert([{
     );
   }
 
-  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all
-  const displayBins = selectedBinsForArchive.length > 0
+  // When checkboxes in Search Bin are selected, show only those bins; when none selected, show all. Then filter by search (multiple bin numbers e.g. "4, 9, 10").
+  const binsBySelection = selectedBinsForArchive.length > 0
     ? bins.filter(bin => selectedBinsForArchive.includes(bin.id))
     : bins;
+  const searchTerms = binSearchTerm
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(s => /^\d+$/.test(s));
+  const displayBins = searchTerms.length === 0
+    ? binsBySelection
+    : binsBySelection.filter(bin => {
+        const binNumber = (bin.name || '').replace(/[^0-9]/g, '');
+        const binNum = binNumber ? parseInt(binNumber, 10) : NaN;
+        if (Number.isNaN(binNum)) return false;
+        return searchTerms.some(term => binNum === parseInt(term, 10));
+      });
 
-  // Calculate pagination
-  const totalPages = Math.ceil(displayBins.length / binsPerPage);
+  const totalPages = Math.max(1, Math.ceil(displayBins.length / binsPerPage));
   const indexOfLastBin = currentPage * binsPerPage;
   const indexOfFirstBin = indexOfLastBin - binsPerPage;
   const currentBins = displayBins.slice(indexOfFirstBin, indexOfLastBin);
@@ -944,17 +1021,21 @@ const handleAddBin = async (e) => {
       : 1;
     const newBinName = `Bin ${nextBinNumber}`;
 
-    // Insert into database
+    // Insert into database (device_id links bin to hardware)
+    const insertPayload = {
+      name: newBinName,
+      location: binFormData.location.trim(),
+      capacity: '20kg',
+      assigned_collector_id: parseInt(binFormData.assigned_collector_id),
+      assigned_at: new Date().toISOString(),
+      system_power: 100,
+      status: 'ACTIVE'
+    };
+    if (binFormData.device_id?.trim()) insertPayload.device_id = binFormData.device_id.trim();
+
     const { data: newBinData, error } = await supabase
       .from('bins')
-      .insert([{
-        name: newBinName,
-        location: binFormData.location.trim(),
-        capacity: '20kg', // Default capacity
-        assigned_collector_id: parseInt(binFormData.assigned_collector_id),
-        system_power: 100,
-        status: 'ACTIVE'
-      }])
+      .insert([insertPayload])
       .select(`
         *,
         assigned_collector:users!bins_assigned_collector_id_fkey(
@@ -1035,7 +1116,8 @@ const handleAddBin = async (e) => {
     // Reset form
     setBinFormData({
       location: '',
-      assigned_collector_id: ''
+      assigned_collector_id: '',
+      device_id: ''
     });
 
     // Close modal
@@ -1103,6 +1185,18 @@ const handleAddBin = async (e) => {
         ))}
       </select>
     </div>
+
+    <div className="form-group">
+      <label>Device ID (optional)</label>
+      <input
+        type="text"
+        name="device_id"
+        value={binFormData.device_id}
+        onChange={handleBinInputChange}
+        placeholder="e.g., raspberry-pi-1 or arduino-com7"
+      />
+      <span className="form-hint">Links this bin to hardware. Hardware sends this ID so detections go to this bin.</span>
+    </div>
   </div>
   
   <div className="modal-footer">
@@ -1118,90 +1212,70 @@ const handleAddBin = async (e) => {
         </div>
       )}
 
-      {/* List View Header - Search Bin dropdown */}
+      {/* Unassign collector confirmation modal */}
+      {showUnassignConfirmModal && binToUnassign && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <div className="modal-icon-wrapper">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c62828" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+            </div>
+            <h3>Unassign collector?</h3>
+            <p>
+              Are you sure you want to unassign <strong>{binToUnassign.assigned_collector_name || 'the collector'}</strong> from <strong>{binToUnassign.name || 'this bin'}</strong>? The bin will become unassigned.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-modal btn-cancel" onClick={() => { setShowUnassignConfirmModal(false); setBinToUnassign(null); }}>
+                Cancel
+              </button>
+              <button className="btn-modal btn-confirm" onClick={confirmUnassignBin}>
+                Yes, unassign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* List View Header - title left, search + Add Bin right (same layout as superadmin) */}
       <div className="bin-monitoring-header">
         <div>
           <h1>{isArchiveView ? 'Archive Bins' : 'Bin Monitoring'}</h1>
           <p>{isArchiveView ? 'View archived bins' : 'Monitor bin fill levels'}</p>
         </div>
-        <div className="bin-search-dropdown-wrapper">
-          <button
-            className="add-bin-header-button"
-            onClick={() => {
-              setIsBinDropdownOpen((prev) => {
-                if (!prev) return true;
-                setBinSearchTerm('');
-                return false;
-              });
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 8h16" />
-              <path d="M4 16h16" />
-              <path d="M10 12h10" />
-            </svg>
-            Search Bin
-            <span className="bin-search-caret">▾</span>
-          </button>
-
-          {isBinDropdownOpen && (
-            <div className="bin-search-dropdown">
-              <div className="bin-search-input-wrapper">
-                <div className="bin-search-input-inner">
-                  <input
-                    type="text"
-                    className="bin-search-input"
-                    placeholder="Search Bin #"
-                    value={binSearchTerm}
-                    onChange={(e) => setBinSearchTerm(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                </div>
+        <div className="bin-header-right-column">
+          <div className="bin-search-and-archive-row bin-search-and-archive-in-header">
+            <div className="bin-search-bar-above-cards">
+              <div className="bin-search-input-inner">
+                <input
+                  type="text"
+                  className="bin-search-input"
+                  placeholder="Search by bin # (e.g. 4, 9, 10)"
+                  value={binSearchTerm}
+                  onChange={(e) => setBinSearchTerm(e.target.value)}
+                  aria-label="Search bins"
+                />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="bin-search-icon">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
               </div>
-              {(() => {
-                const filteredBins = bins.filter(bin => {
-                  if (!binSearchTerm.trim()) return true;
-                  const binNumber = bin.name.replace(/[^0-9]/g, '');
-                  return binNumber.includes(binSearchTerm.trim());
-                });
-
-                if (filteredBins.length === 0) {
-                  return (
-                    <div className="bin-search-dropdown-item bin-search-empty">
-                      {bins.length === 0 ? 'No bins available' : 'No bins found'}
-                    </div>
-                  );
-                }
-                return (
-                  <>
-                    {filteredBins.map((bin) => (
-                      <div key={bin.id} className="bin-search-dropdown-item bin-search-item-with-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedBinsForArchive.includes(bin.id)}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            if (e.target.checked) {
-                              setSelectedBinsForArchive(prev => [...prev, bin.id]);
-                            } else {
-                              setSelectedBinsForArchive(prev => prev.filter(id => id !== bin.id));
-                            }
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="bin-checkbox"
-                        />
-                        <span className="bin-name-text">{bin.name}</span>
-                      </div>
-                    ))}
-                  </>
-                );
-              })()}
             </div>
-          )}
+            {!isArchiveView && (
+              <button
+                type="button"
+                className="bin-add-bin-button-inline"
+                onClick={() => setShowAddBinModal(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Bin
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1214,6 +1288,8 @@ const handleAddBin = async (e) => {
             onClick={() => handleBinClick(bin)}
             isArchived={isArchiveView}
             assignedPosition="header"
+            showUnassignButton={!isArchiveView}
+            onUnassign={handleUnassignBin}
           />
         ))}
       </div>

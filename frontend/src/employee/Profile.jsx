@@ -48,7 +48,6 @@ const Profile = () => {
   middleName: '',
   lastName: '',
   email: '',
-  phone: '',
   address: {
     region: '',
     province: '',
@@ -114,7 +113,7 @@ const fetchProfile = async () => {
 
     const { data, error } = await supabase
       .from('users')
-      .select('first_name, last_name, middle_name, email, contact, region, province, city_municipality, barangay, street_address')
+      .select('first_name, last_name, middle_name, email, region, province, city_municipality, barangay, street_address')
       .eq('auth_id', user.id)
       .single();
 
@@ -126,7 +125,6 @@ const fetchProfile = async () => {
         middleName: data.middle_name || '',
         lastName: data.last_name || '',
         email: data.email || '',
-        phone: String(data.contact || ''),
         address: {
           region: data.region || '',
           province: data.province || '',
@@ -360,13 +358,13 @@ const validateAddress = () => {
       return;
     }
     const newErrors = {};
-    ['firstName', 'lastName', 'middleName', 'email', 'phone'].forEach(field => {
+    ['firstName', 'lastName', 'middleName', 'email'].forEach(field => {
       const error = validateField(field, formData[field]);
       if (error) newErrors[field] = error;
     });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setTouched({ firstName: true, lastName: true, middleName: true, email: true, phone: true });
+      setTouched({ firstName: true, lastName: true, middleName: true, email: true });
       setAlertTitle('Validation Error');
       setAlertMessage('Please fix all validation errors before saving.');
       setShowAlertModal(true);
@@ -401,7 +399,6 @@ const validateAddress = () => {
           first_name: formData.firstName,
           last_name: formData.lastName,
           middle_name: formData.middleName,
-          contact: formData.phone,
           region: formData.address.region,
           province: formData.address.province,
           city_municipality: formData.address.city_municipality,

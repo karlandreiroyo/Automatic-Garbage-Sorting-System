@@ -1,10 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import philippinesData from '../assets/philippines.json';
 import './AddressDropdowns.css';
 
-const AddressDropdowns = ({ 
-  value = {}, 
-  onChange, 
+const PSGC_BASE = 'https://psgc.cloud/api';
+
+// Fetch and parse JSON with UTF-8 so PSGC names (e.g. Las Piñas, Parañaque) display correctly
+async function fetchPsgcJson(url) {
+  const res = await fetch(url);
+  const buffer = await res.arrayBuffer();
+  const text = new TextDecoder('utf-8').decode(buffer);
+  if (!res.ok) throw new Error('Request failed');
+  return JSON.parse(text);
+}
+async function fetchPsgcJsonOrEmpty(url) {
+  try {
+    return await fetchPsgcJson(url);
+  } catch {
+    return [];
+  }
+}
+
+const AddressDropdowns = ({
+  value = {},
+  onChange,
   disabled = false,
   errors = {},
   touched = {}
@@ -13,12 +30,157 @@ const AddressDropdowns = ({
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
   const [barangays, setBarangays] = useState([]);
-  const [openField, setOpenField] = useState(null); // 'region' | 'province' | 'city_municipality' | 'barangay' | null
+  const [loadingRegions, setLoadingRegions] = useState(true);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingBarangays, setLoadingBarangays] = useState(false);
+  const [apiError, setApiError] = useState(null);
+  const [openField, setOpenField] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Close dropdown when clicking outside; clear search when closing
+  // Fetch regions on mount
+  useEffect(() => {
+    let cancelled = false;
+    setApiError(null);
+    setLoadingRegions(true);
+    fetchPsgcJson(`${PSGC_BASE}/regions`)
+      .then((data) => {
+        if (!cancelled) {
+          setRegions(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setApiError(err.message || 'Failed to load address data');
+          setRegions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRegions(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Fetch provinces when region changes. If region has no provinces (e.g. NCR), use a single "—" option and load cities from region.
+  useEffect(() => {
+    if (!value.region) {
+      setProvinces([]);
+      setCities([]);
+      setBarangays([]);
+      return;
+    }
+    const regionCode = regions.find((r) => r.name === value.region)?.code;
+    if (!regionCode) {
+      setProvinces([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingProvinces(true);
+    setProvinces([]);
+    setCities([]);
+    setBarangays([]);
+    fetchPsgcJsonOrEmpty(`${PSGC_BASE}/regions/${regionCode}/provinces`)
+      .then((data) => {
+        if (cancelled) return;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length > 0) {
+          setProvinces(list);
+        } else {
+          // Region has no provinces (e.g. NCR); check for cities/municipalities under region
+          return fetchPsgcJsonOrEmpty(`${PSGC_BASE}/regions/${regionCode}/cities`)
+            .then((citiesFromRegion) => {
+              if (cancelled) return;
+              const hasRegionLevel = Array.isArray(citiesFromRegion) && citiesFromRegion.length > 0;
+              if (hasRegionLevel) {
+                setProvinces([{ name: '—', code: regionCode, isRegionLevel: true }]);
+              } else {
+                setProvinces([]);
+              }
+            });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setProvinces([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProvinces(false);
+      });
+    return () => { cancelled = true; };
+  }, [value.region, regions]);
+
+  // Fetch cities + municipalities when province changes (or from region when province is "—" for NCR-style regions)
+  useEffect(() => {
+    if (!value.region || !value.province) {
+      setCities([]);
+      setBarangays([]);
+      return;
+    }
+    const selectedProvince = provinces.find((p) => p.name === value.province);
+    const provinceCode = selectedProvince?.code;
+    const isRegionLevel = selectedProvince?.isRegionLevel === true;
+    const regionCode = regions.find((r) => r.name === value.region)?.code;
+    if (!provinceCode && !isRegionLevel) {
+      setCities([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingCities(true);
+    setCities([]);
+    setBarangays([]);
+    const base = isRegionLevel ? `${PSGC_BASE}/regions/${regionCode}` : `${PSGC_BASE}/provinces/${provinceCode}`;
+    const fetchCities = fetchPsgcJsonOrEmpty(`${base}/cities`);
+    const fetchMunicipalities = fetchPsgcJsonOrEmpty(`${base}/municipalities`);
+    Promise.all([fetchCities, fetchMunicipalities]).then(([citiesData, munData]) => {
+        const citiesList = Array.isArray(citiesData) ? citiesData : [];
+        const munList = Array.isArray(munData) ? munData : [];
+        const combined = [...citiesList.map((c) => ({ ...c, type: c.type || 'City' })), ...munList.map((m) => ({ ...m, type: m.type || 'Mun' }))];
+        combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (!cancelled) setCities(combined);
+      })
+      .catch(() => {
+        if (!cancelled) setCities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCities(false);
+      });
+    return () => { cancelled = true; };
+  }, [value.region, value.province, provinces, regions]);
+
+  // Fetch barangays when city/municipality changes
+  useEffect(() => {
+    if (!value.region || !value.province || !value.city_municipality) {
+      setBarangays([]);
+      return;
+    }
+    const selected = cities.find((c) => c.name === value.city_municipality);
+    if (!selected?.code) {
+      setBarangays([]);
+      return;
+    }
+    const isCity = (selected.type || '').toLowerCase() === 'city';
+    const url = isCity
+      ? `${PSGC_BASE}/cities/${selected.code}/barangays`
+      : `${PSGC_BASE}/municipalities/${selected.code}/barangays`;
+    let cancelled = false;
+    setLoadingBarangays(true);
+    setBarangays([]);
+    fetchPsgcJson(url)
+      .then((data) => {
+        if (!cancelled) {
+          setBarangays(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setBarangays([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingBarangays(false);
+      });
+    return () => { cancelled = true; };
+  }, [value.region, value.province, value.city_municipality, cities]);
+
   useEffect(() => {
     if (!openField) return;
     setSearchQuery('');
@@ -32,7 +194,6 @@ const AddressDropdowns = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [openField]);
 
-  // Focus search input when dropdown opens
   useEffect(() => {
     if (openField) {
       const t = setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -40,67 +201,8 @@ const AddressDropdowns = ({
     }
   }, [openField]);
 
-  // Initialize regions on mount
-  useEffect(() => {
-    const regionList = Object.keys(philippinesData).map(key => ({
-      code: key,
-      name: philippinesData[key].region_name
-    }));
-    setRegions(regionList);
-  }, []);
-
-  // Update provinces when region changes
-  useEffect(() => {
-    if (value.region) {
-      const regionData = philippinesData[value.region];
-      if (regionData) {
-        const provinceList = Object.keys(regionData.province_list).map(name => ({
-          name: name
-        }));
-        setProvinces(provinceList);
-      }
-    } else {
-      setProvinces([]);
-      setCities([]);
-      setBarangays([]);
-    }
-  }, [value.region]);
-
-  // Update cities when province changes
-  useEffect(() => {
-    if (value.region && value.province) {
-      const regionData = philippinesData[value.region];
-      if (regionData && regionData.province_list[value.province]) {
-        const cityList = Object.keys(regionData.province_list[value.province].municipality_list).map(name => ({
-          name: name
-        }));
-        setCities(cityList);
-      }
-    } else {
-      setCities([]);
-      setBarangays([]);
-    }
-  }, [value.region, value.province]);
-
-  // Update barangays when city changes
-  useEffect(() => {
-    if (value.region && value.province && value.city_municipality) {
-      const regionData = philippinesData[value.region];
-      if (regionData && 
-          regionData.province_list[value.province] && 
-          regionData.province_list[value.province].municipality_list[value.city_municipality]) {
-        const barangayList = regionData.province_list[value.province].municipality_list[value.city_municipality].barangay_list;
-        setBarangays(barangayList);
-      }
-    } else {
-      setBarangays([]);
-    }
-  }, [value.region, value.province, value.city_municipality]);
-
   const handleChange = (field, selectedValue) => {
     let newValue = { ...value, [field]: selectedValue };
-
-    // Reset dependent fields when parent changes
     if (field === 'region') {
       newValue = { region: selectedValue, province: '', city_municipality: '', barangay: '', street_address: value.street_address || '' };
     } else if (field === 'province') {
@@ -108,7 +210,6 @@ const AddressDropdowns = ({
     } else if (field === 'city_municipality') {
       newValue = { ...value, city_municipality: selectedValue, barangay: '' };
     }
-
     onChange(newValue);
     setOpenField(null);
     setSearchQuery('');
@@ -124,14 +225,24 @@ const AddressDropdowns = ({
     }
   };
 
-  // Custom dropdown with type-to-search; options list stays inside modal
-  const CustomSelect = ({ field, placeholder, options, valueKey, labelKey, value: currentValue, hasError, disabled: fieldDisabled, searchPlaceholder }) => {
+  const CustomSelect = ({
+    field,
+    placeholder,
+    options,
+    valueKey,
+    labelKey,
+    value: currentValue,
+    hasError,
+    disabled: fieldDisabled,
+    searchPlaceholder,
+    loading
+  }) => {
     const isOpen = openField === field;
     const isDisabled = disabled || fieldDisabled;
     const getVal = (o) => (typeof o === 'string' ? o : (o[valueKey] ?? o.name ?? o));
     const getLabel = (o) => (typeof o === 'string' ? o : (o[labelKey] ?? o.name ?? o));
     const displayValue = currentValue
-      ? (options.find(o => getVal(o) === currentValue) ? getLabel(options.find(o => getVal(o) === currentValue)) : currentValue)
+      ? (options.find((o) => getVal(o) === currentValue) ? getLabel(options.find((o) => getVal(o) === currentValue)) : currentValue)
       : '';
     const query = isOpen ? searchQuery : '';
     const filteredOptions = query.trim()
@@ -146,7 +257,9 @@ const AddressDropdowns = ({
           disabled={isDisabled}
           title={displayValue || placeholder}
         >
-          <span className={!displayValue ? 'placeholder' : ''}>{displayValue || placeholder}</span>
+          <span className={!displayValue ? 'placeholder' : ''}>
+            {loading ? 'Loading...' : displayValue || placeholder}
+          </span>
           <span className="address-select-arrow">▾</span>
         </button>
         {isOpen && (
@@ -173,12 +286,7 @@ const AddressDropdowns = ({
                 autoComplete="off"
               />
             </div>
-            <button
-              type="button"
-              className="address-select-option"
-              onClick={() => handleChange(field, '')}
-              role="option"
-            >
+            <button type="button" className="address-select-option" onClick={() => handleChange(field, '')} role="option">
               {placeholder}
             </button>
             {filteredOptions.length > 0 ? (
@@ -198,7 +306,7 @@ const AddressDropdowns = ({
                 );
               })
             ) : (
-              <div className="address-select-no-results">No matches</div>
+              <div className="address-select-no-results">{loading ? 'Loading...' : 'No matches'}</div>
             )}
           </div>
         )}
@@ -208,6 +316,11 @@ const AddressDropdowns = ({
 
   return (
     <div className="address-fields">
+      {apiError && (
+        <div className="address-api-error" role="alert">
+          {apiError}
+        </div>
+      )}
       <div className="form-group">
         <label>Region *</label>
         <CustomSelect
@@ -215,10 +328,11 @@ const AddressDropdowns = ({
           placeholder="Select Region"
           searchPlaceholder="Type region..."
           options={regions}
-          valueKey="code"
+          valueKey="name"
           labelKey="name"
           value={value.region || ''}
           hasError={touched.region && errors.region}
+          loading={loadingRegions}
         />
         {touched.region && errors.region && (
           <span className="error-message">{errors.region}</span>
@@ -237,6 +351,7 @@ const AddressDropdowns = ({
           value={value.province || ''}
           hasError={touched.province && errors.province}
           disabled={disabled || !value.region}
+          loading={loadingProvinces}
         />
         {touched.province && errors.province && (
           <span className="error-message">{errors.province}</span>
@@ -248,12 +363,14 @@ const AddressDropdowns = ({
         <CustomSelect
           field="city_municipality"
           placeholder="Select City/Municipality"
+          searchPlaceholder="Type city or municipality..."
           options={cities}
           valueKey="name"
           labelKey="name"
           value={value.city_municipality || ''}
           hasError={touched.city_municipality && errors.city_municipality}
           disabled={disabled || !value.province}
+          loading={loadingCities}
         />
         {touched.city_municipality && errors.city_municipality && (
           <span className="error-message">{errors.city_municipality}</span>
@@ -272,6 +389,7 @@ const AddressDropdowns = ({
           value={value.barangay || ''}
           hasError={touched.barangay && errors.barangay}
           disabled={disabled || !value.city_municipality}
+          loading={loadingBarangays}
         />
         {touched.barangay && errors.barangay && (
           <span className="error-message">{errors.barangay}</span>

@@ -117,7 +117,7 @@ const Accounts = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', ['ADMIN', 'SUPERADMIN'])
+        .eq('role', 'ADMIN')
         .order('id', { ascending: false });
       
       if (error) throw error;
@@ -240,17 +240,6 @@ const Accounts = () => {
           else if (value.trim().length < 2) error = 'Must be at least 2 characters';
         }
         break;
-      case 'contact':
-        const contactStr = String(value || '');
-        const digitsOnly = contactStr.replace(/[^0-9]/g, '');
-        if (!contactStr.trim()) {
-          error = 'Contact number is required';
-        } else if (digitsOnly.length < 11) {
-          error = `Remaining ${11 - digitsOnly.length} digits required`;
-        } else if (!digitsOnly.startsWith('09')) {
-          error = 'Contact number must start with 09';
-        }
-        break;
       case 'email': {
         const emailVal = value.trim();
         const atCount = (emailVal.match(/@/g) || []).length;
@@ -266,6 +255,8 @@ const Accounts = () => {
           // If there is exactly one @, check for valid domain structure
           if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
             error = 'Email cannot end with @ or a period';
+          } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+            error = 'Use gmail.com for complete domain';
           } else if (!emailRegex.test(emailVal)) {
             error = 'Invalid domain format (e.g., .com)';
           }
@@ -299,6 +290,8 @@ const Accounts = () => {
           } else if (atCount === 1) {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
               error = 'Email cannot end with @ or a period';
+            } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+              error = 'Use gmail.com for complete domain';
             } else if (!emailRegex.test(emailVal)) {
               error = 'Invalid domain format (e.g., .com)';
             }
@@ -461,13 +454,6 @@ const Accounts = () => {
     // Keep names Uppercase and letters only
     if (['first_name', 'last_name', 'middle_name'].includes(name)) {
       finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
-    }
-
-    // Keep Contact logic for "09"
-    if (name === 'contact') {
-      let digits = value.replace(/\D/g, '');
-      if (!digits.startsWith('09')) digits = '09' + digits;
-      finalValue = digits.slice(0, 11);
     }
 
     setEditingUser(prev => ({ ...prev, [name]: finalValue }));
@@ -729,7 +715,7 @@ const handleCancelSave = () => {
   const filteredUsers = users.filter(user => {
     const fullName = getFullName(user).toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
-    const matchesRole = user.role === 'ADMIN' || user.role === 'SUPERADMIN';
+    const matchesRole = user.role === 'ADMIN';
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -957,7 +943,7 @@ const handleCancelSave = () => {
                   {errors.last_name && <span className="error-message">{errors.last_name}</span>}
                 </div>
                 <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name" 
@@ -1080,7 +1066,7 @@ const handleCancelSave = () => {
                   {editErrors.last_name && <span className="error-message">{editErrors.last_name}</span>}
                 </div>
                 <div className={`form-group ${editErrors.middle_name ? 'has-error' : ''}`}>
-                  <label>Middle Name</label>
+                  <label>Middle Name (optional)</label>
                   <input 
                     type="text" 
                     name="middle_name"
