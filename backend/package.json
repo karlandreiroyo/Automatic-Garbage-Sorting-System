@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "esbuild server.js --bundle --platform=node --outfile=dist/app.js"
   },
   "keywords": [
     "password-reset",
@@ -27,3 +28,5 @@
     "nodemon": "^3.0.2"
   }
 }
+
+

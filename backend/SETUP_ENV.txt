@@ -20,3 +20,22 @@ NODE_ENV=development
 
 5. Restart the backend server:
    npm start
+
+---
+DEPLOYMENT (e.g. Railway) — add these so routing works from your deployed frontend:
+
+BACKEND_URL=https://your-backend.railway.app
+   - Public URL of this backend (Railway gives you this).
+   - Used in emails/links and startup logs.
+
+FRONTEND_URL=https://your-frontend.railway.app
+   - Public URL of your frontend (or Vercel/Netlify URL).
+   - Backend allows CORS from this origin and uses it in password-reset links.
+
+CORS_ORIGIN=https://your-frontend.railway.app
+   - Optional. Comma-separated list of allowed origins if you have multiple frontend URLs.
+   - If you set FRONTEND_URL, it is automatically allowed; use CORS_ORIGIN for extra origins.
+
+Frontend: when building for production, set VITE_API_URL to your backend URL so all API calls go to the right place, e.g.:
+   VITE_API_URL=https://your-backend.railway.app npm run build
+   (Or set VITE_API_URL in your frontend host's environment and build there.)
