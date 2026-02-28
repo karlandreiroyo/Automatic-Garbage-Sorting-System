@@ -22,16 +22,29 @@ NODE_ENV=development
    npm start
 
 ---
-EMAIL VERIFICATION (e.g. when using Brave for email) — optional, add to backend/.env:
+EMAIL VERIFICATION — choose one option.
 
+Option A: Brevo (recommended for Railway / Brave)
+   Add to backend/.env:
+
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your_brevo_account_email@example.com
+SMTP_PASS=xkeysib-YOUR_BREVO_API_KEY_HERE
+SMTP_FROM=Your App Name <your_verified_sender@example.com>
+
+   - SMTP_USER = email you use to log in at https://app.brevo.com
+   - SMTP_PASS = your Brevo API key (from Brevo: SMTP & API → API Keys). Paste your key (e.g. xkeysib-...).
+   - SMTP_FROM = use a sender email you verified in Brevo (Sender & Domains).
+
+Option B: Gmail (often blocked on Railway)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_sender_email@gmail.com
 SMTP_PASS=your_app_password
 SMTP_FROM=System Name <your_sender_email@gmail.com>
 
-   - Use your real Gmail (or other SMTP) credentials. For Gmail, use an App Password, not your normal password.
-   - Get the key from Supabase in Brave (or any browser): Dashboard > Settings > API > service_role key.
+   - For Gmail use an App Password. Get Supabase key in Brave: Dashboard → Settings → API → service_role key.
 
 ---
 DEPLOYMENT (e.g. Railway) — add these so routing works from your deployed frontend:

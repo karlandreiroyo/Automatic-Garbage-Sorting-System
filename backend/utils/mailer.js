@@ -14,7 +14,13 @@ function getSmtpConfig() {
   const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM;
 
-  // Check for placeholder values
+  // Check for placeholder values (allow Brevo API keys: xkeysib-...)
+  const passLooksLikePlaceholder = pass && (
+    pass.toLowerCase().includes('your_app_password') ||
+    pass.toLowerCase().includes('your_password') ||
+    pass.toLowerCase().includes('your_smtp_pass')
+  ) && !pass.startsWith('xkeysib-');
+
   const hasPlaceholders = 
     !host || 
     !user || 
@@ -26,9 +32,7 @@ function getSmtpConfig() {
     user.toLowerCase().includes('your_email') ||
     user.toLowerCase().includes('your_smtp_user') ||
     user.toLowerCase().includes('@example.com') ||
-    pass.toLowerCase().includes('your_app_password') ||
-    pass.toLowerCase().includes('your_password') ||
-    pass.toLowerCase().includes('your_smtp_pass') ||
+    passLooksLikePlaceholder ||
     from.toLowerCase().includes('your_email') ||
     from.toLowerCase().includes('example.com');
 
@@ -36,7 +40,7 @@ function getSmtpConfig() {
   const userEmailValid = user && validateEmail(user);
   const fromEmailValid = from && (validateEmail(from) || from.includes('<'));
 
-  // Check for common Gmail issues
+  // Common provider checks (Gmail vs Brevo)
   const validationErrors = [];
   if (host && host.includes('gmail.com') && user) {
     if (!user.includes('@gmail.com')) {
@@ -45,6 +49,9 @@ function getSmtpConfig() {
     if (pass && pass.length < 16) {
       validationErrors.push('Gmail App Passwords are 16 characters. Your password seems too short.');
     }
+  }
+  if (host && host.includes('brevo.com') && user && !validateEmail(user)) {
+    validationErrors.push('For Brevo, SMTP_USER must be your Brevo account email');
   }
 
   const enabled = Boolean(host && port && user && pass && from && !hasPlaceholders && userEmailValid);
