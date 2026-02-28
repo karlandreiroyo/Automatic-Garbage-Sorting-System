@@ -46,18 +46,17 @@ const smtpCfg = getSmtpConfig();
 });
 if (smtpCfg.hasPlaceholders) {
   console.warn('\n⚠️  WARNING: SMTP configuration contains placeholder values!');
-  console.warn('⚠️  Email sending will fail until you configure actual SMTP credentials.');
-  console.warn('⚠️  Update backend/.env with your SMTP settings:');
+  console.warn('⚠️  Email sending will fail until you configure actual SMTP credentials in backend/.env.');
+  console.warn('⚠️  When using Brave for email verification, set these in backend/.env:');
   console.warn('⚠️    SMTP_HOST=smtp.gmail.com (or your SMTP server)');
   console.warn('⚠️    SMTP_PORT=587');
   console.warn('⚠️    SMTP_USER=your_sender_email@gmail.com (ONE sender account for all users)');
   console.warn('⚠️    SMTP_PASS=your_app_password');
   console.warn('⚠️    SMTP_FROM="System Name <your_sender_email@gmail.com>"');
-  console.warn('⚠️  Note: Recipient emails are automatically determined from user sessions.');
-  console.warn('⚠️  Verification codes will still be logged to terminal for testing.\n');
+  console.warn('⚠️  Recipient emails are determined from user sessions. Verification codes are also logged to terminal.\n');
 } else if (!smtpCfg.enabled) {
   console.log('\nℹ️  SMTP not configured. Verification codes will be logged to terminal only.');
-  console.log('ℹ️  To enable email sending, configure SMTP in backend/.env');
+  console.log('ℹ️  To enable email sending (e.g. when using Brave for email verification), configure SMTP in backend/.env');
   console.log('ℹ️  One sender account will send emails to all users dynamically.\n');
 } else if (smtpCfg.enabled) {
   // Validate configuration

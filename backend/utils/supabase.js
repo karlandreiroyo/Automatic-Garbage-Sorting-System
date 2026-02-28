@@ -14,7 +14,7 @@ if (!supabaseServiceKey || supabaseServiceKey === 'your_service_role_key_here') 
   console.error('⚠️ The backend needs the service_role key to access the users table.');
   console.error('⚠️ Current value:', supabaseServiceKey || 'NOT SET');
   console.error('⚠️ Get your key from: Supabase Dashboard > Settings > API > service_role key');
-  console.error('⚠️ Update backend/.env file with: SUPABASE_SERVICE_KEY=your_actual_key');
+  console.error('⚠️ In backend/.env set: SUPABASE_SERVICE_KEY=your_actual_key (use Brave or your browser to open Supabase Dashboard)');
   console.error('⚠️ Then restart the server with: npm start');
 }
 
