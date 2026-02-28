@@ -56,7 +56,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
   const navigate = useNavigate();
 
   // Backend API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
   // Check for existing lockout on component mount
   useEffect(() => {

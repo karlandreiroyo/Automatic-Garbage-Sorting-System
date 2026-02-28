@@ -14,7 +14,7 @@ const DecorativeShapes = () => (
 
 
 // Backend API base URL - adjust this to match your backend server
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
 const Forgot = () => {
   const [step, setStep] = useState('forgot'); // forgot | confirm | reset

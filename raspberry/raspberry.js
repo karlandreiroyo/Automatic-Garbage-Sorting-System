@@ -13,7 +13,7 @@
 
 require('dotenv').config();
 
-const API_URL = (process.env.API_URL || 'http://localhost:3001').replace(/\/$/, '');
+const API_URL = (process.env.API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app').replace(/\/$/, '');
 const INTERVAL_MS = parseInt(process.env.INTERVAL_MS || '10000', 10) || 10000; // 10 seconds
 const DEVICE_ID = process.env.DEVICE_ID || 'raspberry-pi-1';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './HardwareStatus.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
 export default function HardwareStatus() {
   const [status, setStatus] = useState({

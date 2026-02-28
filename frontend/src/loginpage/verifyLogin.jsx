@@ -18,7 +18,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
   const [verifying, setVerifying] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
   useEffect(() => {
     const raw = sessionStorage.getItem('pendingLoginUser');

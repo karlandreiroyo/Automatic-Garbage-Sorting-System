@@ -11,7 +11,7 @@ import { supabase } from '../supabaseClient';
 import BinListCard from '../components/BinListCard';
 import './admincss/binMonitoring.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 

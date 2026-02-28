@@ -283,7 +283,7 @@ router.post('/create-employee', async (req, res) => {
         expiresAt
       });
 
-      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const baseUrl = process.env.FRONTEND_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
       secondEmailVerificationResult = await sendSecondEmailVerification({
         to: secondEmailVal,
         primaryEmail: emailVal,

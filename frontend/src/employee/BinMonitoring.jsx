@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import HardwareStatus from "../components/HardwareStatus";
 import "../employee/employeecss/BinMonitoring.css";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://automatic-garbage-sorting-system-production.up.railway.app";
 
 /**
  * Rounds fill level to nearest 10

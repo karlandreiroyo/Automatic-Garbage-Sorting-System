@@ -541,7 +541,7 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
  */
 async function sendSecondEmailVerification({ to, primaryEmail, fullName, verificationToken, baseUrl }) {
   const cfg = getSmtpConfig();
-  const backendUrl = process.env.BACKEND_URL || process.env.API_URL || 'http://localhost:3001';
+  const backendUrl = process.env.BACKEND_URL || process.env.API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
   const verifyLink = `${backendUrl.replace(/\/$/, '')}/api/accounts/verify-second-email?token=${encodeURIComponent(verificationToken)}&email=${encodeURIComponent((to || '').trim().toLowerCase())}`;
 
   if (cfg.hasPlaceholders) {

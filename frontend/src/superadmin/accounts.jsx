@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import AddressDropdowns from '../components/AddressDropdowns';
 import './superadmincss/accounts.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
 
 // --- Icons ---
 const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
@@ -162,7 +162,7 @@ const Accounts = () => {
     setConfirmAction(() => async () => {
       try {
         setLoading(true);
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
         const res = await fetch(`${API_BASE_URL}/api/accounts/user-status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
