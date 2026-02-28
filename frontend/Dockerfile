@@ -20,4 +20,6 @@ RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
 
 ENV PORT=80
+# Set BACKEND_URL to your backend API root (e.g. https://your-backend.up.railway.app) so /api is proxied there
+ENV BACKEND_URL=http://127.0.0.1:3001
 CMD ["/docker-entrypoint.sh"]
