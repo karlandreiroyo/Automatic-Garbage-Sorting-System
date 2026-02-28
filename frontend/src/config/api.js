@@ -16,7 +16,7 @@ export async function parseJsonResponse(response) {
   if (!contentType.includes('application/json')) {
     const text = await response.text();
     if (text.trimStart().startsWith('<')) {
-      throw new Error('Server returned an error page instead of JSON. If deployed on Railway, add SUPABASE_SERVICE_KEY and SMTP variables in your backend service Variables, then redeploy.');
+      throw new Error('Server returned an error page instead of JSON. On Railway: (1) Frontend service: set BACKEND_URL to your backend\'s public URL. (2) Backend service: add SUPABASE_SERVICE_KEY and SMTP variables. See backend/RAILWAY.md. Then redeploy both.');
     }
     throw new Error(text || `Request failed with status ${response.status}`);
   }

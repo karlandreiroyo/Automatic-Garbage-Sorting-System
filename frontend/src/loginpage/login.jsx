@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient.jsx';
-import { parseJsonResponse } from '../config/api';
+import { parseJsonResponse, API_BASE } from '../config/api';
 import './login.css';
 import employeeIcon from '../assets/employee.PNG';
 import adminIcon from '../assets/admin.PNG';
@@ -56,8 +56,8 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
   
   const navigate = useNavigate();
 
-  // Backend API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
+  // Use shared API base (same-origin in prod so nginx can proxy /api to backend)
+  const API_BASE_URL = API_BASE;
 
   // Check for existing lockout on component mount
   useEffect(() => {

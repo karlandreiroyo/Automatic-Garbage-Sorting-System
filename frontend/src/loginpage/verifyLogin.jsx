@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { parseJsonResponse } from '../config/api';
+import { parseJsonResponse, API_BASE } from '../config/api';
 import './login.css';
 
 // Decorative Green Translucent Shapes Component (same as login)
@@ -19,7 +19,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
   const [verifying, setVerifying] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
+  const API_BASE_URL = API_BASE;
 
   useEffect(() => {
     const raw = sessionStorage.getItem('pendingLoginUser');

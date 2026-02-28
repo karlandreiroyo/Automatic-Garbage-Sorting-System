@@ -1,13 +1,30 @@
 # Railway deployment – set these variables
 
-Railway does **not** use your local `backend/.env` file. You must add every variable in the **Railway Dashboard** for the backend to work.
+Railway does **not** use your local `backend/.env` file. Add variables in the **Railway Dashboard** per service.
 
-## Steps
+Your app is at **https://automatic-garbage-sorting-system-production.up.railway.app/** (no localhost). You typically have **two services**: the **frontend** (that URL) and the **backend** (Node, with its own Railway URL). Both need their own variables.
 
-1. Open [Railway Dashboard](https://railway.app/dashboard) and select your project.
-2. Click your **backend** service (the one that runs the Node server).
-3. Go to **Variables** (or **Environment**).
-4. Add these variables (use **Add Variable** or **Raw Editor**):
+---
+
+## 1. Frontend service (nginx) — the one at that URL
+
+1. In Railway, open the service that serves **https://automatic-garbage-sorting-system-production.up.railway.app/** (your frontend).
+2. Go to **Variables** and add:
+
+| Variable | Value |
+|----------|--------|
+| `BACKEND_URL` | Your **backend** service's public URL from Railway (no trailing slash), e.g. `https://automatic-garbage-sorting-system-production-backend.up.railway.app` or whatever URL Railway shows for the backend service. |
+
+Without this, nginx proxies `/api` to localhost and you get error pages (HTML) instead of JSON. Find the backend URL in Railway: open the backend service → **Settings** → **Networking** / **Generate domain**.
+
+3. Redeploy the frontend after adding `BACKEND_URL`.
+
+---
+
+## 2. Backend service (Node)
+
+1. Open your **backend** service in Railway (the one that runs the Node server, not the nginx one).
+2. Go to **Variables** and add:
 
 ### Required for login and verification
 
@@ -29,9 +46,9 @@ Railway does **not** use your local `backend/.env` file. You must add every vari
 
 | Variable | Example |
 |----------|---------|
-| `FRONTEND_URL` | `https://your-frontend.up.railway.app` |
-| `BACKEND_URL` | `https://your-backend.up.railway.app` |
+| `FRONTEND_URL` | `https://automatic-garbage-sorting-system-production.up.railway.app` |
+| `BACKEND_URL` | Your backend’s Railway URL (used in emails/links) |
 
-5. **Redeploy** the backend after adding or changing variables (e.g. use **Redeploy** from the service menu).
+3. **Redeploy** the backend after adding or changing variables.
 
-Until `SUPABASE_SERVICE_KEY` and (for email) the SMTP variables are set in Railway, the backend will log warnings and login/verification may return errors or HTML instead of JSON.
+Until `SUPABASE_SERVICE_KEY` and (for email) the SMTP variables are set, the backend will log warnings and login/verification may fail or return errors.

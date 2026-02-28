@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE } from '../config/api';
 import './forgot.css';
 
 // Decorative Green Translucent Shapes Component
@@ -13,8 +14,8 @@ const DecorativeShapes = () => (
 );
 
 
-// Backend API base URL - adjust this to match your backend server
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
+// Use shared API base (same-origin in prod so nginx can proxy /api to backend)
+const API_BASE_URL = API_BASE;
 
 const Forgot = () => {
   const [step, setStep] = useState('forgot'); // forgot | confirm | reset
