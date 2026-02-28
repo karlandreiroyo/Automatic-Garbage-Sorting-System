@@ -41,8 +41,13 @@ const smtpCfg = getSmtpConfig();
   if (!smtpCheck.ok && smtpCfg.enabled) {
     console.warn('\n⚠️  WARNING: SMTP connection test failed!');
     console.warn(`⚠️  ${smtpCheck.message}`);
-    console.warn('⚠️  Email sending will fail. Check your SMTP configuration in backend/.env');
-    console.warn('⚠️  If your App Password was removed, generate a new one at: https://myaccount.google.com/apppasswords\n');
+    console.warn('⚠️  Email sending may still work when sending. Check SMTP in Railway Variables or backend/.env');
+    const host = (smtpCfg.host || '').toLowerCase();
+    if (host.includes('brevo.com')) {
+      console.warn('⚠️  Brevo: use SMTP_USER = Brevo login email, SMTP_PASS = API key from Brevo → SMTP & API → API Keys\n');
+    } else {
+      console.warn('⚠️  Gmail: use an App Password from https://myaccount.google.com/apppasswords\n');
+    }
   } else if (smtpCfg.enabled && smtpCheck.ok) {
     console.log('✅ SMTP connection verified successfully\n');
   }
@@ -104,9 +109,9 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
 });
 
-// Arduino serial: only init when ARDUINO_PORT is set (skip on Railway to avoid COM3 error)
+// Arduino serial: only init when ARDUINO_PORT is set and not in production (no COM ports on Railway/cloud)
 try {
-  if (process.env.ARDUINO_PORT) {
+  if (process.env.ARDUINO_PORT && process.env.NODE_ENV !== 'production') {
     const { initHardware } = require('./utils/hardwareStore');
     initHardware();
   }

@@ -6,6 +6,23 @@ Your app is at **https://automatic-garbage-sorting-system-production.up.railway.
 
 ---
 
+## Quick fix for “Server returned an error page instead of JSON”
+
+1. **Find your backend URL**  
+   In Railway → open the **backend** service (the one whose deploy logs say “Backend server running on port 8080”) → **Settings** → **Networking** (or **Generate domain**). Copy the full URL (e.g. `https://automatic-garbage-sorting-system-production-backend.up.railway.app`).
+
+2. **Set BACKEND_URL on the frontend**  
+   Open the **frontend** service (the one that serves the login page at the app URL above) → **Variables** → add **`BACKEND_URL`** = that backend URL (no trailing slash). Save.
+
+3. **Redeploy the frontend**  
+   Use **Redeploy** (or push a new commit) so the frontend container restarts with the new variable. Then try logging in again.
+
+4. **Check the backend**  
+   In the browser, open: `https://<your-backend-url>/api/health`  
+   You should see JSON like `{"ok":true}`. If you see HTML or an error, the backend service needs `SUPABASE_SERVICE_KEY` and SMTP variables (see section 2 below), then redeploy the backend.
+
+---
+
 ## 1. Frontend service (nginx) — the one at that URL
 
 1. In Railway, open the service that serves **https://automatic-garbage-sorting-system-production.up.railway.app/** (your frontend).
@@ -50,5 +67,7 @@ Without this, nginx proxies `/api` to localhost and you get error pages (HTML) i
 | `BACKEND_URL` | Your backend’s Railway URL (used in emails/links) |
 
 3. **Redeploy** the backend after adding or changing variables.
+
+**Do not set `ARDUINO_PORT`** on the backend service in Railway. Serial/Arduino is only used when running locally; in production the backend skips opening COM ports to avoid "No such file or directory" errors.
 
 Until `SUPABASE_SERVICE_KEY` and (for email) the SMTP variables are set, the backend will log warnings and login/verification may fail or return errors.

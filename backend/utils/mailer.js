@@ -80,10 +80,12 @@ function createTransport() {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.port === 465,
-    auth: { 
-      user: cfg.user.trim(), 
-      pass: cleanPass 
+    auth: {
+      user: cfg.user.trim(),
+      pass: cleanPass
     },
+    connectionTimeout: 20000,
+    greetingTimeout: 10000,
     tls: {
       rejectUnauthorized: false // Allow self-signed certificates
     }
