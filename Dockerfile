@@ -6,26 +6,17 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Build backend and run both
+# Backend
 FROM node:20-alpine
-
 WORKDIR /app
 
-# Backend
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY backend/ ./
 
-# Frontend static files (from build stage)
-COPY --from=frontend-build /app/dist /usr/share/nginx/html
+# Copy frontend build into backend
+COPY --from=frontend-build /app/dist ./dist
 
-# Install nginx and create start script (nginx in background, node in foreground)
-RUN apk add --no-cache nginx && \
-    echo '#!/bin/sh' > /start.sh && \
-    echo 'nginx -g "daemon off;" &' >> /start.sh && \
-    echo 'exec node server.js' >> /start.sh && \
-    chmod +x /start.sh
+EXPOSE 3001
 
-EXPOSE 80 3001
-
-CMD ["/start.sh"]
+CMD ["node", "server.js"]
