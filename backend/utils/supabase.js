@@ -29,4 +29,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+const hasValidServiceKey = Boolean(supabaseServiceKey && supabaseServiceKey !== 'your_service_role_key_here');
+
 module.exports = supabase;
+module.exports.hasValidServiceKey = hasValidServiceKey;
