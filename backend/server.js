@@ -49,13 +49,8 @@ const smtpCfg = getSmtpConfig();
 });
 if (smtpCfg.hasPlaceholders) {
   console.warn('\n⚠️  WARNING: SMTP configuration contains placeholder values!');
-  console.warn('⚠️  Email sending will fail until you configure actual SMTP credentials in backend/.env.');
-  console.warn('⚠️  When using Brave for email verification, set these in backend/.env:');
-  console.warn('⚠️    SMTP_HOST=smtp.gmail.com (or your SMTP server)');
-  console.warn('⚠️    SMTP_PORT=587');
-  console.warn('⚠️    SMTP_USER=your_sender_email@gmail.com (ONE sender account for all users)');
-  console.warn('⚠️    SMTP_PASS=your_app_password');
-  console.warn('⚠️    SMTP_FROM="System Name <your_sender_email@gmail.com>"');
+  console.warn('⚠️  Email sending will fail until you set real credentials in Railway Variables (or backend/.env).');
+  console.warn('⚠️  For Railway/Brave use Brevo: SMTP_HOST=smtp-relay.brevo.com, SMTP_PORT=587, SMTP_USER=your Brevo email, SMTP_PASS=your Brevo API key (xkeysib-...), SMTP_FROM="App Name <verified@email.com>"');
   console.warn('⚠️  Recipient emails are determined from user sessions. Verification codes are also logged to terminal.\n');
 } else if (!smtpCfg.enabled) {
   console.log('\nℹ️  SMTP not configured. Verification codes will be logged to terminal only.');
@@ -95,15 +90,22 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
 
+// 404 for unknown API routes — return JSON so frontend never gets HTML
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: 'Not found' });
+});
+
 // Always return JSON for API errors (avoids HTML error pages that break frontend)
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
+  res.setHeader('Content-Type', 'application/json');
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
 });
 
-// Arduino serial (optional): skip in production (no COM3 on Railway)
+// Arduino serial: only init when ARDUINO_PORT is set (skip on Railway to avoid COM3 error)
+// Arduino serial: only init when ARDUINO_PORT is set (skip on Railway to avoid COM3 error)
 try {
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.ARDUINO_PORT) {
     const { initHardware } = require('./utils/hardwareStore');
     initHardware();
   }
