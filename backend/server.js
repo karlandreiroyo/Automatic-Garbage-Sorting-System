@@ -14,6 +14,9 @@ const corsOriginList = (process.env.CORS_ORIGIN || '')
   .map(s => s.trim())
   .filter(Boolean);
 if (frontendUrl) corsOriginList.push(frontendUrl);
+// Allow Railway app URL by default so API works at https://automatic-garbage-sorting-system-production.up.railway.app
+const railwayOrigin = 'https://automatic-garbage-sorting-system-production.up.railway.app';
+if (!corsOriginList.includes(railwayOrigin)) corsOriginList.push(railwayOrigin);
 const localOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
 const allowedOrigins = isProduction ? corsOriginList : [...new Set([...corsOriginList, ...localOrigins])];
 
@@ -92,10 +95,18 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
 
-// Arduino serial (optional): npm install serialport; set ARDUINO_PORT=COM3 in .env
+// Always return JSON for API errors (avoids HTML error pages that break frontend)
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
+});
+
+// Arduino serial (optional): skip in production (no COM3 on Railway)
 try {
-  const { initHardware } = require('./utils/hardwareStore');
-  initHardware();
+  if (process.env.NODE_ENV !== 'production') {
+    const { initHardware } = require('./utils/hardwareStore');
+    initHardware();
+  }
 } catch (e) {
   // ignore if serialport not installed
 }
