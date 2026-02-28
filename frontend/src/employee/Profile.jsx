@@ -77,7 +77,7 @@ const Profile = () => {
   const [otpMessage, setOtpMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [preferences, setPreferences] = useState({
+  const [_preferences, _setPreferences] = useState({
     emailNotifications: false,
     pushNotifications: false
   });
@@ -92,8 +92,8 @@ const Profile = () => {
   
   // Toast notification states
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success'); // 'success' or 'error'
+  const [toastMessage, _setToastMessage] = useState('');
+  const [toastType, _setToastType] = useState('success'); // 'success' or 'error'
 
 // Fetch profile from Supabase
 const fetchProfile = async () => {

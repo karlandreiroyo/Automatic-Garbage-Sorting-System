@@ -55,7 +55,7 @@ function App() {
               setUserRole(role);
               setIsLoggedIn(true);
             }
-          } catch (_) {
+          } catch {
             setUserRole(role);
             setIsLoggedIn(true);
           }
@@ -80,7 +80,7 @@ function App() {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('userRole');
         localStorage.removeItem('userEmail');

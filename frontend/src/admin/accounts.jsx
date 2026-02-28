@@ -25,7 +25,7 @@ const Accounts = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [editErrors, setEditErrors] = useState({});
-  const [editTouched, setEditTouched] = useState({});
+  const [_editTouched, setEditTouched] = useState({});
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isNotificationHiding, setIsNotificationHiding] = useState(false);
@@ -357,7 +357,7 @@ const Accounts = () => {
   };
 
   // Validate address fields
-  const validateAddress = () => {
+  const _validateAddress = () => {
     const addressErrors = {};
     if (!formData.address.region) {
       addressErrors.region = 'Region is required';
@@ -413,7 +413,7 @@ const Accounts = () => {
     return error;
   };
 
-  const generateDefaultPassword = () => {
+  const _generateDefaultPassword = () => {
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lowercase = 'abcdefghijklmnopqrstuvwxyz';
     const numbers = '0123456789';
@@ -609,7 +609,7 @@ const handleConfirmCreate = async () => {
           .maybeSingle();
         if (currentUser?.id) performedByUserId = currentUser.id;
       }
-    } catch (_) {}
+    } catch {}
     const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

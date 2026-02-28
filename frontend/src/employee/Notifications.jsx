@@ -65,7 +65,7 @@ const Notifications = () => {
 
   // Validation: Check if there are any notifications
   const hasNotifications = notifications.length > 0;
-  const hasUnreadNotifications = notifications.filter(n => n.isUnread).length > 0;
+  const _hasUnreadNotifications = notifications.filter(n => n.isUnread).length > 0;
   const hasFilteredNotifications = filteredNotifications.length > 0;
 
   // Show success message with auto-hide
@@ -146,7 +146,7 @@ const Notifications = () => {
     );
   };
 
-  const handleClearAll = () => {
+  const _handleClearAll = () => {
     if (notifications.length === 0) {
       showSuccess('No notifications to clear');
       return;

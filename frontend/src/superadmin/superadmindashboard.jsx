@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { supabase } from '../supabaseClient.jsx';
-import { useNavigate } from 'react-router-dom';
+import { supabase as _supabase } from '../supabaseClient.jsx';
+import { useNavigate as _useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
 import './superadmincss/superadmindashboard.css'; 
 

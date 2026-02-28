@@ -31,13 +31,13 @@ const getFillLevelColor = (fillLevel) => {
 };
 
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity, fillLevel, lastCollection, colorClass, status, icon: Icon, onDrain, isSelected, onToggle }) => {
+const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain: _onDrain, isSelected, onToggle: _onToggle }) => {
   const isEmpty = fillLevel === 0;
 
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
-        <div className="icon-circle"><Icon /></div>
+        <div className="icon-circle"><_Icon /></div>
         <h3>{title}</h3>
       </div>
 
@@ -84,8 +84,8 @@ const BinMonitoring = () => {
   const [collectorName, setCollectorName] = useState("");
   const [collectorInfo, setCollectorInfo] = useState(null);
   const [collectorBins, setCollectorBins] = useState([]);
-  const [hasPersistedBinState, setHasPersistedBinState] = useState(false);
-  const [restoreAttempted, setRestoreAttempted] = useState(false);
+  const [_hasPersistedBinState, setHasPersistedBinState] = useState(false);
+  const [_restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
@@ -219,7 +219,7 @@ const BinMonitoring = () => {
   /**
    * Fetches bin data from Supabase and aggregates category bins
    */
-  const fetchBinData = async () => {
+  const _fetchBinData = async () => {
     try {
       const { data, error } = await supabase
         .from('bins')
@@ -342,7 +342,7 @@ const BinMonitoring = () => {
    * Updates bin fill levels in real-time
    * Simulates gradual decrease and rounds to nearest 10
    */
-  const updateBinFillLevels = () => {
+  const _updateBinFillLevels = () => {
     setBins(prevBins =>
       prevBins.map(bin => {
         if (bin.fillLevel > 0) {
@@ -363,7 +363,7 @@ const BinMonitoring = () => {
   
   // 1. Identify valid candidates globally (anything that HAS trash)
   const filledBins = useMemo(() => bins.filter(b => b.fillLevel > 0), [bins]);
-  const urgentBinsCount = useMemo(() => bins.filter(bin => bin.fillLevel > 75).length, [bins]);
+  const _urgentBinsCount = useMemo(() => bins.filter(bin => bin.fillLevel > 75).length, [bins]);
 
   // 2. Identify "Actionable" bins based on user selection
   const actionableBins = useMemo(() => {
@@ -378,10 +378,10 @@ const BinMonitoring = () => {
   }, [bins, selectedBins, filledBins]);
 
   // 3. Determine button state
-  const isButtonDisabled = actionableBins.length === 0;
+  const _isButtonDisabled = actionableBins.length === 0;
   
   // 4. Determine button text
-  const getButtonText = () => {
+  const _getButtonText = () => {
     if (selectedBins.length > 0) {
       // Smart Text: Show how many valid bins will be affected
       return `DRAIN SELECTED (${actionableBins.length})`;
@@ -404,7 +404,7 @@ const BinMonitoring = () => {
     }
   };
   
-  const handleMainButtonAction = () => {
+  const _handleMainButtonAction = () => {
     if (actionableBins.length > 0) {
       setConfirmModal({ show: true, binsToDrain: actionableBins });
     }

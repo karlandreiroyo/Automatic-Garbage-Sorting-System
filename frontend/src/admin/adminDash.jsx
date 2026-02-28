@@ -160,7 +160,7 @@ const fetchDashboardData = async () => {
           .maybeSingle();
         currentAdminUser = userRow;
       }
-    } catch (_) {}
+    } catch {}
 
     // Fetch recent activity: user_id = admin who performed; get admin name from users (user_id), collector name from users (added_user_id)
     let formattedActivity = [];
@@ -192,7 +192,7 @@ const fetchDashboardData = async () => {
             };
           });
         }
-      } catch (_) {
+      } catch {
         // Fallback if added_user_id column or FKs don't exist yet
         const { data: fallbackData } = await supabase
           .from('activity_logs')
@@ -249,7 +249,7 @@ const fetchDashboardData = async () => {
         'Unsorted': 0
       };
       itemsData?.forEach(item => {
-        if (categoryCounts.hasOwnProperty(item.category)) {
+        if (Object.prototype.hasOwnProperty.call(categoryCounts, item.category)) {
           categoryCounts[item.category]++;
         }
       });
@@ -275,7 +275,7 @@ const fetchDashboardData = async () => {
     return `${diffHours} hr ago`;
   };
 
-  const maxCount = Math.max(...distribution.map(d => d.count), 1);
+  const _maxCount = Math.max(...distribution.map(d => d.count), 1);
 
   const calculateYAxisLabels = () => {
   const maxValue = Math.max(...distribution.map(d => d.count), 0);

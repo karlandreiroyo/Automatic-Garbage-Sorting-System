@@ -38,7 +38,7 @@ const AlertIcon = () => (
   </svg>
 );
 
-function Login({ setIsLoggedIn, setUserRole }) {
+function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

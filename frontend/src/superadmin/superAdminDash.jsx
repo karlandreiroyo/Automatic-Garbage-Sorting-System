@@ -156,7 +156,7 @@ const fetchDashboardData = async () => {
           .maybeSingle();
         currentSuperadminId = userRow?.id;
       }
-    } catch (_) {}
+    } catch {}
 
     // Fetch recent activity: only actions performed by this superadmin (user_id = superadmin)
     let formattedActivity = [];
@@ -175,7 +175,7 @@ const fetchDashboardData = async () => {
             time: getTimeAgo(activity.created_at)
           }));
         }
-      } catch (_) {}
+      } catch {}
     }
 
     setStats({
@@ -256,7 +256,7 @@ const fetchWasteDistribution = async (dateString) => {
     return `${diffHours} hr ago`;
   };
 
-  const maxCount = Math.max(...distribution.map(d => d.count), 1);
+  const _maxCount = Math.max(...distribution.map(d => d.count), 1);
 
   const calculateYAxisLabels = () => {
   const maxValue = Math.max(...distribution.map(d => d.count), 0);

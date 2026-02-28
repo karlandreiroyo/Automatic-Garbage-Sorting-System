@@ -277,7 +277,7 @@ const [wasteDistribution, setWasteDistribution] = useState([
   };
 
   const donutSegments = calculateDonutSegments();
-  const maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 100); // Minimum of 100 for better visualization
+  const _maxTrendValue = Math.max(...dailyTrend.map(d => d.value), 100); // Minimum of 100 for better visualization
 
 const calculateYAxisLabels = () => {
   const maxValue = Math.max(...dailyTrend.map(d => d.value), 0);

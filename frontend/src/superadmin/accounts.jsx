@@ -20,17 +20,17 @@ const AlertIcon = () => <svg width="48" height="48" viewBox="0 0 24 24" fill="no
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('ADMIN');
+  const [filterRole, _setFilterRole] = useState('ADMIN');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [_showPassword, _setShowPassword] = useState(false);
+  const [_showConfirmPassword, _setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [editErrors, setEditErrors] = useState({});
-  const [editTouched, setEditTouched] = useState({});
+  const [_editTouched, setEditTouched] = useState({});
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isNotificationHiding, setIsNotificationHiding] = useState(false);

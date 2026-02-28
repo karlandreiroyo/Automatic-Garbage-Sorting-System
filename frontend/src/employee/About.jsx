@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import mainLogo from "../assets/sorting-logo.png";
+import _mainLogo from "../assets/sorting-logo.png";
 import '../employee/employeecss/About.css';
 
 // --- ICONS ---

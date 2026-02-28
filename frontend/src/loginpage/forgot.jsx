@@ -29,7 +29,7 @@ const Forgot = () => {
   const [error, setError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState({});
+  const [_passwordErrors, setPasswordErrors] = useState({});
 
   const navigate = useNavigate();
 
@@ -61,7 +61,7 @@ const Forgot = () => {
   };
 
   // Check if password is valid
-  const isPasswordValid = (password) => {
+  const _isPasswordValid = (password) => {
     const errors = validatePassword(password);
     return Object.keys(errors).length === 0;
   };

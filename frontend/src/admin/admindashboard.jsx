@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient.jsx';
-import { useNavigate } from 'react-router-dom';
 import sidebarLogo from '../assets/whitelogo.png';
 import '../admin/admincss/admindashboard.css';
 import TermsAndConditionsModal from '../components/TermsAndConditionsModal'; 
@@ -134,7 +133,7 @@ const AdminDashboard = ({ onLogout }) => {
           const name = [userRow.first_name, userRow.last_name].filter(Boolean).join(' ').trim();
           setCurrentUserName(name || 'Admin');
         }
-      } catch (_) {}
+      } catch {}
     };
     loadCurrentUserName();
   }, []);

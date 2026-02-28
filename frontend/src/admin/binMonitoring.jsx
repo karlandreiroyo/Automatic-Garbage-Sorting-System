@@ -93,7 +93,7 @@ const BatteryIcon = ({ level }) => {
  * @param {number} fillLevel - Fill level percentage (0-100)
  * @returns {string} Hex color code
  */
-const getFillLevelColor = (fillLevel) => {
+const _getFillLevelColor = (fillLevel) => {
   if (fillLevel >= 50) return '#10b981'; // Green
   if (fillLevel >= 30) return '#eab308'; // Yellow
   if (fillLevel >= 15) return '#f97316'; // Orange
@@ -106,13 +106,13 @@ const getFillLevelColor = (fillLevel) => {
  * Shows category, fill level, last collection time, and visual bin representation
  * @param {Object} bin - Bin data object with category information
  */
-const BinDetailCard = ({ bin, onDrain }) => {
+const BinDetailCard = ({ bin, onDrain: _onDrain }) => {
   /**
    * Gets status text based on fill level
    * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
    * @returns {string} Status text
    */
-  const getStatus = () => {
+  const _getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
     if (bin.fillLevel >= 50) return 'Normal';
@@ -123,7 +123,7 @@ const BinDetailCard = ({ bin, onDrain }) => {
    * Gets CSS class for status badge based on fill level
    * @returns {string} CSS class name
    */
-  const getStatusClass = () => {
+  const _getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
     if (bin.fillLevel >= 50) return 'status-normal';
@@ -207,12 +207,12 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State to control the visibility of the drain all confirmation modal
   const [showDrainAllModal, setShowDrainAllModal] = useState(false);
   // selectedBinsForArchive kept for filter logic (admin: no dropdown, so always show all bins)
-  const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
+  const [selectedBinsForArchive, _setSelectedBinsForArchive] = useState([]);
   const [binSearchTerm, setBinSearchTerm] = useState('');
   const [isArchiveView, setIsArchiveView] = useState(false);
-  const [showUnarchiveModal, setShowUnarchiveModal] = useState(false);
-  const [binToUnarchive, setBinToUnarchive] = useState(null);
-  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [_showUnarchiveModal, setShowUnarchiveModal] = useState(false);
+  const [_binToUnarchive, setBinToUnarchive] = useState(null);
+  const [_showArchiveModal, _setShowArchiveModal] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const binsPerPage = 4;
@@ -638,7 +638,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
    * Only affects the specific bin in the list view
    * @param {number} binId - The ID of the list view bin to drain
    */
-  const handleDrainListBin = async (binId) => {
+  const _handleDrainListBin = async (binId) => {
     try {
       await supabase.from('waste_items').delete().eq('bin_id', binId);
       await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', binId);
@@ -733,7 +733,7 @@ await supabase.from('activity_logs').insert([{
    * Called when user clicks "Drain All" button
    * Prevents accidental draining by requiring user confirmation
    */
-  const handleDrainAll = () => {
+  const _handleDrainAll = () => {
     if (!selectedBinId) return;
     // Show confirmation modal before draining
     setShowDrainAllModal(true);
@@ -812,7 +812,7 @@ await supabase.from('activity_logs').insert([{
     return { full, almostFull };
   };
 
-  const { full, almostFull } = getActionRequiredCount();
+  const { full: _full, almostFull: _almostFull } = getActionRequiredCount();
   
   // Get the selected bin's category bins for display
   const selectedBin = bins.find(b => b.id === selectedBinId);
@@ -836,7 +836,7 @@ await supabase.from('activity_logs').insert([{
    * @param {number} fillLevel - Fill level percentage
    * @returns {string} Status text
    */
-  const getMainBinStatus = (fillLevel) => {
+  const _getMainBinStatus = (fillLevel) => {
     if (fillLevel >= 90) return 'Full';
     if (fillLevel >= 75) return 'Almost Full';
     if (fillLevel >= 50) return 'Normal';
@@ -848,7 +848,7 @@ await supabase.from('activity_logs').insert([{
    * @param {number} fillLevel - Fill level percentage
    * @returns {string} CSS class name
    */
-  const getMainBinStatusClass = (fillLevel) => {
+  const _getMainBinStatusClass = (fillLevel) => {
     if (fillLevel >= 90) return 'status-full';
     if (fillLevel >= 75) return 'status-almost-full';
     if (fillLevel >= 50) return 'status-normal';

@@ -99,7 +99,7 @@ const BatteryIcon = ({ level }) => {
  * @param {number} fillLevel - Fill level percentage (0-100)
  * @returns {string} Hex color code
  */
-const getFillLevelColor = (fillLevel) => {
+const _getFillLevelColor = (fillLevel) => {
   if (fillLevel >= 50) return '#10b981'; // Green
   if (fillLevel >= 30) return '#eab308'; // Yellow
   if (fillLevel >= 15) return '#f97316'; // Orange
@@ -112,13 +112,13 @@ const getFillLevelColor = (fillLevel) => {
  * Shows category, fill level, last collection time, and visual bin representation
  * @param {Object} bin - Bin data object with category information
  */
-const BinDetailCard = ({ bin, onDrain }) => {
+const BinDetailCard = ({ bin, onDrain: _onDrain }) => {
   /**
    * Gets status text based on fill level
    * Returns: "Full" (>=90%), "Almost Full" (75-89%), "Normal" (50-74%), or "Empty" (<50%)
    * @returns {string} Status text
    */
-  const getStatus = () => {
+  const _getStatus = () => {
     if (bin.fillLevel >= 90) return 'Full';
     if (bin.fillLevel >= 75) return 'Almost Full';
     if (bin.fillLevel >= 50) return 'Normal';
@@ -129,7 +129,7 @@ const BinDetailCard = ({ bin, onDrain }) => {
    * Gets CSS class for status badge based on fill level
    * @returns {string} CSS class name
    */
-  const getStatusClass = () => {
+  const _getStatusClass = () => {
     if (bin.fillLevel >= 90) return 'status-full';
     if (bin.fillLevel >= 75) return 'status-almost-full';
     if (bin.fillLevel >= 50) return 'status-normal';
@@ -211,7 +211,7 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
   // State to track which bin is currently selected for detail view
   const [selectedBinId, setSelectedBinId] = useState(null);
   // State to control Search Bin dropdown visibility
-  const [isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
+  const [_isBinDropdownOpen, setIsBinDropdownOpen] = useState(false);
   // State for selected bins (for archiving)
   const [selectedBinsForArchive, setSelectedBinsForArchive] = useState([]);
   const [showArchiveCheckboxesOnCards, setShowArchiveCheckboxesOnCards] = useState(false);
@@ -248,6 +248,7 @@ const BinMonitoring = ({ openArchiveFromSidebar, onViewedArchiveFromSidebar, onA
 
   // Collection history (Recent button on detail view)
   const [showCollectionHistoryInline, setShowCollectionHistoryInline] = useState(false);
+  const [_showCollectionHistoryModal, setShowCollectionHistoryModal] = useState(false);
   const [collectionHistoryBin, setCollectionHistoryBin] = useState(null);
   const [collectionHistoryCategory, setCollectionHistoryCategory] = useState(null);
   const [collectionHistoryItems, setCollectionHistoryItems] = useState([]);
@@ -273,7 +274,7 @@ const fetchCollectors = async () => {
 const [bins, setBins] = useState([]);
 const binsRef = React.useRef(bins);
 binsRef.current = bins;
-const [collectors, setCollectors] = useState([]);
+const [_collectors, setCollectors] = useState([]);
 
   const showSuccessNotification = (message) => {
     setNotificationMessage(message);
@@ -339,7 +340,8 @@ const [collectors, setCollectors] = useState([]);
     }
   };
 
-  const closeCollectionHistory = () => {
+  const _closeCollectionHistory = () => {
+    setShowCollectionHistoryModal(false);
     setShowCollectionHistoryInline(false);
     setCollectionHistoryBin(null);
     setCollectionHistoryCategory(null);
@@ -630,7 +632,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
   /**
    * Drains a specific list view bin: delete all waste_items for that bin, update bins table (same as admin).
    */
-  const handleDrainListBin = async (binId) => {
+  const _handleDrainListBin = async (binId) => {
     try {
       await supabase.from('waste_items').delete().eq('bin_id', binId);
       await supabase.from('bins').update({ fill_level: 0, last_update: new Date().toISOString() }).eq('id', binId);
@@ -687,7 +689,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
    * Called when user clicks "Drain All" button
    * Prevents accidental draining by requiring user confirmation
    */
-  const handleDrainAll = () => {
+  const _handleDrainAll = () => {
     if (!selectedBinId) return;
     // Show confirmation modal before draining
     setShowDrainAllModal(true);
@@ -786,7 +788,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
     return { full, almostFull };
   };
 
-  const { full, almostFull } = getActionRequiredCount();
+  const { full: _full, almostFull: _almostFull } = getActionRequiredCount();
   
   // Get the selected bin's category bins for display
   const selectedBin = bins.find(b => b.id === selectedBinId);
@@ -810,7 +812,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
    * @param {number} fillLevel - Fill level percentage
    * @returns {string} Status text
    */
-  const getMainBinStatus = (fillLevel) => {
+  const _getMainBinStatus = (fillLevel) => {
     if (fillLevel >= 90) return 'Full';
     if (fillLevel >= 75) return 'Almost Full';
     if (fillLevel >= 50) return 'Normal';
@@ -822,7 +824,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
    * @param {number} fillLevel - Fill level percentage
    * @returns {string} CSS class name
    */
-  const getMainBinStatusClass = (fillLevel) => {
+  const _getMainBinStatusClass = (fillLevel) => {
     if (fillLevel >= 90) return 'status-full';
     if (fillLevel >= 75) return 'status-almost-full';
     if (fillLevel >= 50) return 'status-normal';
