@@ -58,22 +58,22 @@ app.use(cors());
 app.use(express.json());
 
 // Import routes
-const forgotPasswordRoutes = require('./routes/forgotPassword');
-const profilePasswordRoutes = require('./routes/profilePassword');
-const loginVerificationRoutes = require('./routes/loginVerification');
-const healthRoutes = require('./routes/health');
-const securityAlertRoutes = require('./routes/securityAlert');
-const accountsRoutes = require('./routes/accounts');
+// const forgotPasswordRoutes = require('./routes/forgotPassword');
+// const profilePasswordRoutes = require('./routes/profilePassword');
+// const loginVerificationRoutes = require('./routes/loginVerification');
+// const healthRoutes = require('./routes/health');
+// const securityAlertRoutes = require('./routes/securityAlert');
+// const accountsRoutes = require('./routes/accounts');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collectorBins');
 
 // Use routes
-app.use('/api/forgot-password', forgotPasswordRoutes);
-app.use('/api/profile', profilePasswordRoutes);
-app.use('/api/login', loginVerificationRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/security', securityAlertRoutes);
-app.use('/api/accounts', accountsRoutes);
+// app.use('/api/forgot-password', forgotPasswordRoutes);
+// app.use('/api/profile', profilePasswordRoutes);
+// app.use('/api/login', loginVerificationRoutes);
+// app.use('/api/health', healthRoutes);
+// app.use('/api/security', securityAlertRoutes);
+// app.use('/api/accounts', accountsRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
 
