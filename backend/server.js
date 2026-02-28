@@ -6,7 +6,27 @@ const { getSmtpConfig } = require('./utils/mailer');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Check SMTP configuration on startup
+// Dynamic CORS: allow FRONTEND_URL and/or CORS_ORIGIN (comma-separated) for Railway/deploy; always allow localhost in dev
+const isProduction = process.env.NODE_ENV === 'production';
+const frontendUrl = process.env.FRONTEND_URL || '';
+const corsOriginList = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+if (frontendUrl) corsOriginList.push(frontendUrl);
+const localOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+const allowedOrigins = isProduction ? corsOriginList : [...new Set([...corsOriginList, ...localOrigins])];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // same-origin or tools like Postman
+    if (allowedOrigins.length === 0) return cb(null, true); // no env set, allow all (dev default)
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+app.use(express.json());
 const smtpCfg = getSmtpConfig();
 
 // Check SMTP connection on startup (async, don't block server start)
@@ -53,27 +73,23 @@ if (smtpCfg.hasPlaceholders) {
   }
 }
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-
 // Import routes
-// const forgotPasswordRoutes = require('./routes/forgotPassword');
-// const profilePasswordRoutes = require('./routes/profilePassword');
-// const loginVerificationRoutes = require('./routes/loginVerification');
-// const healthRoutes = require('./routes/health');
-// const securityAlertRoutes = require('./routes/securityAlert');
-// const accountsRoutes = require('./routes/accounts');
+const forgotPasswordRoutes = require('./routes/shared/forgotPassword');
+const profilePasswordRoutes = require('./routes/shared/profilePassword');
+const loginVerificationRoutes = require('./routes/shared/loginVerification');
+const healthRoutes = require('./routes/shared/health');
+const securityAlertRoutes = require('./routes/shared/securityAlert');
+const accountsRoutes = require('./routes/superadmin/accounts');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collectorBins');
 
 // Use routes
-// app.use('/api/forgot-password', forgotPasswordRoutes);
-// app.use('/api/profile', profilePasswordRoutes);
-// app.use('/api/login', loginVerificationRoutes);
-// app.use('/api/health', healthRoutes);
-// app.use('/api/security', securityAlertRoutes);
-// app.use('/api/accounts', accountsRoutes);
+app.use('/api/forgot-password', forgotPasswordRoutes);
+app.use('/api/profile', profilePasswordRoutes);
+app.use('/api/login', loginVerificationRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/security', securityAlertRoutes);
+app.use('/api/accounts', accountsRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
 
@@ -86,11 +102,13 @@ try {
 }
 
 // Start server
+const backendBase = process.env.BACKEND_URL || process.env.API_URL || `http://localhost:${PORT}`;
 app.listen(PORT, () => {
-  console.log(`Backend login server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Hardware API: http://localhost:${PORT}/api/hardware/status`);
-  console.log(`Collector bins: http://localhost:${PORT}/api/collector-bins`);
+  console.log(`Backend server running on port ${PORT}`);
+  console.log(`API base: ${backendBase}`);
+  console.log(`Health: ${backendBase}/api/health`);
+  console.log(`Hardware: ${backendBase}/api/hardware/status`);
+  console.log(`Collector bins: ${backendBase}/api/collector-bins`);
 });
 
 module.exports = app;

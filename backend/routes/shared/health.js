@@ -6,4 +6,4 @@ router.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Backend login service is running' });
 });
 
-module.exports = router;
+module.exports = { path: '/api/health', router };
