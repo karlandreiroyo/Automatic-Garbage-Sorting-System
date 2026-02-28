@@ -56,7 +56,10 @@ if (smtpCfg.hasPlaceholders) {
 // Middleware
 app.use(cors());
 app.use(express.json());
-
+// Basic root route
+app.get('/', (req, res) => {
+  res.send('Hello Skibidi');
+});
 // Import routes
 // const forgotPasswordRoutes = require('./routes/forgotPassword');
 // const profilePasswordRoutes = require('./routes/profilePassword');
