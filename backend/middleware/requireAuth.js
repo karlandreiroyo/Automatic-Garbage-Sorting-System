@@ -33,6 +33,6 @@ module.exports = async function requireAuth(req, res, next) {
     return next();
   } catch (e) {
     console.error('Auth middleware error:', e);
-    return res.status(500).json({ success: false, message: 'Auth check failed' });
+    if (!res.headersSent) res.status(500).setHeader('Content-Type', 'application/json').json({ success: false, message: 'Auth check failed' });
   }
 };

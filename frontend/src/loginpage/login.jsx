@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient.jsx';
+import { parseJsonResponse } from '../config/api';
 import './login.css';
 import employeeIcon from '../assets/employee.PNG';
 import adminIcon from '../assets/admin.PNG';
@@ -267,7 +268,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
           body: JSON.stringify(backupEmailUsed ? { sendCodeTo: backupEmailUsed } : {}),
         });
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
 
         if (data.success) {
           sessionStorage.setItem('pendingLoginUser', JSON.stringify(pendingLoginUser));
@@ -281,7 +282,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       } catch (error) {
         console.error('Send verification error:', error);
         setAlertTitle('Error');
-        setAlertMessage('Failed to send verification code. Please try again.');
+        setAlertMessage(error?.message || 'Failed to send verification code. Please try again.');
         setShowAlertModal(true);
       }
 

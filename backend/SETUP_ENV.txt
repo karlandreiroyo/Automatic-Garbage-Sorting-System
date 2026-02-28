@@ -1,5 +1,12 @@
 INSTRUCTIONS TO CREATE .env FILE:
 
+LOCAL DEVELOPMENT: Create backend/.env and add the variables below.
+
+RAILWAY (and other hosts): .env in your repo is often not used in production.
+  → Go to Railway Dashboard → Your backend service → Variables (or Environment).
+  → Add each variable below there. Redeploy after adding SUPABASE_SERVICE_KEY and SMTP vars.
+  → Without SUPABASE_SERVICE_KEY the backend cannot read users; login/verification will fail with errors.
+
 1. In the 'backend' folder, create a new file named exactly: .env
    (Make sure it starts with a dot: .env not env.txt)
 

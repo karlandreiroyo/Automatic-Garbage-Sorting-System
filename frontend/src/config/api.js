@@ -6,3 +6,19 @@
 export const API_BASE = import.meta.env.PROD
   ? (import.meta.env.VITE_API_URL || '')
   : (import.meta.env.VITE_API_URL || 'http://localhost:3001');
+
+/**
+ * Parse response as JSON. If the server returns HTML (e.g. error page), throws a clear error
+ * so the UI can show a friendly message instead of "Unexpected token '<'".
+ */
+export async function parseJsonResponse(response) {
+  const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    if (text.trimStart().startsWith('<')) {
+      throw new Error('Server returned an error page instead of JSON. If deployed on Railway, add SUPABASE_SERVICE_KEY and SMTP variables in your backend service Variables, then redeploy.');
+    }
+    throw new Error(text || `Request failed with status ${response.status}`);
+  }
+  return response.json();
+}

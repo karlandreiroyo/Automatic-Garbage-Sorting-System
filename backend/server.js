@@ -22,9 +22,11 @@ const allowedOrigins = isProduction ? corsOriginList : [...new Set([...corsOrigi
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // same-origin or tools like Postman
-    if (allowedOrigins.length === 0) return cb(null, true); // no env set, allow all (dev default)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.length === 0) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
+    // When Supabase not configured, allow all so frontend gets JSON error instead of CORS/HTML
+    if (!process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_KEY === 'your_service_role_key_here') return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -102,7 +104,6 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
 });
 
-// Arduino serial: only init when ARDUINO_PORT is set (skip on Railway to avoid COM3 error)
 // Arduino serial: only init when ARDUINO_PORT is set (skip on Railway to avoid COM3 error)
 try {
   if (process.env.ARDUINO_PORT) {

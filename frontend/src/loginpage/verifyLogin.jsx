@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { parseJsonResponse } from '../config/api';
 import './login.css';
 
 // Decorative Green Translucent Shapes Component (same as login)
@@ -66,7 +67,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
 
       if (data.success) {
         localStorage.setItem('userRole', pendingUser.role);
@@ -87,7 +88,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
       }
     } catch (error) {
       console.error('Verify code error:', error);
-      setVerificationMessage('Failed to verify code. Please try again.');
+      setVerificationMessage(error?.message || 'Failed to verify code. Please try again.');
     } finally {
       setVerifying(false);
     }
@@ -115,7 +116,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
         body: JSON.stringify({}),
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (data.success) {
         setVerificationMessage(data.message || 'New verification code sent to your email.');
         setVerificationCode('');
@@ -124,7 +125,7 @@ export default function VerifyLogin({ setIsLoggedIn, setUserRole }) {
       }
     } catch (error) {
       console.error('Resend code error:', error);
-      setVerificationMessage('Failed to resend code. Please try again.');
+      setVerificationMessage(error?.message || 'Failed to resend code. Please try again.');
     }
   };
 
