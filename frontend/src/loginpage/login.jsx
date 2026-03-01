@@ -248,7 +248,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
         return;
       }
 
-      // 6. Store user data temporarily (don't set logged in yet)
+      // 6. Store user data temporarily
       const pendingLoginUser = {
         email: userData.email,
         role: reactRole,
@@ -257,8 +257,39 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
         authId: authData.user.id
       };
 
-      // 7. Send verification code (to backup email if they logged in with backup), then go to verification page
+      // 7. NEW: Check for 2FA Cooldown (1 Month) before sending verification
       try {
+        console.log('Checking 2FA cooldown for:', userData.email);
+        const cooldownResponse = await fetch(`${API_BASE}/api/login/check-cooldown`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          }
+        });
+
+        const cooldownData = await parseJsonResponse(cooldownResponse);
+
+        if (cooldownData.skipVerification) {
+          console.log('✅ 2FA Cooldown Active - Skipping verification for 1 month.');
+          
+          // Set user state and navigate directly to dashboard
+          _setUserRole(reactRole);
+          _setIsLoggedIn(true);
+          
+          // Save session data for persistence
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('userRole', reactRole);
+          localStorage.setItem('userEmail', userData.email);
+          localStorage.setItem('userFirstName', userData.first_name);
+          localStorage.setItem('userLastName', userData.last_name);
+          localStorage.setItem('sb-access-token', accessToken);
+          
+          navigate(`/${reactRole}`);
+          return; // Exit early
+        }
+
+        // 8. If no cooldown, send verification code
+        console.log('❌ No active cooldown - Sending 2FA verification code.');
         const response = await fetch(`${API_BASE}/api/login/send-verification`, {
           method: 'POST',
           headers: {
@@ -280,9 +311,9 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
           setShowAlertModal(true);
         }
       } catch (error) {
-        console.error('Send verification error:', error);
+        console.error('2FA Check/Send error:', error);
         setAlertTitle('Error');
-        setAlertMessage(error?.message || 'Failed to send verification code. Please try again.');
+        setAlertMessage(error?.message || 'Failed to process login verification. Please try again.');
         setShowAlertModal(true);
       }
 

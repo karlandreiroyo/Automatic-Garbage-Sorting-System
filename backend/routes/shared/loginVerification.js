@@ -5,7 +5,7 @@ const { generateVerificationCode, verificationCodes } = require('../../utils/ver
 const { getSmtpConfig, sendLoginVerificationEmail } = require('../../utils/mailer');
 const requireAuth = require('../../middleware/requireAuth');
 
-const COOLDOWN_HOURS = 3;
+const COOLDOWN_HOURS = 720; // 1 Month (24h * 30d)
 
 // Route: Resolve backup email to primary email (for login with backup email)
 // If the given email is a verified second_email, returns primary email so frontend can sign in with it
