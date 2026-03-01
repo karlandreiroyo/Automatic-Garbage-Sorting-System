@@ -87,6 +87,14 @@ const accountsRoutes = require('./routes/superadmin/accounts');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collectorBins');
 
+// Test only
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Backend is running 🚀'
+  });
+});
+
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
@@ -120,7 +128,7 @@ try {
 }
 
 // Start server
-const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
+const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`API base: ${backendBase}`);
