@@ -87,6 +87,14 @@ const accountsRoutes = require('./routes/superadmin/accounts');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collectorBins');
 
+// Test only
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Backend is running 🚀'
+  });
+});
+
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
