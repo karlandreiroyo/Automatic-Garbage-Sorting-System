@@ -128,7 +128,7 @@ try {
 }
 
 // Start server
-const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://automatic-garbage-sorting-system-production.up.railway.app';
+const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`API base: ${backendBase}`);
