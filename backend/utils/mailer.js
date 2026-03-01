@@ -69,6 +69,22 @@ function getSmtpConfig() {
   };
 }
 
+function isBrevo(cfg) {
+  return cfg && cfg.host && String(cfg.host).toLowerCase().includes('brevo');
+}
+
+function getBrevoAuthFailureMessage(cfg) {
+  const passLen = cfg && cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+  return 'Brevo SMTP authentication failed. Check:\n' +
+    '  1. SMTP_USER must be your Brevo login email (the email you use to sign in at app.brevo.com)\n' +
+    '  2. SMTP_PASS must be your Brevo SMTP key or API key (from Brevo → SMTP & API → API Keys)\n' +
+    '  3. Use SMTP_HOST=smtp-relay.brevo.com and SMTP_PORT=587\n\n' +
+    `Current SMTP_USER: ${cfg && cfg.user ? cfg.user : 'NOT SET'}\n` +
+    `Current SMTP_PASS length: ${passLen} characters\n\n` +
+    'Fix: In Brevo go to SMTP & API → API Keys, create or copy your key. ' +
+    'SMTP_USER must be the Brevo account email; SMTP_PASS is the key (e.g. xkeysib-...).';
+}
+
 function createTransport() {
   const cfg = getSmtpConfig();
   if (!cfg.enabled) return null;
@@ -126,18 +142,20 @@ async function verifySmtpConnection() {
   } catch (error) {
     let message = 'SMTP verification failed';
     
-    if (error.message && error.message.includes('535')) {
-      message = 'Gmail authentication failed. Check:\n' +
-               '  1. SMTP_USER must be the exact email that generated the App Password\n' +
-               '  2. SMTP_PASS must be the 16-character App Password (spaces removed automatically)\n' +
-               '  3. 2-Step Verification must be enabled on the Google account\n' +
-               '  4. The App Password must not be expired or revoked\n\n' +
-               `Current SMTP_USER: ${cfg.user}\n` +
-               `Current SMTP_PASS length: ${cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0} characters\n\n` +
-               'Fix: Generate a new App Password at https://myaccount.google.com/apppasswords\n' +
-               'Make sure the email in SMTP_USER matches the account that generated the App Password.';
-    } else if (error.message && error.message.includes('Invalid login')) {
-      message = 'Invalid SMTP credentials. Verify SMTP_USER and SMTP_PASS are correct.';
+    if (error.message && (error.message.includes('535') || error.message.includes('Invalid login'))) {
+      if (isBrevo(cfg)) {
+        message = getBrevoAuthFailureMessage(cfg);
+      } else {
+        message = 'Gmail authentication failed. Check:\n' +
+                 '  1. SMTP_USER must be the exact email that generated the App Password\n' +
+                 '  2. SMTP_PASS must be the 16-character App Password (spaces removed automatically)\n' +
+                 '  3. 2-Step Verification must be enabled on the Google account\n' +
+                 '  4. The App Password must not be expired or revoked\n\n' +
+                 `Current SMTP_USER: ${cfg.user}\n` +
+                 `Current SMTP_PASS length: ${cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0} characters\n\n` +
+                 'Fix: Generate a new App Password at https://myaccount.google.com/apppasswords\n' +
+                 'Make sure the email in SMTP_USER matches the account that generated the App Password.';
+      }
     } else {
       message = error.message || 'Unknown SMTP error';
     }
@@ -219,60 +237,68 @@ async function sendLoginVerificationEmail({ to, code, expiresMinutes = 10 }) {
     });
     return { ok: true, subject, to };
   } catch (error) {
-    // Provide user-friendly error messages for common Gmail issues
+    // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
     
     if (error.message && error.message.includes('535')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      const isWrongLength = passLength !== 16;
-      
-      reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
-               `Current Settings:\n` +
-               `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
-               `  Password Length: ${passLength} characters\n\n`;
-      
-      if (isWrongLength) {
-        reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
-                 `   You are using your regular Gmail password instead of an App Password.\n\n` +
-                 `✅ Solution: Generate a 16-character App Password:\n` +
-                 `   1. Go to: https://myaccount.google.com/apppasswords\n` +
-                 `   2. Make sure 2-Step Verification is enabled first\n` +
-                 `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
-                 `   4. Click "Generate" and copy the 16-character password\n` +
-                 `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
-                 `   6. Restart backend server\n\n`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
       } else {
-        reason += 'How to Fix:\n' +
-                 '1. Go to https://myaccount.google.com/apppasswords\n' +
-                 '2. Make sure 2-Step Verification is enabled on your Google account\n' +
-                 '3. Click "Select app" → Choose "Mail"\n' +
-                 '4. Click "Select device" → Choose "Other (Custom name)"\n' +
-                 '5. Type "Backend Server" and click "Generate"\n' +
-                 '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
-                 '7. Open backend/.env and update SMTP_PASS with the new password\n' +
-                 '8. Restart the backend server\n\n';
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        const isWrongLength = passLength !== 16;
+        
+        reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
+                 `Current Settings:\n` +
+                 `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
+                 `  Password Length: ${passLength} characters\n\n`;
+        
+        if (isWrongLength) {
+          reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
+                   `   You are using your regular Gmail password instead of an App Password.\n\n` +
+                   `✅ Solution: Generate a 16-character App Password:\n` +
+                   `   1. Go to: https://myaccount.google.com/apppasswords\n` +
+                   `   2. Make sure 2-Step Verification is enabled first\n` +
+                   `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
+                   `   4. Click "Generate" and copy the 16-character password\n` +
+                   `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
+                   `   6. Restart backend server\n\n`;
+        } else {
+          reason += 'How to Fix:\n' +
+                   '1. Go to https://myaccount.google.com/apppasswords\n' +
+                   '2. Make sure 2-Step Verification is enabled on your Google account\n' +
+                   '3. Click "Select app" → Choose "Mail"\n' +
+                   '4. Click "Select device" → Choose "Other (Custom name)"\n' +
+                   '5. Type "Backend Server" and click "Generate"\n' +
+                   '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
+                   '7. Open backend/.env and update SMTP_PASS with the new password\n' +
+                   '8. Restart the backend server\n\n';
+        }
+        
+        reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
+                 '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
       }
-      
-      reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
-               '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
     } else if (error.message && error.message.includes('Invalid login')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
-               'For Gmail accounts:\n' +
-               '  • Use your full Gmail address for SMTP_USER\n' +
-               '  • Use a 16-character App Password (not your regular password)\n' +
-               '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
-               '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
-               `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
+      } else {
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
+                 'For Gmail accounts:\n' +
+                 '  • Use your full Gmail address for SMTP_USER\n' +
+                 '  • Use a 16-character App Password (not your regular password)\n' +
+                 '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
+                 '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
+                 `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      }
     } else if (error.message && error.message.includes('ENOTFOUND')) {
       reason = `SMTP server not found: ${cfg.host}\n` +
                'Check SMTP_HOST in backend/.env is correct.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com');
     } else if (error.message && error.message.includes('ECONNREFUSED')) {
       reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}\n` +
                'Check SMTP_HOST and SMTP_PORT in backend/.env.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com and SMTP_PORT=587' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587');
     }
     
     return { ok: false, reason, subject, to, originalError: error.message };
@@ -351,60 +377,68 @@ async function sendChangePasswordVerificationEmail({ to, code, expiresMinutes = 
     });
     return { ok: true, subject, to };
   } catch (error) {
-    // Provide user-friendly error messages for common Gmail issues
+    // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
     
     if (error.message && error.message.includes('535')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      const isWrongLength = passLength !== 16;
-      
-      reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
-               `Current Settings:\n` +
-               `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
-               `  Password Length: ${passLength} characters\n\n`;
-      
-      if (isWrongLength) {
-        reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
-                 `   You are using your regular Gmail password instead of an App Password.\n\n` +
-                 `✅ Solution: Generate a 16-character App Password:\n` +
-                 `   1. Go to: https://myaccount.google.com/apppasswords\n` +
-                 `   2. Make sure 2-Step Verification is enabled first\n` +
-                 `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
-                 `   4. Click "Generate" and copy the 16-character password\n` +
-                 `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
-                 `   6. Restart backend server\n\n`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
       } else {
-        reason += 'How to Fix:\n' +
-                 '1. Go to https://myaccount.google.com/apppasswords\n' +
-                 '2. Make sure 2-Step Verification is enabled on your Google account\n' +
-                 '3. Click "Select app" → Choose "Mail"\n' +
-                 '4. Click "Select device" → Choose "Other (Custom name)"\n' +
-                 '5. Type "Backend Server" and click "Generate"\n' +
-                 '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
-                 '7. Open backend/.env and update SMTP_PASS with the new password\n' +
-                 '8. Restart the backend server\n\n';
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        const isWrongLength = passLength !== 16;
+        
+        reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
+                 `Current Settings:\n` +
+                 `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
+                 `  Password Length: ${passLength} characters\n\n`;
+        
+        if (isWrongLength) {
+          reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
+                   `   You are using your regular Gmail password instead of an App Password.\n\n` +
+                   `✅ Solution: Generate a 16-character App Password:\n` +
+                   `   1. Go to: https://myaccount.google.com/apppasswords\n` +
+                   `   2. Make sure 2-Step Verification is enabled first\n` +
+                   `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
+                   `   4. Click "Generate" and copy the 16-character password\n` +
+                   `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
+                   `   6. Restart backend server\n\n`;
+        } else {
+          reason += 'How to Fix:\n' +
+                   '1. Go to https://myaccount.google.com/apppasswords\n' +
+                   '2. Make sure 2-Step Verification is enabled on your Google account\n' +
+                   '3. Click "Select app" → Choose "Mail"\n' +
+                   '4. Click "Select device" → Choose "Other (Custom name)"\n' +
+                   '5. Type "Backend Server" and click "Generate"\n' +
+                   '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
+                   '7. Open backend/.env and update SMTP_PASS with the new password\n' +
+                   '8. Restart the backend server\n\n';
+        }
+        
+        reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
+                 '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
       }
-      
-      reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
-               '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
     } else if (error.message && error.message.includes('Invalid login')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
-               'For Gmail accounts:\n' +
-               '  • Use your full Gmail address for SMTP_USER\n' +
-               '  • Use a 16-character App Password (not your regular password)\n' +
-               '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
-               '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
-               `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
+      } else {
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
+                 'For Gmail accounts:\n' +
+                 '  • Use your full Gmail address for SMTP_USER\n' +
+                 '  • Use a 16-character App Password (not your regular password)\n' +
+                 '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
+                 '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
+                 `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      }
     } else if (error.message && error.message.includes('ENOTFOUND')) {
       reason = `SMTP server not found: ${cfg.host}\n` +
                'Check SMTP_HOST in backend/.env is correct.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com');
     } else if (error.message && error.message.includes('ECONNREFUSED')) {
       reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}\n` +
                'Check SMTP_HOST and SMTP_PORT in backend/.env.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com and SMTP_PORT=587' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587');
     }
     
     return { ok: false, reason, subject, to, originalError: error.message };
@@ -483,60 +517,68 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
     });
     return { ok: true, subject, to };
   } catch (error) {
-    // Provide user-friendly error messages for common Gmail issues
+    // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
     
     if (error.message && error.message.includes('535')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      const isWrongLength = passLength !== 16;
-      
-      reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
-               `Current Settings:\n` +
-               `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
-               `  Password Length: ${passLength} characters\n\n`;
-      
-      if (isWrongLength) {
-        reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
-                 `   You are using your regular Gmail password instead of an App Password.\n\n` +
-                 `✅ Solution: Generate a 16-character App Password:\n` +
-                 `   1. Go to: https://myaccount.google.com/apppasswords\n` +
-                 `   2. Make sure 2-Step Verification is enabled first\n` +
-                 `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
-                 `   4. Click "Generate" and copy the 16-character password\n` +
-                 `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
-                 `   6. Restart backend server\n\n`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
       } else {
-        reason += 'How to Fix:\n' +
-                 '1. Go to https://myaccount.google.com/apppasswords\n' +
-                 '2. Make sure 2-Step Verification is enabled on your Google account\n' +
-                 '3. Click "Select app" → Choose "Mail"\n' +
-                 '4. Click "Select device" → Choose "Other (Custom name)"\n' +
-                 '5. Type "Backend Server" and click "Generate"\n' +
-                 '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
-                 '7. Open backend/.env and update SMTP_PASS with the new password\n' +
-                 '8. Restart the backend server\n\n';
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        const isWrongLength = passLength !== 16;
+        
+        reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
+                 `Current Settings:\n` +
+                 `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
+                 `  Password Length: ${passLength} characters\n\n`;
+        
+        if (isWrongLength) {
+          reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
+                   `   You are using your regular Gmail password instead of an App Password.\n\n` +
+                   `✅ Solution: Generate a 16-character App Password:\n` +
+                   `   1. Go to: https://myaccount.google.com/apppasswords\n` +
+                   `   2. Make sure 2-Step Verification is enabled first\n` +
+                   `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
+                   `   4. Click "Generate" and copy the 16-character password\n` +
+                   `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
+                   `   6. Restart backend server\n\n`;
+        } else {
+          reason += 'How to Fix:\n' +
+                   '1. Go to https://myaccount.google.com/apppasswords\n' +
+                   '2. Make sure 2-Step Verification is enabled on your Google account\n' +
+                   '3. Click "Select app" → Choose "Mail"\n' +
+                   '4. Click "Select device" → Choose "Other (Custom name)"\n' +
+                   '5. Type "Backend Server" and click "Generate"\n' +
+                   '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
+                   '7. Open backend/.env and update SMTP_PASS with the new password\n' +
+                   '8. Restart the backend server\n\n';
+        }
+        
+        reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
+                 '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
       }
-      
-      reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
-               '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
     } else if (error.message && error.message.includes('Invalid login')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
-               'For Gmail accounts:\n' +
-               '  • Use your full Gmail address for SMTP_USER\n' +
-               '  • Use a 16-character App Password (not your regular password)\n' +
-               '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
-               '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
-               `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
+      } else {
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
+                 'For Gmail accounts:\n' +
+                 '  • Use your full Gmail address for SMTP_USER\n' +
+                 '  • Use a 16-character App Password (not your regular password)\n' +
+                 '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
+                 '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
+                 `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      }
     } else if (error.message && error.message.includes('ENOTFOUND')) {
       reason = `SMTP server not found: ${cfg.host}\n` +
                'Check SMTP_HOST in backend/.env is correct.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com');
     } else if (error.message && error.message.includes('ECONNREFUSED')) {
       reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}\n` +
                'Check SMTP_HOST and SMTP_PORT in backend/.env.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com and SMTP_PORT=587' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587');
     }
     
     return { ok: false, reason, subject, to, originalError: error.message };
@@ -612,60 +654,68 @@ async function sendSecondEmailVerification({ to, primaryEmail, fullName, verific
     console.log(`[Mailer] ✅ Backup email verification sent to: ${toAddress}`);
     return { ok: true, subject, to: toAddress };
   } catch (error) {
-    // Provide user-friendly error messages for common Gmail issues
+    // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
     
     if (error.message && error.message.includes('535')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      const isWrongLength = passLength !== 16;
-      
-      reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
-               `Current Settings:\n` +
-               `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
-               `  Password Length: ${passLength} characters\n\n`;
-      
-      if (isWrongLength) {
-        reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
-                 `   You are using your regular Gmail password instead of an App Password.\n\n` +
-                 `✅ Solution: Generate a 16-character App Password:\n` +
-                 `   1. Go to: https://myaccount.google.com/apppasswords\n` +
-                 `   2. Make sure 2-Step Verification is enabled first\n` +
-                 `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
-                 `   4. Click "Generate" and copy the 16-character password\n` +
-                 `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
-                 `   6. Restart backend server\n\n`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
       } else {
-        reason += 'How to Fix:\n' +
-                 '1. Go to https://myaccount.google.com/apppasswords\n' +
-                 '2. Make sure 2-Step Verification is enabled on your Google account\n' +
-                 '3. Click "Select app" → Choose "Mail"\n' +
-                 '4. Click "Select device" → Choose "Other (Custom name)"\n' +
-                 '5. Type "Backend Server" and click "Generate"\n' +
-                 '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
-                 '7. Open backend/.env and update SMTP_PASS with the new password\n' +
-                 '8. Restart the backend server\n\n';
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        const isWrongLength = passLength !== 16;
+        
+        reason = 'Gmail authentication failed. Your password configuration needs to be fixed.\n\n' +
+                 `Current Settings:\n` +
+                 `  SMTP_USER: ${cfg.user || 'NOT SET'}\n` +
+                 `  Password Length: ${passLength} characters\n\n`;
+        
+        if (isWrongLength) {
+          reason += `❌ Problem Found: Your password is ${passLength} characters, but Gmail App Passwords must be exactly 16 characters.\n` +
+                   `   You are using your regular Gmail password instead of an App Password.\n\n` +
+                   `✅ Solution: Generate a 16-character App Password:\n` +
+                   `   1. Go to: https://myaccount.google.com/apppasswords\n` +
+                   `   2. Make sure 2-Step Verification is enabled first\n` +
+                   `   3. Select "Mail" → "Other (Custom name)" → Type "Backend Server"\n` +
+                   `   4. Click "Generate" and copy the 16-character password\n` +
+                   `   5. Update backend/.env: SMTP_PASS=your_16_char_app_password\n` +
+                   `   6. Restart backend server\n\n`;
+        } else {
+          reason += 'How to Fix:\n' +
+                   '1. Go to https://myaccount.google.com/apppasswords\n' +
+                   '2. Make sure 2-Step Verification is enabled on your Google account\n' +
+                   '3. Click "Select app" → Choose "Mail"\n' +
+                   '4. Click "Select device" → Choose "Other (Custom name)"\n' +
+                   '5. Type "Backend Server" and click "Generate"\n' +
+                   '6. Copy the 16-character password (it will look like: abcd efgh ijkl mnop)\n' +
+                   '7. Open backend/.env and update SMTP_PASS with the new password\n' +
+                   '8. Restart the backend server\n\n';
+        }
+        
+        reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
+                 '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
       }
-      
-      reason += '⚠️  Important: SMTP_USER must match the email account that generated the App Password.\n' +
-               '   If you see a different email in the "User" field above, make sure SMTP_USER matches that email.';
     } else if (error.message && error.message.includes('Invalid login')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
-               'For Gmail accounts:\n' +
-               '  • Use your full Gmail address for SMTP_USER\n' +
-               '  • Use a 16-character App Password (not your regular password)\n' +
-               '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
-               '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
-               `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      if (isBrevo(cfg)) {
+        reason = getBrevoAuthFailureMessage(cfg);
+      } else {
+        const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
+        reason = 'Invalid email credentials. Please check your SMTP settings.\n\n' +
+                 'For Gmail accounts:\n' +
+                 '  • Use your full Gmail address for SMTP_USER\n' +
+                 '  • Use a 16-character App Password (not your regular password)\n' +
+                 '  • Enable 2-Step Verification first: https://myaccount.google.com/security\n' +
+                 '  • Generate App Password: https://myaccount.google.com/apppasswords\n\n' +
+                 `Current password length: ${passLength} characters (should be 16 for Gmail App Password)`;
+      }
     } else if (error.message && error.message.includes('ENOTFOUND')) {
       reason = `SMTP server not found: ${cfg.host}\n` +
                'Check SMTP_HOST in backend/.env is correct.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com');
     } else if (error.message && error.message.includes('ECONNREFUSED')) {
       reason = `Cannot connect to SMTP server: ${cfg.host}:${cfg.port}\n` +
                'Check SMTP_HOST and SMTP_PORT in backend/.env.\n' +
-               'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587';
+               (isBrevo(cfg) ? 'For Brevo, use: SMTP_HOST=smtp-relay.brevo.com and SMTP_PORT=587' : 'For Gmail, use: SMTP_HOST=smtp.gmail.com and SMTP_PORT=587');
     }
     
     return { ok: false, reason, subject: 'Backup Email Confirmation', to, originalError: error.message };
@@ -751,10 +801,9 @@ async function sendSecurityAlertEmail({ to, failedAttempts, attemptedEmail, time
     const cfg = getSmtpConfig();
     
     if (error.message && error.message.includes('535')) {
-      const passLength = cfg.pass ? cfg.pass.replace(/\s/g, '').length : 0;
-      reason = 'Gmail authentication failed. Please check your SMTP configuration in backend/.env';
+      reason = isBrevo(cfg) ? getBrevoAuthFailureMessage(cfg) : 'Gmail authentication failed. Please check your SMTP configuration in backend/.env';
     } else if (error.message && error.message.includes('Invalid login')) {
-      reason = 'Invalid SMTP credentials. Please check your backend/.env file.';
+      reason = isBrevo(cfg) ? getBrevoAuthFailureMessage(cfg) : 'Invalid SMTP credentials. Please check your backend/.env file.';
     } else if (error.message && error.message.includes('ENOTFOUND')) {
       reason = `SMTP server not found: ${cfg.host}`;
     } else if (error.message && error.message.includes('ECONNREFUSED')) {
@@ -852,11 +901,11 @@ async function sendNewEmployeeCredentialsEmail({ to, username, password, fullNam
     // Provide more detailed error information
     let reason = error.message || 'Failed to send credentials email.';
     if (error.code === 'EAUTH') {
-      reason = 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in backend/.env';
+      reason = isBrevo(cfg) ? getBrevoAuthFailureMessage(cfg) : 'SMTP authentication failed. Check SMTP_USER and SMTP_PASS in backend/.env';
     } else if (error.code === 'ECONNECTION') {
       reason = `Cannot connect to SMTP server ${cfg.host}:${cfg.port}. Check SMTP_HOST and SMTP_PORT.`;
-    } else if (error.responseCode === 535) {
-      reason = 'Gmail authentication failed. Verify SMTP_PASS is a valid App Password (16 characters).';
+    } else if (error.responseCode === 535 || (error.message && error.message.includes('535'))) {
+      reason = isBrevo(cfg) ? getBrevoAuthFailureMessage(cfg) : 'Gmail authentication failed. Verify SMTP_PASS is a valid App Password (16 characters).';
     }
     
     return { ok: false, reason, subject, to, originalError: error.message };
