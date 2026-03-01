@@ -259,7 +259,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
 
       // 7. Send verification code (to backup email if they logged in with backup), then go to verification page
       try {
-        const response = await fetch(`${API_BASE_URL}/api/login/send-verification`, {
+        const response = await fetch(`${API_BASE}/api/login/send-verification`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

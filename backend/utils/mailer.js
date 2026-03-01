@@ -228,15 +228,21 @@ async function sendLoginVerificationEmail({ to, code, expiresMinutes = 10 }) {
   `;
 
   try {
-    await transporter.sendMail({
+    console.log(`\n[Mailer] 📤 Sending Login Verification Email to: ${to}`);
+    console.log(`[Mailer] 🔑 Verification Code: ${code}`);
+    
+    const result = await transporter.sendMail({
       from: cfg.from,
       to,
       subject,
       text,
       html,
     });
+    
+    console.log(`[Mailer] ✅ Login Verification Email sent successfully! MessageId: ${result.messageId || 'N/A'}\n`);
     return { ok: true, subject, to };
   } catch (error) {
+    console.error(`[Mailer] ❌ Failed to send Login Verification Email to ${to}:`, error.message);
     // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
@@ -315,6 +321,11 @@ async function sendLoginVerificationEmail({ to, code, expiresMinutes = 10 }) {
  * SMTP_USER in .env is the SENDER account (one account sends emails to all users).
  */
 async function sendChangePasswordVerificationEmail({ to, code, expiresMinutes = 10 }) {
+  if (!code) {
+    console.error('[Mailer] sendChangePasswordVerificationEmail called without code');
+    return { ok: false, reason: 'Internal Error: Verification code missing' };
+  }
+
   const cfg = getSmtpConfig();
   
   if (cfg.hasPlaceholders) {
@@ -368,15 +379,21 @@ async function sendChangePasswordVerificationEmail({ to, code, expiresMinutes = 
   `;
 
   try {
-    await transporter.sendMail({
+    console.log(`\n[Mailer] 📤 Sending Change Password Email to: ${to}`);
+    console.log(`[Mailer] 🔑 Verification Code: ${code}`);
+
+    const result = await transporter.sendMail({
       from: cfg.from,
       to,
       subject,
       text,
       html,
     });
+    
+    console.log(`[Mailer] ✅ Change Password Email sent successfully! MessageId: ${result.messageId || 'N/A'}\n`);
     return { ok: true, subject, to };
   } catch (error) {
+    console.error(`[Mailer] ❌ Failed to send Change Password Email to ${to}:`, error.message);
     // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();
@@ -455,6 +472,11 @@ async function sendChangePasswordVerificationEmail({ to, code, expiresMinutes = 
  * SMTP_USER in .env is the SENDER account (one account sends emails to all users).
  */
 async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 10 }) {
+  if (!code) {
+    console.error('[Mailer] sendResetPasswordVerificationEmail called without code');
+    return { ok: false, reason: 'Internal Error: Verification code missing' };
+  }
+
   const cfg = getSmtpConfig();
   
   if (cfg.hasPlaceholders) {
@@ -508,15 +530,21 @@ async function sendResetPasswordVerificationEmail({ to, code, expiresMinutes = 1
   `;
 
   try {
-    await transporter.sendMail({
+    console.log(`\n[Mailer] 📤 Sending Reset Password Email to: ${to}`);
+    console.log(`[Mailer] 🔑 Verification Code: ${code}`);
+
+    const result = await transporter.sendMail({
       from: cfg.from,
       to,
       subject,
       text,
       html,
     });
+    
+    console.log(`[Mailer] ✅ Reset Password Email sent successfully! MessageId: ${result.messageId || 'N/A'}\n`);
     return { ok: true, subject, to };
   } catch (error) {
+    console.error(`[Mailer] ❌ Failed to send Reset Password Email to ${to}:`, error.message);
     // Provide user-friendly error messages (Brevo vs Gmail)
     let reason = error.message;
     const cfg = getSmtpConfig();

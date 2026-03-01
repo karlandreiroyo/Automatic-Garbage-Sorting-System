@@ -79,6 +79,10 @@ router.get('/check-cooldown', requireAuth, async (req, res) => {
 // Route: Send verification code after login
 // This route sends verification email to the authenticated user's email address (or to sendCodeTo if provided, e.g. backup email)
 router.post('/send-verification', requireAuth, async (req, res) => {
+  console.log('\n' + '═'.repeat(75));
+  console.log('📬 NEW LOGIN VERIFICATION REQUEST RECEIVED');
+  console.log('═'.repeat(75));
+  
   try {
     const authenticatedUserEmail = req.authUser.email;
     const sendCodeTo = req.body.sendCodeTo && String(req.body.sendCodeTo).trim().toLowerCase();

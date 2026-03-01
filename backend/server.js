@@ -17,7 +17,14 @@ if (frontendUrl) corsOriginList.push(frontendUrl);
 // Allow Railway app URL by default so API works at https://automatic-garbage-sorting-system-production.up.railway.app
 const railwayOrigin = 'https://automatic-garbage-sorting-system-production.up.railway.app';
 if (!corsOriginList.includes(railwayOrigin)) corsOriginList.push(railwayOrigin);
-const localOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
+const localOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:3000', 
+  'http://127.0.0.1:5173', 
+  'http://127.0.0.1:3000',
+  'http://192.168.0.108:5173',
+  'http://192.168.0.108:3000'
+];
 const allowedOrigins = isProduction ? corsOriginList : [...new Set([...corsOriginList, ...localOrigins])];
 
 app.use(cors({
@@ -129,7 +136,7 @@ try {
 
 // Start server
 const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`API base: ${backendBase}`);
   console.log(`Health: ${backendBase}/api/health`);
