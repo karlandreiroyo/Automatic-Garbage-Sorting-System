@@ -1,8 +1,8 @@
 /**
  * Single source for API base URL.
- * Using localhost:3001 for local development as it is most reliable.
+ * Default to Railway backend when deployed; set VITE_API_URL=http://localhost:3001 for local dev.
  */
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
 /**
  * Parse response as JSON. If the server returns HTML (e.g. error page), throws a clear error
  * so the UI can show a friendly message instead of "Unexpected token '<'".
