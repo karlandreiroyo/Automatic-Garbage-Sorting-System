@@ -71,3 +71,15 @@ Without this, nginx proxies `/api` to localhost and you get error pages (HTML) i
 **Do not set `ARDUINO_PORT`** on the backend service in Railway. Serial/Arduino is only used when running locally; in production the backend skips opening COM ports to avoid "No such file or directory" errors.
 
 Until `SUPABASE_SERVICE_KEY` and (for email) the SMTP variables are set, the backend will log warnings and login/verification may fail or return errors.
+
+---
+
+## 3. “Remember me” (login email + password) on Railway
+
+If you see **`Could not find the table 'public.remember_me_tokens' in the schema cache`** and “Remember me” does not pre-fill the login form after logout:
+
+1. Open **Supabase Dashboard** → your project → **SQL Editor**.
+2. Run the SQL in **`backend/supabase-remember-me-table.sql`** (copy the whole file and run it). This creates the `remember_me_tokens` table.
+3. **Redeploy** your Railway backend.
+
+The frontend also saves “Remember me” in the browser’s localStorage, so it can still pre-fill email/password on the same device even before the table exists. Creating the table removes the error and lets the backend store it as well.

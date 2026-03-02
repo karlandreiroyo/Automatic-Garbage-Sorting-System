@@ -59,20 +59,36 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
   // Use shared API base (same-origin in prod so nginx can proxy /api to backend)
   const API_BASE_URL = API_BASE;
 
-  // Restore remembered login (username + password) from Railway backend on mount
+  // Restore remembered login (username + password): try backend first, then localStorage (works on Railway even if table missing)
   useEffect(() => {
     let cancelled = false;
+    const applySaved = (savedEmail, savedPassword) => {
+      if (cancelled) return;
+      if (savedEmail && typeof savedEmail === 'string') setEmail(savedEmail);
+      if (savedPassword && typeof savedPassword === 'string') setPassword(savedPassword);
+    };
     (async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/remember-me`, { credentials: 'include' });
         if (cancelled) return;
         if (res.ok) {
           const data = await res.json();
-          if (data.email && typeof data.email === 'string') setEmail(data.email);
-          if (data.password && typeof data.password === 'string') setPassword(data.password);
+          if (data.email || data.password) {
+            applySaved(data.email, data.password);
+            return;
+          }
         }
       } catch (_) {
         // ignore (e.g. network or CORS)
+      }
+      try {
+        const saved = localStorage.getItem('login_remember_me');
+        if (saved) {
+          const { email: savedEmail, password: savedPassword } = JSON.parse(saved);
+          applySaved(savedEmail, savedPassword);
+        }
+      } catch (_) {
+        // ignore invalid stored data
       }
     })();
     return () => { cancelled = true; };
@@ -213,20 +229,27 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       localStorage.removeItem('failedLoginAttempts');
       localStorage.removeItem('loginLockout');
 
-      // Remember me: save or clear on Railway backend (cookie + DB)
-      try {
-        if (rememberMe) {
+      // Remember me: save to backend AND localStorage so it works on Railway (same for username + password)
+      const savedPayload = { email: email.trim().toLowerCase(), password };
+      if (rememberMe) {
+        try {
           await fetch(`${API_BASE_URL}/api/remember-me`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+            body: JSON.stringify(savedPayload),
           });
-        } else {
+        } catch (_) {}
+        try {
+          localStorage.setItem('login_remember_me', JSON.stringify(savedPayload));
+        } catch (_) {}
+      } else {
+        try {
           await fetch(`${API_BASE_URL}/api/remember-me`, { method: 'DELETE', credentials: 'include' });
-        }
-      } catch (_) {
-        // non-blocking; login still succeeds
+        } catch (_) {}
+        try {
+          localStorage.removeItem('login_remember_me');
+        } catch (_) {}
       }
 
       // 2. Get user details AND status from the users table
