@@ -1,0 +1,1256 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
+import AddressDropdowns from '../components/AddressDropdowns';
+import './superadmincss/accounts.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// --- Icons ---
+const AddIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
+const CloseIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>;
+const CancelIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>;
+const SaveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
+const ArchiveIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>;
+const ActivateIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+const EditIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+const EyeIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const EyeOffIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+const AlertIcon = () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+
+const Accounts = () => { 
+  const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState('ADMIN');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [editErrors, setEditErrors] = useState({});
+  const [editTouched, setEditTouched] = useState({});
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [isNotificationHiding, setIsNotificationHiding] = useState(false);
+  
+  // Verify state for Add Admin (email verification)
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState(null);
+  
+  // Confirmation modal states
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [userToConfirm, setUserToConfirm] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null);
+  
+  // Save changes confirmation modal states
+  const [showSaveConfirmModal, setShowSaveConfirmModal] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState(null);
+  
+  // Create account confirmation modal states
+  const [showCreateConfirmModal, setShowCreateConfirmModal] = useState(false);
+  const [pendingCreateData, setPendingCreateData] = useState(null);
+  
+  // Credentials sent modal (after Create Account – same as Admin)
+  const [showCredentialsSentModal, setShowCredentialsSentModal] = useState(false);
+  const [lastCreatedEmail, setLastCreatedEmail] = useState('');
+  const [lastCreatedBackupEmail, setLastCreatedBackupEmail] = useState('');
+  const [credentialsSentToEmail, setCredentialsSentToEmail] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [resendingEmail, setResendingEmail] = useState(false);
+  
+  // Alert/Error modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('Alert');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    role: 'ADMIN',
+    first_name: '',
+    last_name: '',
+    middle_name: '',
+    backup_email: '',
+    address: {
+      region: '',
+      province: '',
+      city_municipality: '',
+      barangay: '',
+      street_address: ''
+    },
+    password: '',
+    confirmPassword: '',
+  });
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    if (showAddModal) {
+      setEmailVerified(false);
+      setGeneratedPassword(null);
+    }
+  }, [showAddModal]);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (editingUser || showAddModal || showSaveConfirmModal || showCreateConfirmModal || showConfirmModal || showCredentialsSentModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [editingUser, showAddModal, showSaveConfirmModal, showCreateConfirmModal, showConfirmModal, showCredentialsSentModal]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'ADMIN')
+        .order('id', { ascending: false });
+      
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error.message);
+      setAlertTitle('Error');
+      setAlertMessage('Error fetching users: ' + error.message);
+      setShowAlertModal(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showSuccessNotification = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setIsNotificationHiding(false);
+
+    setTimeout(() => {
+      setIsNotificationHiding(true);
+      setTimeout(() => {
+        setShowNotification(false);
+        setIsNotificationHiding(false);
+      }, 300);
+    }, 3000);
+  };
+
+  const closeNotification = () => {
+    setIsNotificationHiding(true);
+    setTimeout(() => {
+      setShowNotification(false);
+      setIsNotificationHiding(false);
+    }, 300);
+  };
+
+  const handleToggleStatus = (user) => {
+    const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const actionLabel = newStatus === 'INACTIVE' ? 'archive' : 'activate';
+    
+    setUserToConfirm(user);
+    setConfirmAction(() => async () => {
+      try {
+        setLoading(true);
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${API_BASE_URL}/api/accounts/user-status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, status: newStatus }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to update user status.');
+        }
+
+        // Log activity: who did it = current superadmin (user_id)
+        let currentUserId = null;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.id) {
+          const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+          currentUserId = u?.id;
+        }
+        const actionText = newStatus === 'INACTIVE' ? 'archived' : 'activated';
+        await supabase.from('activity_logs').insert([{
+          activity_type: newStatus === 'INACTIVE' ? 'USER_ARCHIVED' : 'USER_ACTIVATED',
+          description: `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} ${user.first_name} ${user.last_name}`,
+          user_id: currentUserId
+        }]);
+        
+        setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+        setShowConfirmModal(false);
+        setUserToConfirm(null);
+        setConfirmAction(null);
+        showSuccessNotification(`Employee ${actionLabel}d successfully!`);
+      } catch (error) {
+        setAlertTitle('Error');
+        setAlertMessage('Error: ' + (error.message || 'Failed to update user status.'));
+        setShowAlertModal(true);
+      } finally {
+        setLoading(false);
+      }
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmAction) {
+      confirmAction();
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmModal(false);
+    setUserToConfirm(null);
+    setConfirmAction(null);
+  };
+
+  const openEditModal = (user) => {
+    setEditingUser({ ...user });
+    setEditErrors({});
+    setEditTouched({});
+  };
+
+  const validateField = (name, value) => {
+    let error = '';
+    switch(name) {
+      case 'first_name':
+        if (!value.trim()) error = 'First name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'last_name':
+        if (!value.trim()) error = 'Last name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'middle_name':
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        }
+        break;
+      case 'email': {
+        const emailVal = value.trim();
+        const atCount = (emailVal.match(/@/g) || []).length;
+        const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if (!emailVal) {
+          error = 'Email is required';
+        } else if (atCount === 0) {
+          error = 'You need to put @';
+        } else if (atCount > 1) {
+          error = 'Email must contain exactly one @ symbol';
+        } else if (atCount === 1) {
+          // If there is exactly one @, check for valid domain structure
+          if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+            error = 'Email cannot end with @ or a period';
+          } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+            error = 'Use gmail.com for complete domain';
+          } else if (!emailRegex.test(emailVal)) {
+            error = 'Invalid domain format (e.g., .com)';
+          }
+        }
+        break;
+      }
+      case 'password':
+        if (!value) error = 'Password is required';
+        else if (value.length < 8) error = 'Minimum 8 characters required';
+        else if (!/[A-Z]/.test(value)) error = 'Must include at least 1 capital letter';
+        else if (!/[0-9]/.test(value)) error = 'Must include at least 1 number';
+        else if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) error = 'Must include at least 1 special character';
+        break;
+      case 'confirmPassword':
+        if (!value) error = 'Please confirm your password';
+        else if (value !== formData.password) error = 'Passwords do not match';
+        break;
+      case 'role':
+        if (!value) error = 'Please select an account role';
+        break;
+      case 'backup_email': {
+        if (value && value.trim()) {
+          const emailVal = value.trim();
+          const atCount = (emailVal.match(/@/g) || []).length;
+          const emailRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+          if (atCount === 0) {
+            error = 'You need to put @';
+          } else if (atCount > 1) {
+            error = 'Email must contain exactly one @ symbol';
+          } else if (atCount === 1) {
+            if (emailVal.endsWith('@') || emailVal.endsWith('.')) {
+              error = 'Email cannot end with @ or a period';
+            } else if (emailVal.toLowerCase().endsWith('@gmail.co')) {
+              error = 'Use gmail.com for complete domain';
+            } else if (!emailRegex.test(emailVal)) {
+              error = 'Invalid domain format (e.g., .com)';
+            }
+          }
+        }
+        break;
+      }
+      case 'address':
+        // Address validated via validateAddress()
+        break;
+      default: 
+      break;
+    }
+    return error;
+  };
+
+  // Validate address fields (region, province, city/municipality, barangay required)
+  const validateAddress = () => {
+    const addressErrors = {};
+    if (!formData.address.region) addressErrors.region = 'Region is required';
+    if (!formData.address.province) addressErrors.province = 'Province is required';
+    if (!formData.address.city_municipality) addressErrors.city_municipality = 'City/Municipality is required';
+    if (!formData.address.barangay) addressErrors.barangay = 'Barangay is required';
+    return addressErrors;
+  };
+
+  const validateEditField = (name, value) => {
+    let error = '';
+    switch(name) {
+      case 'first_name':
+        if (!value.trim()) error = 'First name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'last_name':
+        if (!value.trim()) error = 'Last name is required';
+        else if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+        else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        break;
+      case 'middle_name':
+        if (value && value.trim().length > 0) {
+          if (!/^[a-zA-Z\s]+$/.test(value)) error = 'Numbers and special characters are not allowed';
+          else if (value.trim().length < 2) error = 'Must be at least 2 characters';
+        }
+        break;
+      default: break;
+    }
+    return error;
+  };
+
+  const generateDefaultPassword = () => {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*()';
+    
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    const allChars = uppercase + lowercase + numbers + special;
+    for (let i = password.length; i < 12; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    let finalValue = value;
+
+    if (['first_name', 'last_name', 'middle_name'].includes(name)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    } 
+    
+    // Email Real-time cleaning
+    if (name === 'email' || name === 'backup_email') {
+      // 1. Remove invalid characters
+      let cleaned = value.replace(/[^a-zA-Z0-9@.]/g, '').toLowerCase();
+      
+      // 2. Prevent multiple '@' symbols as they type
+      const parts = cleaned.split('@');
+      if (parts.length > 2) {
+        cleaned = parts[0] + '@' + parts.slice(1).join('');
+      }
+      finalValue = cleaned;
+    }
+
+    if (name === 'email') setEmailVerified(false);
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setErrors(prev => ({ ...prev, [name]: validateField(name, finalValue) }));
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+  };
+
+  const handleVerifyEmail = async () => {
+    const emailErr = validateField('email', formData.email);
+    if (emailErr) {
+      setErrors(prev => ({ ...prev, email: emailErr }));
+      setTouched(prev => ({ ...prev, email: true }));
+      return;
+    }
+    if (!formData.first_name || !formData.last_name) {
+      setAlertTitle('Name Required');
+      setAlertMessage('Please fill in First Name and Last Name before verifying email. These are needed to generate the password.');
+      setShowAlertModal(true);
+      return;
+    }
+    setVerifyingEmail(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/verify-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          middle_name: formData.middle_name
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setEmailVerified(true);
+        if (data.password) setGeneratedPassword(data.password);
+        const msg = data.emailSent
+          ? 'Email verified and credentials sent! Check the admin\'s email inbox.'
+          : data.message || 'Email verified successfully.';
+        showSuccessNotification(msg);
+        if (data.emailError) {
+          setAlertTitle('Email Sent with Warning');
+          setAlertMessage(`Email verified, but sending credentials failed: ${data.emailError}`);
+          setShowAlertModal(true);
+        }
+      } else {
+        setAlertTitle('Email Verification Failed');
+        setAlertMessage(data.message || 'Could not verify email. Please check and try again.');
+        setShowAlertModal(true);
+      }
+    } catch (err) {
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Email verification failed. Please try again.');
+      setShowAlertModal(true);
+    } finally {
+      setVerifyingEmail(false);
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    let finalValue = value;
+
+    // Keep names Uppercase and letters only
+    if (['first_name', 'last_name', 'middle_name'].includes(name)) {
+      finalValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+    }
+
+    setEditingUser(prev => ({ ...prev, [name]: finalValue }));
+    setEditTouched(prev => ({ ...prev, [name]: true }));
+    setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, finalValue) }));
+  };
+
+  const handleEditBlur = (e) => {
+    const { name, value } = e.target;
+    setEditTouched(prev => ({ ...prev, [name]: true }));
+    setEditErrors(prev => ({ ...prev, [name]: validateEditField(name, value) }));
+  };
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    // 1. Validate all fields locally first
+    const newErrors = {};
+      ['first_name', 'last_name', 'email'].forEach(f => {
+      const err = validateField(f, formData[f]);
+      if (err) newErrors[f] = err;
+      });
+    
+    // Validate middle_name only if it has a value (optional field)
+    if (formData.middle_name && formData.middle_name.trim()) {
+      const err = validateField('middle_name', formData.middle_name);
+      if (err) newErrors['middle_name'] = err;
+    }
+    
+    // Validate backup_email only if it has a value (optional field)
+    if (formData.backup_email && formData.backup_email.trim()) {
+      const err = validateField('backup_email', formData.backup_email);
+      if (err) newErrors['backup_email'] = err;
+    }
+
+    // Validate address (region, province, city/municipality, barangay required)
+    const addressErrors = validateAddress();
+    Object.assign(newErrors, addressErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setTouched(prev => ({ 
+        ...prev,
+        first_name: true, last_name: true, email: true,
+        region: true, province: true, city_municipality: true, barangay: true
+      }));
+      return;
+    }
+
+    setPendingCreateData({ ...formData, role: 'ADMIN' });
+    setShowCreateConfirmModal(true);
+  };
+
+  const handleCancelCreate = () => {
+    setShowCreateConfirmModal(false);
+    setPendingCreateData(null);
+  };
+
+  const handleCloseCredentialsSent = () => {
+    setShowCredentialsSentModal(false);
+    setLastCreatedEmail('');
+    setLastCreatedBackupEmail('');
+    setCredentialsSentToEmail(false);
+    setEmailError('');
+  };
+
+  const handleResendCredentials = async () => {
+    if (!lastCreatedEmail) return;
+    setResendingEmail(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/accounts/resend-credentials-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: lastCreatedEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setCredentialsSentToEmail(true);
+        setEmailError('');
+        showSuccessNotification('Credentials resent to email.');
+      } else {
+        setAlertTitle('Resend Failed');
+        setAlertMessage(data.message || 'Could not resend to email.');
+        setShowAlertModal(true);
+      }
+    } catch (err) {
+      setAlertTitle('Error');
+      setAlertMessage(err.message || 'Resend failed.');
+      setShowAlertModal(true);
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
+const handleConfirmCreate = async () => {
+  if (!pendingCreateData) return;
+
+  try {
+    setLoading(true);
+    // Current superadmin user id for activity_log (who added this admin)
+    let performedByUserId = null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+      performedByUserId = u?.id;
+    }
+    // Use same backend as Admin (add collector): creates auth user, users row, sends credentials, sends second-email verification if backup provided
+    const res = await fetch(`${API_BASE_URL}/api/accounts/create-employee`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: pendingCreateData.first_name,
+        last_name: pendingCreateData.last_name,
+        middle_name: pendingCreateData.middle_name || '',
+        email: pendingCreateData.email,
+        backup_email: pendingCreateData.backup_email || '',
+        role: 'ADMIN',
+        region: pendingCreateData.address?.region || '',
+        province: pendingCreateData.address?.province || '',
+        city_municipality: pendingCreateData.address?.city_municipality || '',
+        barangay: pendingCreateData.address?.barangay || '',
+        street_address: pendingCreateData.address?.street_address || '',
+        status: 'PENDING', // New accounts stay PENDING until user logs in and accepts terms
+        performed_by_user_id: performedByUserId
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      setAlertTitle('Error');
+      setAlertMessage(data.message || 'Failed to create admin. Please try again.');
+      setShowAlertModal(true);
+      return;
+    }
+    const hadBackupEmail = !!(pendingCreateData.backup_email && pendingCreateData.backup_email.trim());
+    setLastCreatedEmail(pendingCreateData.email.trim().toLowerCase());
+    setLastCreatedBackupEmail(hadBackupEmail ? pendingCreateData.backup_email.trim().toLowerCase() : '');
+    setCredentialsSentToEmail(Boolean(data.sentToEmail));
+    setEmailError(data.emailError || '');
+    setShowAddModal(false);
+    setShowCreateConfirmModal(false);
+    setPendingCreateData(null);
+    setFormData({
+      email: '',
+      role: 'ADMIN',
+      first_name: '',
+      last_name: '',
+      middle_name: '',
+      backup_email: '',
+      address: { region: '', province: '', city_municipality: '', barangay: '', street_address: '' },
+      password: '',
+      confirmPassword: ''
+    });
+    setErrors({});
+    setTouched({});
+    setEmailVerified(false);
+    setGeneratedPassword(null);
+    fetchUsers();
+    setShowCredentialsSentModal(true);
+  } catch (error) {
+    setAlertTitle('Error');
+    setAlertMessage('Error: ' + (error.message || 'Failed to create admin. Please try again.'));
+    setShowAlertModal(true);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleUpdateEmployee = async (e) => {
+  e.preventDefault();
+
+  const newErrors = {};
+  ['first_name', 'last_name'].forEach(f => {
+    const err = validateEditField(f, editingUser[f]);
+    if (err) newErrors[f] = err;
+  });
+
+  if (editingUser.middle_name) {
+    const err = validateEditField('middle_name', editingUser.middle_name);
+    if (err) newErrors['middle_name'] = err;
+  }
+
+  if (Object.keys(newErrors).length > 0) {
+    setEditErrors(newErrors);
+    setEditTouched({ first_name: true, last_name: true, middle_name: true });
+    return;
+  }
+
+  // Show save confirmation modal
+  setPendingSaveData({ ...editingUser });
+  setShowSaveConfirmModal(true);
+};
+
+const handleConfirmSave = async () => {
+  if (!pendingSaveData) return;
+
+  try {
+    setLoading(true);
+
+    const roleValue = (pendingSaveData.role || '').toUpperCase();
+    if (roleValue !== 'COLLECTOR' && roleValue !== 'ADMIN') {
+      setAlertTitle('Error');
+      setAlertMessage('Role must be Collector or Admin.');
+      setShowAlertModal(true);
+      setLoading(false);
+      return;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/api/accounts/update-user`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: pendingSaveData.id,
+        auth_id: pendingSaveData.auth_id || undefined,
+        first_name: pendingSaveData.first_name?.trim() || '',
+        last_name: pendingSaveData.last_name?.trim() || '',
+        middle_name: pendingSaveData.middle_name?.trim() || '',
+        role: roleValue
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to update user.');
+    }
+
+    // Log activity: who did it = current superadmin (user_id)
+    let currentUserId = null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      const { data: u } = await supabase.from('users').select('id').eq('auth_id', session.user.id).maybeSingle();
+      currentUserId = u?.id;
+    }
+    await supabase.from('activity_logs').insert([{
+      activity_type: 'USER_UPDATED',
+      description: `Updated ${pendingSaveData.first_name} ${pendingSaveData.last_name}'s information`,
+      user_id: currentUserId
+    }]);
+
+    setEditingUser(null);
+    setPendingSaveData(null);
+    setShowSaveConfirmModal(false);
+    setEditErrors({});
+    setEditTouched({});
+    await fetchUsers();
+    showSuccessNotification('Employee updated successfully!');
+  } catch (error) {
+    console.error("Update user error:", error.message);
+    setAlertTitle('Error');
+    setAlertMessage('Error: ' + (error.message || 'Failed to update user.'));
+    setShowAlertModal(true);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleCancelSave = () => {
+  setShowSaveConfirmModal(false);
+  setPendingSaveData(null);
+};
+
+  const getFullName = (user) => {
+    const middle = user.middle_name ? ` ${user.middle_name} ` : ' ';
+    return `${user.first_name}${middle}${user.last_name}`;
+  };
+
+  const filteredUsers = users.filter(user => {
+    const fullName = getFullName(user).toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase());
+    const matchesRole = user.role === 'ADMIN';
+    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const generatePageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterRole, filterStatus]);
+
+  return (
+    <div className="accounts-container">
+      
+      {/* Confirmation Modal */}
+      {showConfirmModal && userToConfirm && (
+        <div className="confirm-modal-overlay" onClick={handleCancelConfirm}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Confirm Action</h3>
+            <p className="confirm-modal-message">
+              Are you sure you want to {userToConfirm.status === 'ACTIVE' ? 'archive' : 'activate'} {userToConfirm.first_name}?
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-cancel" 
+                onClick={handleCancelConfirm}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`confirm-btn-ok ${userToConfirm.status === 'ACTIVE' ? 'archive-confirm' : 'activate-confirm'}`}
+                onClick={handleConfirmAction}
+                disabled={loading}
+              >
+                {loading ? 'Processing...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Save Changes Confirmation Modal */}
+      {showSaveConfirmModal && (
+        <div className="confirm-modal-overlay" onClick={handleCancelSave}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Confirm Action</h3>
+            <p className="confirm-modal-message">
+              Are you sure you want to save these changes?
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-cancel" 
+                onClick={handleCancelSave}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleConfirmSave}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Create Account Confirmation Modal */}
+      {showCreateConfirmModal && (
+        <div className="confirm-modal-overlay" onClick={handleCancelCreate}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Confirm Action</h3>
+            <p className="confirm-modal-message">
+              Are you sure you want to create this employee account?
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-cancel" 
+                onClick={handleCancelCreate}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleConfirmCreate}
+                disabled={loading}
+              >
+                {loading ? 'Creating...' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Credentials Sent Modal (after Create Account – same as Admin; includes backup email Accept message) */}
+      {showCredentialsSentModal && (
+        <div className="confirm-modal-overlay" onClick={handleCloseCredentialsSent}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">Account Created</h3>
+            <p className="confirm-modal-message">
+              {credentialsSentToEmail && 'Credentials sent to the admin\'s email. Also check the terminal for username and password.'}
+              {!credentialsSentToEmail && 'Account created. Email sending failed; check SMTP config. Check the terminal for username and password.'}
+            </p>
+            {lastCreatedBackupEmail && (
+              <p className="confirm-modal-message" style={{ marginTop: '12px', fontWeight: 600 }}>
+                A verification email was sent to the backup email. They must click <strong>Accept</strong> in that email to activate it. After that, they can log in with the backup email if they forget their main email.
+              </p>
+            )}
+            {emailError && (
+              <div style={{ marginTop: '12px', padding: '8px 12px', background: '#fee', borderRadius: '8px', fontSize: '14px' }}>
+                <strong>Email Error:</strong> {emailError}
+              </div>
+            )}
+            <p className="confirm-modal-message" style={{ marginTop: '16px', fontSize: '14px' }}>Resend credentials if needed:</p>
+            <div className="confirm-modal-actions" style={{ marginTop: '8px' }}>
+              <button
+                type="button"
+                className="confirm-btn-ok activate-confirm"
+                onClick={handleResendCredentials}
+                disabled={resendingEmail}
+              >
+                {resendingEmail ? 'Sending...' : 'Resend Email'}
+              </button>
+              <button type="button" className="confirm-btn-cancel" onClick={handleCloseCredentialsSent}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Success Notification Toast */}
+      {showNotification && (
+        <div className={`notification-toast ${isNotificationHiding ? 'hiding' : ''}`}>
+          <div className="notification-icon">✓</div>
+          <div className="notification-content">
+            <p className="notification-title">Success!</p>
+            <p className="notification-message">{notificationMessage}</p>
+          </div>
+          <button className="notification-close" onClick={closeNotification}>×</button>
+        </div>
+      )}
+
+      {/* --- ADD MODAL --- */}
+      {showAddModal && !showCreateConfirmModal && (
+        <div className="modal-overlay modal-add-admin">
+          <div className="modal-content maximized modal-add-admin" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add New Admin</h2>
+            </div>
+            <form onSubmit={handleAddEmployee} className="employee-form">
+              <div className="form-grid">
+                <div className="form-row-names">
+                  <div className={`form-group ${errors.first_name ? 'has-error' : ''}`}>
+                    <label>First Name *</label>
+                    <input 
+                      type="text" 
+                      name="first_name" 
+                      value={formData.first_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.first_name && <span className="error-message">{errors.first_name}</span>}
+                  </div>
+                  <div className={`form-group ${errors.last_name ? 'has-error' : ''}`}>
+                    <label>Last Name *</label>
+                    <input 
+                      type="text" 
+                      name="last_name" 
+                      value={formData.last_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.last_name && <span className="error-message">{errors.last_name}</span>}
+                  </div>
+                  <div className={`form-group ${errors.middle_name ? 'has-error' : ''}`}>
+                    <label>Middle Name (optional)</label>
+                    <input 
+                      type="text" 
+                      name="middle_name" 
+                      value={formData.middle_name} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur} 
+                    />
+                    {errors.middle_name && <span className="error-message">{errors.middle_name}</span>}
+                  </div>
+                </div>
+                <div className="form-row-emails">
+                  <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
+                    <label>Email Address *</label>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                      placeholder="Admin's email address"
+                      autoComplete="email"
+                    />
+                    {errors.email && <span className="error-message">{errors.email}</span>}
+                  </div>
+                  <div className={`form-group ${errors.backup_email ? 'has-error' : ''}`}>
+                    <label>Back up Email (Optional)</label>
+                    <input 
+                      type="text" 
+                      name="backup_email" 
+                      value={formData.backup_email} 
+                      onChange={handleInputChange} 
+                      onBlur={handleBlur}
+                      placeholder="Optional backup email address"
+                    />
+                    {errors.backup_email && <span className="error-message">{errors.backup_email}</span>}
+                  </div>
+                </div>
+                <div style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ marginBottom: '1.25rem', marginTop: '0.5rem', color: '#374151', fontSize: '1rem', fontWeight: '600' }}>Address Information</h4>
+                  <AddressDropdowns
+                    value={formData.address}
+                    onChange={(newAddress) => {
+                      setFormData(prev => ({ ...prev, address: newAddress }));
+                      setTouched(prev => ({ ...prev, region: true, province: true, city_municipality: true, barangay: true, street_address: true }));
+                    }}
+                    disabled={false}
+                    errors={errors}
+                    touched={touched}
+                  />
+                </div>
+                <input type="hidden" name="role" value="ADMIN" />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT MODAL --- */}
+      {editingUser && !showSaveConfirmModal && (
+        <div className="modal-overlay" onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (e.target === e.currentTarget) {
+            // Only prevent if clicking directly on overlay, not modal content
+            return;
+          }
+        }}>
+          <div className="modal-content maximized" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Admin Account</h2>
+            </div>
+            <form onSubmit={handleUpdateEmployee} className="employee-form">
+              <div className="form-grid">
+                <div className={`form-group ${editErrors.first_name ? 'has-error' : ''}`}>
+                  <label>First Name *</label>
+                  <input 
+                    type="text" 
+                    name="first_name"
+                    value={editingUser.first_name || ''}
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.first_name && <span className="error-message">{editErrors.first_name}</span>}
+                </div>
+                <div className={`form-group ${editErrors.last_name ? 'has-error' : ''}`}>
+                  <label>Last Name *</label>
+                  <input 
+                    type="text" 
+                    name="last_name"
+                    value={editingUser.last_name} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.last_name && <span className="error-message">{editErrors.last_name}</span>}
+                </div>
+                <div className={`form-group ${editErrors.middle_name ? 'has-error' : ''}`}>
+                  <label>Middle Name (optional)</label>
+                  <input 
+                    type="text" 
+                    name="middle_name"
+                    value={editingUser.middle_name || ''} 
+                    onChange={handleEditInputChange}
+                    onBlur={handleEditBlur}
+                  />
+                  {editErrors.middle_name && <span className="error-message">{editErrors.middle_name}</span>}
+                </div>
+                <div className="form-group">
+                  <label>Role</label>
+                  <select
+                    name="role"
+                    value={editingUser.role || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  >
+                    <option value="COLLECTOR">Collector</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setEditingUser(null)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- HEADER --- */}
+      <div className="accounts-header">
+        <div>
+          <h1>Account Management</h1>
+          <p>Admin Account</p>
+        </div>
+        <button className="add-employee-btn" onClick={() => setShowAddModal(true)}>
+          <AddIcon /> Add Admin
+        </button>
+      </div>
+
+      {/* --- FILTERS --- */}
+      <div className="filters-row">
+        <input type="text" placeholder="Search by name..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <select className="filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="all">All Status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+          <option value="PENDING">Pending</option>
+        </select>
+      </div>
+
+      {/* --- TABLE (Desktop) --- */}
+      <div className="accounts-table">
+        <div className="table-header">
+          <div>Admin Name</div>
+          <div>Email</div>
+          <div>Role</div>
+          <div>Status</div>
+          <div>Actions</div>
+        </div>
+        <div className="table-body">
+          {currentUsers.map(user => (
+            <div key={user.id} className="table-row">
+              <div className="td-name">
+                <div className="user-avatar">{user.first_name?.charAt(0).toUpperCase()}</div>
+                <span>{getFullName(user)}</span>
+              </div>
+              <div>{user.email}</div>
+              <div className="td-role">{user.role}</div>
+              <div>
+                <span className={`status-badge ${user.status?.toLowerCase()}`}>{user.status}</span>
+              </div>
+              <div className="td-actions">
+                <div className="actions-left">
+                  <button 
+                    className={`action-btn ${user.status === 'ACTIVE' ? 'archive-btn' : 'activate-btn'}`}
+                    onClick={() => handleToggleStatus(user)}
+                    disabled={loading}
+                  >
+                    {user.status === 'ACTIVE' ? <><ArchiveIcon /> Archive</> : <><ActivateIcon /> Activate</>}
+                  </button>
+                  <button 
+                    className="icon-btn edit-btn" 
+                    onClick={() => openEditModal(user)}
+                    disabled={loading}
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- CARD GRID (Mobile/Tablet) --- */}
+      <div className="accounts-card-grid">
+        {currentUsers.map(user => (
+          <div key={user.id} className="employee-card">
+            <div className="card-header-top">
+              <span className={`card-status-badge ${user.status?.toLowerCase()}`}>{user.status}</span>
+            </div>
+            <div className="card-profile-section">
+              <div className="card-avatar">{user.first_name?.charAt(0).toUpperCase()}</div>
+              <div className="card-name-section">
+                <div className="card-name-with-icon">
+                  <button 
+                    className="card-edit-icon-btn"
+                    onClick={() => openEditModal(user)}
+                    disabled={loading}
+                    title="Edit user information"
+                  >
+                    <EditIcon />
+                  </button>
+                  <span>{getFullName(user)}</span>
+                </div>
+                <div className="card-role">{user.role}</div>
+              </div>
+            </div>
+            <div className="card-actions-section">
+              <button 
+                className={`card-action-btn ${user.status === 'ACTIVE' ? 'archive-btn' : 'activate-btn'}`}
+                onClick={() => handleToggleStatus(user)}
+                disabled={loading}
+              >
+                {user.status === 'ACTIVE' ? <><ArchiveIcon /> Archive</> : <><ActivateIcon /> Activate</>}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* --- PAGINATION --- */}
+      {totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination">
+            <button 
+              className="page-btn prev-btn" 
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            
+            {generatePageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="page-ellipsis">...</span>
+              ) : (
+                <button
+                  key={page}
+                  className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                  onClick={() => handlePageChange(page)}
+                >
+                  {page}
+                </button>
+              )
+            ))}
+            
+            <button 
+              className="page-btn next-btn" 
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Alert/Error Modal */}
+      {showAlertModal && (
+        <div className="confirm-modal-overlay" onClick={() => setShowAlertModal(false)}>
+          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-icon">
+              <AlertIcon />
+            </div>
+            <h3 className="confirm-modal-title">{alertTitle}</h3>
+            <p className="confirm-modal-message">
+              {alertMessage}
+            </p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn-ok" 
+                onClick={() => setShowAlertModal(false)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Accounts;

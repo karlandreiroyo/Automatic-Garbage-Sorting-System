@@ -1,0 +1,19 @@
+.hardware-status { padding: 1rem; max-width: 800px; }
+.hardware-status-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+.hardware-status-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+.badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
+.badge-connected { background: #10b981; color: white; }
+.badge-disconnected { background: #6b7280; color: white; }
+.hardware-status-error { padding: 0.5rem 0.75rem; background: #fef2f2; color: #b91c1c; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
+.hardware-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.hardware-card { padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; flex-direction: column; gap: 0.25rem; }
+.hardware-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.hardware-value { font-size: 1.25rem; font-weight: 600; color: #0f172a; }
+.hardware-time { font-size: 0.7rem; color: #94a3b8; }
+.hardware-events h3 { margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; }
+.hardware-events-list { list-style: none; margin: 0; padding: 0; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+.hardware-event-item { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; display: grid; grid-template-columns: 80px 1fr auto; gap: 0.5rem; align-items: center; font-size: 0.875rem; }
+.hardware-event-item:last-child { border-bottom: none; }
+.event-type { font-weight: 500; color: #475569; }
+.event-data { color: #0f172a; }
+.event-time { font-size: 0.75rem; color: #94a3b8; }
