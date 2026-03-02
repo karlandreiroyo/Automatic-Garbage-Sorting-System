@@ -43,7 +43,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  // const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isLockedOut, setIsLockedOut] = useState(false);
@@ -58,6 +58,25 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
 
   // Use shared API base (same-origin in prod so nginx can proxy /api to backend)
   const API_BASE_URL = API_BASE;
+
+  // Restore remembered login (username + password) from Railway backend on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/remember-me`, { credentials: 'include' });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data.email && typeof data.email === 'string') setEmail(data.email);
+          if (data.password && typeof data.password === 'string') setPassword(data.password);
+        }
+      } catch (_) {
+        // ignore (e.g. network or CORS)
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [API_BASE_URL]);
 
   // Check for existing lockout on component mount
   useEffect(() => {
@@ -193,6 +212,22 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       setFailedAttempts(0);
       localStorage.removeItem('failedLoginAttempts');
       localStorage.removeItem('loginLockout');
+
+      // Remember me: save or clear on Railway backend (cookie + DB)
+      try {
+        if (rememberMe) {
+          await fetch(`${API_BASE_URL}/api/remember-me`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+          });
+        } else {
+          await fetch(`${API_BASE_URL}/api/remember-me`, { method: 'DELETE', credentials: 'include' });
+        }
+      } catch (_) {
+        // non-blocking; login still succeeds
+      }
 
       // 2. Get user details AND status from the users table
       const { data: userData, error: userError } = await supabase
@@ -391,14 +426,15 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
             </div>
 
             <div className="options-row">
-              {/* <label className="remember-me">
-                <input 
-                  type="checkbox" 
+              <label className="remember-me">
+                <input
+                  type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading || isLockedOut}
                 />
                 Remember me
-              </label> */}
+              </label>
               <span
                 className="forgot-password"
                 onClick={() => navigate('/forgot')}

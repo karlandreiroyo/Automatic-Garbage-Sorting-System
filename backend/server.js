@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const { getSmtpConfig } = require('./utils/mailer');
 
 const app = express();
@@ -47,6 +48,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+app.use(cookieParser());
 const smtpCfg = getSmtpConfig();
 
 // Check SMTP connection on startup (async, don't block server start)
@@ -96,6 +98,7 @@ if (smtpCfg.hasPlaceholders) {
 const forgotPasswordRoutes = require('./routes/shared/forgotPassword');
 const profilePasswordRoutes = require('./routes/shared/profilePassword');
 const loginVerificationRoutes = require('./routes/shared/loginVerification');
+const rememberMeRoutes = require('./routes/shared/rememberMe');
 const healthRoutes = require('./routes/shared/health');
 const securityAlertRoutes = require('./routes/shared/securityAlert');
 const accountsRoutes = require('./routes/superadmin/accounts');
@@ -114,6 +117,7 @@ app.get('/', (req, res) => {
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
 app.use('/api/login', loginVerificationRoutes);
+app.use('/api/remember-me', rememberMeRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/security', securityAlertRoutes);
 app.use('/api/accounts', accountsRoutes);

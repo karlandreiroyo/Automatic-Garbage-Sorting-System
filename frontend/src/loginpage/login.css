@@ -255,10 +255,10 @@
   color: var(--text-secondary, #6b7280);
 }
 
-/* Options row */
+/* Options row: Remember me (left), Forgot Password (right) */
 .options-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-top: 0;
   margin-bottom: 0.75rem;
