@@ -46,15 +46,16 @@ Railway does **not** use your local `backend/.env`. Set variables in the **Railw
 3. **Redeploy the frontend** so the new build includes the API URL.
 4. **Check backend:** Open `https://<your-backend-url>/api/health` in browser; expect JSON like `{"ok":true}`.
 
-**Frontend service**
+**Frontend service (the one that serves the React app)**
 
-- **Required for API (including Notifications):** Set **`VITE_API_URL`** = your backend service public URL (no trailing slash). Redeploy after adding.
+- **Required for API and Notifications:** Add **`VITE_API_URL`** = your **backend** service public URL (e.g. `https://your-backend.up.railway.app`), no trailing slash. This is **not** the same as `FRONTEND_URL`. Then **redeploy the Frontend** so the build picks it up.
+- **If you can’t set env vars on the frontend:** In `frontend/index.html`, uncomment the line that sets `window.__AGSS_BACKEND_URL__` and put your backend URL there, then redeploy the frontend.
 
-**Backend service**
+**Backend service (the one that runs Node/Express)**
 
-- **Required:** `SUPABASE_SERVICE_KEY` = Supabase **service_role** key (Settings → API).
-- **For email (Brevo):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. Example: `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=587`, `SMTP_USER` = Brevo email, `SMTP_PASS` = Brevo API key, `SMTP_FROM="App Name <verified@email.com>"`.
-- **Optional:** `FRONTEND_URL`, `BACKEND_URL` for CORS/links.
+- **Required:** `SUPABASE_SERVICE_KEY` = Supabase **service_role** key (Settings → API) so it can read `notification_bin` and other tables.
+- **Optional:** `FRONTEND_URL` = your frontend URL (e.g. `https://automatic-garbage-sorting-system.production.up.railway.app`) for CORS. You already have this; it does **not** tell the frontend where the backend is.
+- **For email (Brevo):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
 - Do **not** set `ARDUINO_PORT` on Railway (serial only for local).
 
 ---
@@ -187,7 +188,10 @@ Notifications are stored in Supabase in the **same project** you use locally, so
 - On Railway, set **`SUPABASE_SERVICE_KEY`** (service_role key) in the backend service variables so the API can read/write `notification_bin`.
 
 **Notifications empty on Railway (collector should see same as local)**  
-To get the Collector Notifications page on Railway to show the same `notification_bin` data as local: (1) Deploy the latest backend (uses `notification_bin` with fallback when `is_read`/`collector_id` are missing). (2) Backend: set **`SUPABASE_SERVICE_KEY`**. (3) Frontend: set **`VITE_API_URL`** = your backend public URL (e.g. `https://your-backend.up.railway.app`), then **redeploy the frontend** so the build includes it. (4) Ensure CORS allows your frontend origin. The API returns rows for the logged-in collector (by `last_name` when `collector_id` is not in the table).
+1. **Backend service:** Set **`SUPABASE_SERVICE_KEY`** (Supabase service_role key). In **Settings → Networking**, copy your backend URL (e.g. `https://automatic-garbage-sorting-system-backend.up.railway.app`).  
+2. **Frontend service:** In **Variables**, add **`VITE_API_URL`** = that backend URL (no trailing slash). **Redeploy the Frontend** (the variable is used at build time).  
+3. **Alternative if you can’t set Frontend variables:** Edit `frontend/index.html`, uncomment the `<script>` line and set `window.__AGSS_BACKEND_URL__` to your backend URL, then commit and redeploy the frontend.  
+4. Backend must be deployed with the latest code that reads `notification_bin`. CORS already allows your frontend origin.
 
 ---
 

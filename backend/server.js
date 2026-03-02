@@ -22,9 +22,14 @@ if (!corsOriginList.includes(railwayOrigin)) corsOriginList.push(railwayOrigin);
 const railwayOrigin2 = 'https://brave-adaptation-production.up.railway.app';
 if (!corsOriginList.includes(railwayOrigin2)) corsOriginList.push(railwayOrigin2);
 
-// ADD THIS ↓
-const frontendOrigin = 'https://automatic-garbage-sorting-system-production.up.railway.app';
-if (!corsOriginList.includes(frontendOrigin)) corsOriginList.push(frontendOrigin);
+// Railway frontend origins (with and without .production. in host)
+const frontendOrigins = [
+  'https://automatic-garbage-sorting-system-production.up.railway.app',
+  'https://automatic-garbage-sorting-system.production.up.railway.app',
+];
+frontendOrigins.forEach((origin) => {
+  if (!corsOriginList.includes(origin)) corsOriginList.push(origin);
+});
 
 const localOrigins = [
   'http://localhost:5173', 

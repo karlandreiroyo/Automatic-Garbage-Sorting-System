@@ -39,6 +39,7 @@ const getBinClassName = (subtext) => {
 const Notifications = () => {
   const [notifications, setNotifications] = useState(loadInitialNotifications);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
   const [activeFilters, setActiveFilters] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -46,9 +47,10 @@ const Notifications = () => {
   const [deletedNotifications, setDeletedNotifications] = useState([]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
-  // Fetch notifications from database (same DB locally and on Railway)
+  // Fetch notifications from database (Supabase notification_bin — same DB locally and on Railway)
   useEffect(() => {
     let cancelled = false;
+    setApiError(null);
     const fetchFromApi = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -68,9 +70,12 @@ const Notifications = () => {
             setNotifications(list);
             try { localStorage.setItem('agss_notifications', JSON.stringify(list)); } catch {}
           }
+        } else {
+          const msg = res.status === 401 ? 'Not signed in or session expired.' : res.status === 503 ? 'Backend misconfigured (check SUPABASE_SERVICE_KEY).' : `Server error (${res.status}).`;
+          if (!cancelled) setApiError(msg);
         }
-      } catch (_) {
-        // Keep localStorage fallback
+      } catch (e) {
+        if (!cancelled) setApiError('Could not reach backend. Set VITE_API_URL to your backend URL and redeploy. See DOCS.md.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -255,6 +260,14 @@ const Notifications = () => {
         <div className="success-toast">
           {Icons.check}
           <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* API error: e.g. Railway backend not reachable or Supabase not configured */}
+      {apiError && (
+        <div className="api-error-banner" style={{ marginBottom: '1rem', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.9rem' }}>
+          {Icons.critical}
+          <span style={{ marginLeft: '8px' }}>{apiError}</span>
         </div>
       )}
 
