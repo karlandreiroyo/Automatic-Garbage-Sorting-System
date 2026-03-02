@@ -6,6 +6,7 @@ Single reference for setup, deployment, email, and hardware. Keep this file; the
 
 ## Table of contents
 
+0. [**Step-by-step: Notifications on Railway (do this first)**](#0-step-by-step-notifications-on-railway-do-this-first)
 1. [Project overview](#1-project-overview)
 2. [Railway deployment](#2-railway-deployment)
 3. [Backend & Supabase](#3-backend--supabase)
@@ -23,6 +24,94 @@ Single reference for setup, deployment, email, and hardware. Keep this file; the
 15. [Frontend / Backend login service](#15-frontend--backend-login-service)
 16. [Arduino hardware](#16-arduino-hardware)
 17. [Raspberry Pi](#17-raspberry-pi)
+
+---
+
+## 0. Step-by-step: Notifications on Railway (do this first)
+
+Follow these steps **one by one**. You do not need to change any code—only Railway and Supabase.
+
+---
+
+### Step 1: Get your Supabase service key
+
+1. Open your browser and go to **https://supabase.com** → sign in.
+2. Open the project that has your **AGSS Database** (the one where you see the `notification_bin` table).
+3. In the left sidebar, click **Settings** (gear icon).
+4. Click **API**.
+5. On the API page, find **Project API keys**.
+6. Find the key named **service_role** (not “anon”). Click **Reveal** or copy it. It is long and starts with `eyJ...`.
+7. Copy that key and keep it somewhere safe (e.g. Notepad). You will use it in Step 3.
+
+---
+
+### Step 2: Get your Backend URL on Railway
+
+1. Go to **https://railway.app** and sign in.
+2. Open your project (e.g. “Automatic Garbage Sorting System” or “brave-adaptation”).
+3. You should see at least two services: one for **Frontend** (React) and one for **Backend** (Node/Express). Click the **Backend** service.
+4. Go to **Settings** (or the tab that has settings).
+5. Find **Networking** or **Domains** (or **Generate domain**).
+6. You will see a URL like `https://brave-adaptation-production.up.railway.app` or `https://something.up.railway.app`. That is your **Backend URL**.
+7. Copy that full URL (no slash at the end) and keep it. You will use it in Step 4.
+
+---
+
+### Step 3: Put the Supabase key in the Backend on Railway
+
+1. Still in Railway, in your **Backend** service, open the **Variables** tab (or **Environment** / **Env**).
+2. Click **Add variable** or **New variable**.
+3. **Name:** `SUPABASE_SERVICE_KEY`  
+   **Value:** paste the **service_role** key you copied in Step 1.
+4. Save. The backend may redeploy automatically; if not, use **Redeploy** or **Deploy** for the Backend service.
+5. Wait until the deployment finishes (green / success).
+
+---
+
+### Step 4: Tell the Frontend where the Backend is
+
+1. In Railway, click your **Frontend** service (the one that serves the website, not the backend).
+2. Open the **Variables** tab.
+3. Click **Add variable** or **New variable**.
+4. **Name:** `VITE_API_URL`  
+   **Value:** the **Backend URL** you copied in Step 2 (e.g. `https://brave-adaptation-production.up.railway.app`). No slash at the end.
+5. Save.
+6. **Important:** The frontend must **rebuild** so it uses this value. Click **Redeploy** or **Deploy** for the **Frontend** service and wait until it finishes.
+
+---
+
+### Step 5: Check that the Backend is working
+
+1. Open a new browser tab.
+2. In the address bar, type:  
+   `https://YOUR-BACKEND-URL/api/health`  
+   (Replace `YOUR-BACKEND-URL` with the same URL you used in Step 4, e.g. `brave-adaptation-production.up.railway.app`.)
+3. Press Enter. You should see something like: `{"ok":true}`.  
+   - If you see that, the backend is running. Go to Step 6.  
+   - If you see an error or a blank page, the backend is not running or the URL is wrong. Check Step 2 and Step 3 and try again.
+
+---
+
+### Step 6: Open the app and check Notifications
+
+1. Open your **Frontend** URL in the browser (e.g. `https://automatic-garbage-sorting-system-production.up.railway.app`).
+2. Sign in as the **Collector** (e.g. KARL ANREI WEMBY ROYO).
+3. In the left menu, click **Notifications**.
+4. You should see the notifications from your `notification_bin` table (e.g. the “Drained” rows).  
+   - If you still see “No notifications,” check the red error message at the top of the page (if any). It will say whether the problem is “Could not reach backend,” “Backend misconfigured,” or something else. Then repeat Step 3 (Supabase key) and Step 4 (VITE_API_URL) and redeploy both Backend and Frontend again.
+
+---
+
+**Summary**
+
+| Step | Where        | What to set / do |
+|------|--------------|-------------------|
+| 1    | Supabase     | Copy **service_role** key |
+| 2    | Railway      | Copy **Backend** URL |
+| 3    | Railway Backend  | Variable: `SUPABASE_SERVICE_KEY` = service_role key → Redeploy backend |
+| 4    | Railway Frontend | Variable: `VITE_API_URL` = Backend URL → Redeploy frontend |
+| 5    | Browser      | Open Backend URL + `/api/health` → expect `{"ok":true}` |
+| 6    | Browser      | Open app → Sign in → Notifications → should show DB data |
 
 ---
 

@@ -7,9 +7,9 @@ const requireAuth = require('../../middleware/requireAuth');
 
 /**
  * GET /api/admin/collectors-with-stats
- * Returns all users with role COLLECTOR (for admin Data Analytics search).
+ * Returns only ACTIVE collectors (for admin Data Analytics search).
+ * PENDING and INACTIVE collectors do not appear—same status as Account Management.
  * Includes item_count from waste_items in bins assigned to each collector.
- * Collectors with zero items are included so admins can select any collector.
  */
 /**
  * GET /api/admin/total-collection
@@ -59,6 +59,7 @@ router.get('/collectors-with-stats', requireAuth, async (req, res) => {
       .from('users')
       .select('id, first_name, last_name, middle_name')
       .eq('role', 'COLLECTOR')
+      .eq('status', 'ACTIVE')
       .order('first_name');
     if (collectorsError) return res.status(500).json({ success: false, message: collectorsError.message });
 

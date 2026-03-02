@@ -278,10 +278,15 @@ router.get('/notifications', requireAuth, async (req, res) => {
         console.error('notifications list error:', fallback.error);
         return res.status(500).json({ success: false, message: fallback.error.message });
       }
-      rows = fallback.data || [];
-      const lastName = (userRow.last_name || '').trim();
+      const allRows = fallback.data || [];
+      const lastName = (userRow.last_name || '').trim().toUpperCase();
       if (lastName) {
-        rows = rows.filter((r) => (r.last_name || '').trim().toUpperCase() === lastName.toUpperCase());
+        rows = allRows.filter((r) => (r.last_name || '').trim().toUpperCase() === lastName);
+        if (rows.length === 0 && allRows.length > 0) {
+          rows = allRows;
+        }
+      } else {
+        rows = allRows;
       }
     } else {
       rows = result.data || [];
