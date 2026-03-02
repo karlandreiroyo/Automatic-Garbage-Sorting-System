@@ -107,6 +107,7 @@ const rememberMeRoutes = require('./routes/shared/rememberMe');
 const healthRoutes = require('./routes/shared/health');
 const securityAlertRoutes = require('./routes/shared/securityAlert');
 const accountsRoutes = require('./routes/superadmin/accounts');
+const adminRoutes = require('./routes/admin');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collector/collectorBins');
 
@@ -126,6 +127,7 @@ app.use('/api/remember-me', rememberMeRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/security', securityAlertRoutes);
 app.use('/api/accounts', accountsRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
 
