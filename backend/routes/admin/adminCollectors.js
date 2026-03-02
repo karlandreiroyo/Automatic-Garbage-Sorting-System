@@ -55,13 +55,36 @@ router.get('/collectors-with-stats', requireAuth, async (req, res) => {
     const role = (userRow.role || '').toUpperCase();
     if (role !== 'ADMIN' && role !== 'SUPERADMIN') return res.status(403).json({ success: false, message: 'Admin access required' });
 
-    const { data: collectors, error: collectorsError } = await supabase
+    let collectorRows = [];
+    let collectorsError = null;
+    const res = await supabase
       .from('users')
-      .select('id, first_name, last_name, middle_name')
+      .select('id, first_name, last_name, middle_name, status')
       .eq('role', 'COLLECTOR')
-      .eq('status', 'ACTIVE')
       .order('first_name');
+    if (res.error) {
+      if ((res.error.message || '').toLowerCase().includes('status') || (res.error.message || '').toLowerCase().includes('column')) {
+        const fallback = await supabase
+          .from('users')
+          .select('id, first_name, last_name, middle_name')
+          .eq('role', 'COLLECTOR')
+          .order('first_name');
+        if (fallback.error) {
+          collectorsError = fallback.error;
+        } else {
+          collectorRows = fallback.data || [];
+        }
+      } else {
+        collectorsError = res.error;
+      }
+    } else {
+      collectorRows = res.data || [];
+    }
     if (collectorsError) return res.status(500).json({ success: false, message: collectorsError.message });
+
+    const collectors = collectorRows.filter(
+      (u) => !('status' in u) || (u.status || '').toUpperCase() === 'ACTIVE'
+    );
 
     const { data: bins, error: binsError } = await supabase
       .from('bins')
