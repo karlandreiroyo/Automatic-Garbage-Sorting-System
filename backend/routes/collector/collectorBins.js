@@ -233,13 +233,14 @@ function notificationRowToUI(row, binName) {
     message,
     subtext: category,
     time,
-    isUnread: !row.is_read,
+    isUnread: row.is_read === false ? false : true,
   };
 }
 
 /**
  * GET /api/collector-bins/notifications
  * Returns notifications from notification_bin for the current collector (same DB as local; works on Railway).
+ * Works with or without is_read/collector_id columns: filters by last_name when collector_id is missing.
  */
 router.get('/notifications', requireAuth, async (req, res) => {
   try {
@@ -253,19 +254,37 @@ router.get('/notifications', requireAuth, async (req, res) => {
       .maybeSingle();
     if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
 
+    const baseSelect = 'id, created_at, bin_id, status, bin_category, last_name';
+    let rows;
+
+    // Try full schema first (with is_read and collector_id) (with is_read and collector_id)
     let query = supabase
       .from('notification_bin')
-      .select('id, created_at, bin_id, status, bin_category, is_read')
+      .select(`${baseSelect}, is_read, collector_id`)
       .order('created_at', { ascending: false })
       .limit(200);
-
     if (userRow.id != null) {
       query = query.or(`collector_id.eq.${userRow.id},collector_id.is.null`);
     }
-    const { data: rows, error } = await query;
-    if (error) {
-      console.error('notifications list error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+    const result = await query;
+    if (result.error) {
+      // Fallback: table may not have is_read or collector_id yet; use columns that exist and filter by last_name
+      const fallback = await supabase
+        .from('notification_bin')
+        .select(baseSelect)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (fallback.error) {
+        console.error('notifications list error:', fallback.error);
+        return res.status(500).json({ success: false, message: fallback.error.message });
+      }
+      rows = fallback.data || [];
+      const lastName = (userRow.last_name || '').trim();
+      if (lastName) {
+        rows = rows.filter((r) => (r.last_name || '').trim().toUpperCase() === lastName.toUpperCase());
+      }
+    } else {
+      rows = result.data || [];
     }
 
     const binIds = [...new Set((rows || []).map(r => r.bin_id).filter(Boolean))];
