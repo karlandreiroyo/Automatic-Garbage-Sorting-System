@@ -195,6 +195,31 @@ const BinMonitoring = () => {
             const existing = raw ? JSON.parse(raw) : [];
             localStorage.setItem("agss_notifications", JSON.stringify([...existing, newNotification].slice(-100)));
           } catch {}
+          // Persist to database (same DB locally and on Railway) so Notifications page shows them
+          if (collectorInfo && collectorBins.length > 0) {
+            const statusText = newNotification.fillLevel || (newNotification.type === "critical" ? "100%" : "10%");
+            const binCategory = newNotification.subtext || newNotification.title;
+            const matchBin = collectorBins.find((b) => {
+              const n = (b.name || "").toLowerCase();
+              if (binCategory === "Biodegradable") return n.includes("bio") && !n.includes("non");
+              if (binCategory === "Non Biodegradable" || binCategory === "Non-Bio") return n.includes("non");
+              if (binCategory === "Recyclable") return n.includes("recycl");
+              if (binCategory === "Unsorted") return n.includes("unsort") || !n;
+              return true;
+            });
+            const binId = matchBin ? matchBin.id : collectorBins[0]?.id;
+            if (binId != null) {
+              const { data: { session } } = await supabase.auth.getSession();
+              const token = session?.access_token;
+              if (token) {
+                fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ bin_id: binId, status: statusText, bin_category: binCategory }),
+                }).catch(() => {});
+              }
+            }
+          }
         }
         if (collectorInfo && collectorBins.length > 0) {
           const categoryMap = { BIO: "Biodegradable", NON_BIO: "Non Biodegradable", RECYCABLE: "Recyclable", UNSORTED: "Unsorted" };

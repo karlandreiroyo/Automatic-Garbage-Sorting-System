@@ -185,6 +185,174 @@ router.get('/assigned', requireAuth, async (req, res) => {
   }
 });
 
+// Map notification_bin row to Notifications UI shape
+function notificationRowToUI(row, binName) {
+  const status = (row.status || '').trim();
+  const category = row.bin_category || binName || 'Bin';
+  let type = 'info';
+  let title = 'Notification';
+  let message = `${category}: ${status}`;
+  if (status === 'Drained') {
+    type = 'success';
+    title = 'Bin Drained';
+    message = `${category} bin was drained.`;
+  } else if (status.includes('100') || status === 'Full' || status === 'Full - no more') {
+    type = 'critical';
+    title = 'Bin Full Alert';
+    message = `${category} is full — no more can be added. Drain the bin.`;
+  } else if (status.includes('80')) {
+    type = 'warning';
+    title = 'Bin Warning';
+    message = `${category} bin is at 80% capacity.`;
+  } else if (status.includes('50')) {
+    type = 'info';
+    title = 'Bin update';
+    message = `${category} bin is at 50% capacity.`;
+  } else if (status.includes('10')) {
+    type = 'info';
+    title = 'Bin update';
+    message = `${category} bin is at 10% capacity.`;
+  }
+  const created = row.created_at ? new Date(row.created_at) : new Date();
+  const now = new Date();
+  const diffMs = now - created;
+  let time = 'Just now';
+  if (diffMs > 60000) {
+    const mins = Math.floor(diffMs / 60000);
+    time = mins === 1 ? '1 min ago' : `${mins} mins ago`;
+  } else if (diffMs > 3600000) {
+    const hrs = Math.floor(diffMs / 3600000);
+    time = hrs === 1 ? '1h ago' : `${hrs}h ago`;
+  } else if (diffMs > 86400000) {
+    time = created.toLocaleDateString();
+  }
+  return {
+    id: row.id,
+    type,
+    title,
+    message,
+    subtext: category,
+    time,
+    isUnread: !row.is_read,
+  };
+}
+
+/**
+ * GET /api/collector-bins/notifications
+ * Returns notifications from notification_bin for the current collector (same DB as local; works on Railway).
+ */
+router.get('/notifications', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, middle_name, last_name')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    let query = supabase
+      .from('notification_bin')
+      .select('id, created_at, bin_id, status, bin_category, is_read')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (userRow.id != null) {
+      query = query.or(`collector_id.eq.${userRow.id},collector_id.is.null`);
+    }
+    const { data: rows, error } = await query;
+    if (error) {
+      console.error('notifications list error:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+
+    const binIds = [...new Set((rows || []).map(r => r.bin_id).filter(Boolean))];
+    const { data: binRows } = binIds.length
+      ? await supabase.from('bins').select('id, name').in('id', binIds)
+      : { data: [] };
+    const binNames = {};
+    (binRows || []).forEach(b => { binNames[b.id] = b.name || `Bin ${b.id}`; });
+
+    const list = (rows || []).map(r => notificationRowToUI(r, binNames[r.bin_id]));
+    res.json({ notifications: list });
+  } catch (err) {
+    console.error('notifications GET error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * PATCH /api/collector-bins/notifications/:id/read
+ * Mark a notification as read.
+ */
+router.patch('/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid notification id' });
+
+    const { data: row } = await supabase.from('notification_bin').select('id, collector_id').eq('id', id).maybeSingle();
+    if (!row) return res.status(404).json({ success: false, message: 'Notification not found' });
+    if (row.collector_id != null && row.collector_id !== userRow.id) return res.status(403).json({ success: false, message: 'Not allowed' });
+
+    const { error } = await supabase.from('notification_bin').update({ is_read: true }).eq('id', id);
+    if (error) {
+      console.error('notification mark-read error:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notifications PATCH error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * DELETE /api/collector-bins/notifications/:id
+ * Delete a notification (optional; collector must own it or it’s unassigned).
+ */
+router.delete('/notifications/:id', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid notification id' });
+
+    const { data: row } = await supabase.from('notification_bin').select('id, collector_id').eq('id', id).maybeSingle();
+    if (!row) return res.status(404).json({ success: false, message: 'Notification not found' });
+    if (row.collector_id != null && row.collector_id !== userRow.id) return res.status(403).json({ success: false, message: 'Not allowed' });
+
+    const { error } = await supabase.from('notification_bin').delete().eq('id', id);
+    if (error) {
+      console.error('notification delete error:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('notifications DELETE error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.get('/', (req, res) => { try { res.json({ bins: getBinsState() || [] }); } catch (err) { res.status(500).json({ error: err.message }); } });
 router.post('/', (req, res) => {
   try {
@@ -437,7 +605,7 @@ router.post('/bin-alert', requireAuth, async (req, res) => {
         return res.status(500).json({ success: false, message: insErr.message });
       }
     }
-    console.log('[notification_bin] bin-alert inserted:', { bin_id: binIdVal, status: row.status });
+    console.log('[notification_bin] bin-alert inserted:', { bin_id: binIdVal, status: rowWithOptional.status });
     res.json({ ok: true });
   } catch (err) {
     console.error('bin-alert error:', err);

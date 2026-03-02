@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import '../employee/employeecss/Notifications.css';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
 
 const loadInitialNotifications = () => {
   try {
@@ -36,12 +39,46 @@ const getBinClassName = (subtext) => {
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState(loadInitialNotifications);
+  const [loading, setLoading] = useState(true);
 
   const [activeFilters, setActiveFilters] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+
+  // Fetch notifications from database (same DB locally and on Railway)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchFromApi = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/api/collector-bins/notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          const list = data?.notifications;
+          if (Array.isArray(list)) {
+            setNotifications(list);
+            try { localStorage.setItem('agss_notifications', JSON.stringify(list)); } catch {}
+          }
+        }
+      } catch (_) {
+        // Keep localStorage fallback
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchFromApi();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     try {
@@ -74,19 +111,36 @@ const Notifications = () => {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const handleMarkAllRead = () => {
-    const unreadCount = notifications.filter(n => n.isUnread).length;
+  const handleMarkAllRead = async () => {
+    const unread = notifications.filter(n => n.isUnread);
+    const unreadCount = unread.length;
     
     if (unreadCount === 0) {
       showSuccess('All notifications are already marked as read');
       return;
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (token) {
+      const dbIds = unread
+        .filter(n => typeof n.id === 'number' || (typeof n.id === 'string' && /^\d+$/.test(String(n.id))))
+        .map(n => n.id);
+      await Promise.all(
+        dbIds.map(id =>
+          fetch(`${API_BASE}/api/collector-bins/notifications/${id}/read`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      );
+    }
+
     setNotifications(notifications.map(n => ({ ...n, isUnread: false })));
     showSuccess(`Marked ${unreadCount} notification${unreadCount > 1 ? 's' : ''} as read`);
   };
 
-  const handleMarkRead = (id) => {
+  const handleMarkRead = async (id) => {
     const notification = notifications.find(n => n.id === id);
     
     if (!notification) {
@@ -97,6 +151,23 @@ const Notifications = () => {
     if (!notification.isUnread) {
       showSuccess('Notification is already marked as read');
       return;
+    }
+
+    const isDbId = typeof id === 'number' || (typeof id === 'string' && /^\d+$/.test(String(id)));
+    if (isDbId) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch(`${API_BASE}/api/collector-bins/notifications/${id}/read`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('API error');
+        }
+      } catch (_) {
+        // Fallback: update local only
+      }
     }
 
     setNotifications(notifications.map(n => 
@@ -116,7 +187,7 @@ const Notifications = () => {
     setDeleteConfirm(id);
   };
 
-  const handleConfirmDelete = (id) => {
+  const handleConfirmDelete = async (id) => {
     const notification = notifications.find(n => n.id === id);
     
     if (!notification) {
@@ -125,13 +196,26 @@ const Notifications = () => {
       return;
     }
 
-    // Store deleted notification for potential undo
+    const isDbId = typeof id === 'number' || (typeof id === 'string' && /^\d+$/.test(String(id)));
+    if (isDbId) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch(`${API_BASE}/api/collector-bins/notifications/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error('API error');
+        }
+      } catch (_) {
+        // Still remove from local state
+      }
+    }
+
     setDeletedNotifications([...deletedNotifications, notification]);
-    
-    // Remove from notifications
     setNotifications(notifications.filter(n => n.id !== id));
     setDeleteConfirm(null);
-    
     showSuccess('Notification deleted successfully');
   };
 
@@ -232,7 +316,11 @@ const Notifications = () => {
       )}
 
       {/* Notification List */}
-      {!hasNotifications ? (
+      {loading ? (
+        <div className="empty-state">
+          <p>Loading notifications…</p>
+        </div>
+      ) : !hasNotifications ? (
         <div className="empty-state">
           <div className="empty-icon">{Icons.info}</div>
           <h3>No notifications</h3>

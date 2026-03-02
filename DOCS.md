@@ -176,7 +176,20 @@ Restart backend. Reset by email still uses SMTP; by phone uses SMS when the key 
 
 ---
 
-## 13. Remember me (login table)
+## 13. Notifications database (notification_bin)
+
+Notifications are stored in Supabase in the **same project** you use locally, so when you deploy to Railway the app uses the same database and notifications appear in production.
+
+- The backend reads/writes the **`notification_bin`** table (bin alerts, drain events, and read state).
+- Run the migration in Supabase so the Notifications UI can mark items as read:
+  1. Supabase Dashboard → **SQL Editor**.
+  2. Run the contents of **`backend/scripts/add-notification-bin-is-read.sql`** (adds `is_read` column).
+- If you haven’t already, run **`backend/scripts/add-notification-bin-columns.sql`** for `collector_id` and `bin_category`.
+- On Railway, set **`SUPABASE_SERVICE_KEY`** (service_role key) in the backend service variables so the API can read/write `notification_bin`.
+
+---
+
+## 14. Remember me (login table)
 
 If you see **“Could not find the table 'public.remember_me_tokens'”** and Remember Me does not persist:
 
@@ -188,7 +201,7 @@ The frontend also uses localStorage as fallback so Remember Me can work before t
 
 ---
 
-## 14. Reuse email after deleting user
+## 15. Reuse email after deleting user
 
 “A user with this email address has already been registered” usually means the email still exists in **Supabase Auth** even if the row was deleted from your `users` table.
 
@@ -196,7 +209,7 @@ The frontend also uses localStorage as fallback so Remember Me can work before t
 
 ---
 
-## 15. Frontend / Backend login service
+## 16. Frontend / Backend login service
 
 The main app uses `backend/server.js`. There is also a small **backendlogin** server under `frontend/src/loginpage/backendlogin/server.js` (forgot-password-style endpoints, optional).
 
@@ -204,7 +217,7 @@ The main app uses `backend/server.js`. There is also a small **backendlogin** se
 
 ---
 
-## 16. Arduino hardware
+## 17. Arduino hardware
 
 - Sketch runs on **Arduino Uno**; sends waste type and weight over **serial (USB)**.
 - Backend expects lines like: `RECYCABLE`, `NON_BIO`, `BIO`, `UNSORTED`, `Weight: X.X g`.
@@ -213,7 +226,7 @@ The main app uses `backend/server.js`. There is also a small **backendlogin** se
 
 ---
 
-## 17. Raspberry Pi
+## 18. Raspberry Pi
 
 - App in **raspberry/** sends sensor data to the backend: `POST API_URL/api/device/sensor` with `category`, `processing_time`, etc. Backend writes to Supabase `waste_items`.
 - On Pi: copy `raspberry` folder, `npm install`, create `.env` with `API_URL=http://<PC_IP>:3001`, then `npm start`. Replace simulated data in `getSimulatedReading()` with real hardware/GPIO if needed.

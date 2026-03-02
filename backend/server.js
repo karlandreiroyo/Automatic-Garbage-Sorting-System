@@ -103,7 +103,7 @@ const healthRoutes = require('./routes/shared/health');
 const securityAlertRoutes = require('./routes/shared/securityAlert');
 const accountsRoutes = require('./routes/superadmin/accounts');
 const hardwareRoutes = require('./routes/hardware');
-const collectorBinsRoutes = require('./routes/collectorBins');
+const collectorBinsRoutes = require('./routes/collector/collectorBins');
 
 // Test only
 app.get('/', (req, res) => {
