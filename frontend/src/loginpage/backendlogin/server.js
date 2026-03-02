@@ -6,8 +6,29 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+
+// Simple cookie parser for remember-me (no extra dependency)
+function parseCookies(cookieHeader) {
+  const obj = {};
+  if (!cookieHeader) return obj;
+  cookieHeader.split(';').forEach((s) => {
+    const [key, ...v] = s.trim().split('=');
+    if (key) obj[key] = decodeURIComponent((v.join('=') || '').trim());
+  });
+  return obj;
+}
+const REMEMBER_ME_COOKIE = 'remember_me_token';
+const rememberMeStore = new Map(); // token -> { email, password }
+const isProduction = process.env.NODE_ENV === 'production';
+const COOKIE_OPTS = {
+  httpOnly: true,
+  maxAge: 365 * 24 * 60 * 60 * 1000,
+  path: '/',
+  sameSite: isProduction ? 'none' : 'lax',
+  secure: isProduction,
+};
 
 // Supabase configuration
 const supabaseUrl = 'https://aezdtsjycbsygqnsvkbz.supabase.co';
@@ -366,6 +387,40 @@ app.post('/api/forgot-password/resend-code', async (req, res) => {
       message: 'An error occurred. Please try again.' 
     });
   }
+});
+
+// Remember-me: GET (return 200 with empty or saved email/password so no 404 in console)
+app.get('/api/remember-me', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies[REMEMBER_ME_COOKIE] && cookies[REMEMBER_ME_COOKIE].trim();
+  if (!token) return res.status(200).json({ success: true, email: '', password: '' });
+  const data = rememberMeStore.get(token);
+  if (!data) return res.status(200).json({ success: true, email: '', password: '' });
+  res.status(200).json({ success: true, email: data.email || '', password: data.password || '' });
+});
+
+// Remember-me: POST (save and set cookie)
+app.post('/api/remember-me', (req, res) => {
+  const { email, password } = req.body || {};
+  const emailTrim = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!emailTrim) return res.status(400).json({ success: false, message: 'Email is required' });
+  const cookies = parseCookies(req.headers.cookie);
+  const oldToken = cookies[REMEMBER_ME_COOKIE] && cookies[REMEMBER_ME_COOKIE].trim();
+  if (oldToken) rememberMeStore.delete(oldToken);
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  rememberMeStore.set(token, { email: emailTrim, password: typeof password === 'string' ? password : '' });
+  res.cookie(REMEMBER_ME_COOKIE, token, COOKIE_OPTS);
+  res.status(200).json({ success: true });
+});
+
+// Remember-me: DELETE (clear cookie and stored data)
+app.delete('/api/remember-me', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const token = cookies[REMEMBER_ME_COOKIE] && cookies[REMEMBER_ME_COOKIE].trim();
+  if (token) rememberMeStore.delete(token);
+  res.clearCookie(REMEMBER_ME_COOKIE, { path: '/', sameSite: isProduction ? 'none' : 'lax', secure: isProduction });
+  res.status(200).json({ success: true });
 });
 
 // Health check

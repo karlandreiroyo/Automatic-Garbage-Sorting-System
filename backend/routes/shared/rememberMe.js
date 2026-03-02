@@ -22,12 +22,13 @@ function getCookieOptions(res) {
   return opts;
 }
 
-// GET: Return saved email/password for this browser (identified by cookie)
+// GET: Return saved email/password for this browser (identified by cookie).
+// Returns 200 with empty email/password when none saved (avoids 404 in console).
 router.get('/', async (req, res) => {
   try {
     const token = getTokenFromRequest(req);
     if (!token) {
-      return res.status(404).json({ success: false, message: 'No remembered login' });
+      return res.status(200).json({ success: true, email: '', password: '' });
     }
 
     const { data, error } = await supabase
@@ -38,10 +39,10 @@ router.get('/', async (req, res) => {
 
     if (error) {
       console.warn('[remember-me GET] DB error:', error.message);
-      return res.status(500).json({ success: false, message: 'Failed to get remembered login' });
+      return res.status(200).json({ success: true, email: '', password: '' });
     }
     if (!data) {
-      return res.status(404).json({ success: false, message: 'No remembered login' });
+      return res.status(200).json({ success: true, email: '', password: '' });
     }
 
     return res.status(200).json({
@@ -51,7 +52,7 @@ router.get('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Remember me GET error:', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(200).json({ success: true, email: '', password: '' });
   }
 });
 
