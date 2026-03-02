@@ -257,7 +257,7 @@ router.get('/notifications', requireAuth, async (req, res) => {
     const baseSelect = 'id, created_at, bin_id, status, bin_category, last_name';
     let rows;
 
-    // Try full schema first (with is_read and collector_id) (with is_read and collector_id)
+    // Try full schema first (with is_read and collector_id)
     let query = supabase
       .from('notification_bin')
       .select(`${baseSelect}, is_read, collector_id`)

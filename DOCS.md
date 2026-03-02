@@ -41,15 +41,14 @@ Railway does **not** use your local `backend/.env`. Set variables in the **Railw
 
 **Quick fix for “Server returned an error page instead of JSON”**
 
-1. **Backend URL:** Railway → backend service → **Settings** → **Networking** (or **Generate domain**). Copy full URL.
-2. **Frontend:** Open frontend service → **Variables** → set **`BACKEND_URL`** = that backend URL (no trailing slash).
-3. **Redeploy** the frontend.
+1. **Backend URL:** Railway → backend service → **Settings** → **Networking** (or **Generate domain**). Copy full URL (e.g. `https://your-backend.up.railway.app`).
+2. **Frontend:** Open frontend service → **Variables** → set **`VITE_API_URL`** = that backend URL (no trailing slash). The app uses `VITE_API_URL` at build time.
+3. **Redeploy the frontend** so the new build includes the API URL.
 4. **Check backend:** Open `https://<your-backend-url>/api/health` in browser; expect JSON like `{"ok":true}`.
 
 **Frontend service**
 
-- Add variable: `BACKEND_URL` = backend service public URL (no trailing slash).
-- Redeploy after adding.
+- **Required for API (including Notifications):** Set **`VITE_API_URL`** = your backend service public URL (no trailing slash). Redeploy after adding.
 
 **Backend service**
 
@@ -186,6 +185,9 @@ Notifications are stored in Supabase in the **same project** you use locally, so
   2. Run the contents of **`backend/scripts/add-notification-bin-is-read.sql`** (adds `is_read` column).
 - If you haven’t already, run **`backend/scripts/add-notification-bin-columns.sql`** for `collector_id` and `bin_category`.
 - On Railway, set **`SUPABASE_SERVICE_KEY`** (service_role key) in the backend service variables so the API can read/write `notification_bin`.
+
+**Notifications empty on Railway (collector should see same as local)**  
+To get the Collector Notifications page on Railway to show the same `notification_bin` data as local: (1) Deploy the latest backend (uses `notification_bin` with fallback when `is_read`/`collector_id` are missing). (2) Backend: set **`SUPABASE_SERVICE_KEY`**. (3) Frontend: set **`VITE_API_URL`** = your backend public URL (e.g. `https://your-backend.up.railway.app`), then **redeploy the frontend** so the build includes it. (4) Ensure CORS allows your frontend origin. The API returns rows for the logged-in collector (by `last_name` when `collector_id` is not in the table).
 
 ---
 

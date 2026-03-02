@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { API_BASE } from '../config/api';
 import '../employee/employeecss/Notifications.css';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
 
 const loadInitialNotifications = () => {
   try {
