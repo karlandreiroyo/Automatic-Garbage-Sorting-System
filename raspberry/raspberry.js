@@ -1,8 +1,9 @@
 /**
  * Raspberry Pi – small app to send sensor data to the backend (real time).
  * Uses API_URL (your Node.js backend). Backend writes to Supabase.
+ * Compatible with Raspberry Pi 4B and Pi 5 (Node.js 16+).
  *
- * On the Pi:
+ * On the Pi (e.g. Pi 4B):
  *   1. Copy this folder to the Pi (e.g. /home/admin/raspberry).
  *   2. Create .env with:  API_URL=http://YOUR_PC_IP:3001
  *   3. Run:  npm start   (sends data every 10 seconds)

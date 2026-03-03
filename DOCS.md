@@ -325,6 +325,8 @@ The main app uses `backend/server.js`. There is also a small **backendlogin** se
 
 **Flow:** Raspberry Pi (sensors/ML) → **backend** (`/api/device/sensor`) → Supabase `waste_items`. The **frontend** (and admin/collector views) read that data from the backend/Supabase. So the Pi only talks to the backend; the backend and frontend run on your laptop or on Railway.
 
+**CPU compatibility:** The program is compatible with the **Raspberry Pi 4B** CPU. Training and inference in LearningMachine/NutriBin-MachineLearning use the Pi’s CPU by default (no GPU required). Scripts detect when they are running on a Pi and use CPU automatically.
+
 ### Using Python on the Pi
 
 1. **Backend must be running** (on your laptop or Railway) and reachable from the Pi (same Wi‑Fi, or use Railway URL).

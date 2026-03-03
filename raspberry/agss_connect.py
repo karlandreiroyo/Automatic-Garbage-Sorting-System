@@ -1,6 +1,7 @@
 """
 Send ML classification results to the Automatic Garbage Sorting System backend.
 Use this from your LearningMachine / NutriBin-MachineLearning inference script to connect to the app.
+Compatible with Raspberry Pi 4B CPU (inference runs on the Pi's CPU).
 
 Usage:
   Set API_URL (env or .env): http://YOUR_LAPTOP_IP:3001  or your Railway backend URL.
