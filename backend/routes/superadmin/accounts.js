@@ -165,6 +165,9 @@ router.post('/create-employee', async (req, res) => {
     if (!EMAIL_REGEX.test(emailVal)) {
       return res.status(400).json({ success: false, message: 'Invalid email format.' });
     }
+    if (String(role).toUpperCase() === 'ADMIN' && !emailVal.endsWith('.com')) {
+      return res.status(400).json({ success: false, message: 'Email must use a .com domain.' });
+    }
 
     // Validate second email if provided (optional)
     let secondEmailVal = null;
@@ -172,6 +175,9 @@ router.post('/create-employee', async (req, res) => {
       secondEmailVal = String(second_email).trim().toLowerCase();
       if (!EMAIL_REGEX.test(secondEmailVal)) {
         return res.status(400).json({ success: false, message: 'Invalid second email format.' });
+      }
+      if (String(role).toUpperCase() === 'ADMIN' && !secondEmailVal.endsWith('.com')) {
+        return res.status(400).json({ success: false, message: 'Backup email must use a .com domain.' });
       }
       // Check if second email is same as primary email
       if (secondEmailVal === emailVal) {
