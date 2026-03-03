@@ -1,6 +1,6 @@
 /**
- * Arduino serial reader (COM3). Parses TYPE:BIO, RECYCABLE, etc. from Serial.
- * Backend exposes GET /api/hardware/status for frontend.
+ * Arduino: serial (local COM) or bridge (POST from PC when deployed e.g. Railway).
+ * GET /api/hardware/status for frontend. POST /api/hardware/arduino for bridge.
  */
 let SerialPort, ReadlineParser;
 try {
@@ -17,9 +17,11 @@ try {
 
 const PORT_NAME = process.env.ARDUINO_PORT || 'COM3';
 const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
+const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
 
 let port;
 let parser;
+let serialAttempted = false;
 
 const hardwareState = {
   lastType: 'NORMAL',
@@ -27,10 +29,12 @@ const hardwareState = {
   lastUpdated: null,
   connected: false,
   error: null,
+  source: null, // 'serial' | 'bridge' | null
 };
 
 function initHardware() {
   if (port || !SerialPort) return;
+  serialAttempted = true;
   try {
     port = new SerialPort(
       { path: PORT_NAME, baudRate: BAUD_RATE },
@@ -48,6 +52,7 @@ function initHardware() {
       console.log(`✅ Serial port opened on ${PORT_NAME} @ ${BAUD_RATE}`);
       hardwareState.connected = true;
       hardwareState.error = null;
+      hardwareState.source = 'serial';
     });
     port.on('close', () => {
       hardwareState.connected = false;
@@ -79,11 +84,43 @@ function initHardware() {
   }
 }
 
+/**
+ * Update state from Arduino bridge (when deployed e.g. Railway). Bridge runs on PC and POSTs here.
+ */
+function updateStateFromBridge(type, weightG = null, rawLine = null) {
+  const upper = String(type || '').toUpperCase();
+  let lastType = 'NORMAL';
+  if (upper.includes('RECYCABLE')) lastType = 'RECYCABLE';
+  else if (upper.includes('NON_BIO') || upper.includes('NON-BIO')) lastType = 'NON_BIO';
+  else if (upper.includes('BIO')) lastType = 'BIO';
+  else if (upper.includes('UNSORTED')) lastType = 'UNSORTED';
+  else if (upper === 'NORMAL' || upper === '') lastType = 'NORMAL';
+  else lastType = upper || 'NORMAL';
+
+  hardwareState.lastType = lastType;
+  hardwareState.lastLine = rawLine != null ? String(rawLine) : hardwareState.lastLine;
+  hardwareState.lastUpdated = new Date().toISOString();
+  hardwareState.connected = true;
+  hardwareState.error = null;
+  hardwareState.source = 'bridge';
+  hardwareState._bridgeLastAt = Date.now();
+}
+
 function getHardwareState() {
-  return { ...hardwareState };
+  const out = { ...hardwareState };
+  // If we never tried serial, don't expose a stale error (e.g. from another env)
+  if (!serialAttempted && out.error) out.error = null;
+  // Bridge: show connected only for a while after last update
+  if (out.source === 'bridge' && out._bridgeLastAt) {
+    const elapsed = (Date.now() - out._bridgeLastAt) / 1000;
+    if (elapsed > BRIDGE_CONNECTED_SEC) out.connected = false;
+  }
+  delete out._bridgeLastAt;
+  return out;
 }
 
 module.exports = {
   initHardware,
   getHardwareState,
+  updateStateFromBridge,
 };

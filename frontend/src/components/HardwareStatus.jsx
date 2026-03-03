@@ -41,15 +41,25 @@ export default function HardwareStatus() {
     }
   };
 
+  const connectionLabel = status.connected
+    ? (status.source === 'bridge' ? 'Connected (bridge)' : 'Serial connected')
+    : 'Not connected';
+  const showBridgeHint = !status.connected && !status.error;
+
   return (
     <div className="hardware-status">
       <div className="hardware-status-header">
         <h2>Arduino sorting status</h2>
         <span className={`badge ${status.connected ? 'badge-connected' : 'badge-disconnected'}`}>
-          {status.connected ? 'Serial connected' : 'Not connected'}
+          {connectionLabel}
         </span>
       </div>
       {(status.error) && <div className="hardware-status-error">{status.error}</div>}
+      {showBridgeHint && (
+        <div className="hardware-status-hint">
+          When deployed, run the Arduino bridge on your PC (with the Arduino connected) to send data here.
+        </div>
+      )}
       <div className="hardware-cards">
         <div className="hardware-card">
           <span className="hardware-label">Detected type</span>

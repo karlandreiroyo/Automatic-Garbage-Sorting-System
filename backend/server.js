@@ -145,9 +145,10 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
 });
 
-// Arduino serial: only init when ARDUINO_PORT is set and not in production (no COM ports on Railway/cloud)
+// Arduino: only open serial when running locally with Arduino attached (ARDUINO_LOCAL=true).
+// When deployed (e.g. Railway), use the Arduino bridge on your PC to POST to /api/hardware/arduino.
 try {
-  if (process.env.ARDUINO_PORT && process.env.NODE_ENV !== 'production') {
+  if (process.env.ARDUINO_PORT && process.env.ARDUINO_LOCAL === 'true') {
     const { initHardware } = require('./utils/hardwareStore');
     initHardware();
   }
