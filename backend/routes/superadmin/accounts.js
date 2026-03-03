@@ -11,6 +11,18 @@ const { generateSecondEmailToken, secondEmailTokens } = require('../../utils/ver
 const EMAIL_REGEX = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const SPECIAL = '!@#$%^&*';
 
+const GMAIL_MISSPELLINGS = new Set([
+  'gmial.com', 'gmal.com', 'gmai.com', 'gmeil.com', 'gmali.com', 'gmaill.com',
+  'gmail.co', 'gmail.con', 'gmail.cmo', 'gmail.om', 'gmaiil.com', 'gmail.cm', 'gmael.com', 'gimail.com'
+]);
+function isGmailMisspelling(emailStr) {
+  if (!emailStr || typeof emailStr !== 'string') return false;
+  const i = emailStr.indexOf('@');
+  if (i === -1) return false;
+  const domain = emailStr.slice(i + 1).trim().toLowerCase();
+  return GMAIL_MISSPELLINGS.has(domain);
+}
+
 /** In-memory store: auth_id -> plain password, for resend-credentials only. Not persisted. */
 const employeePlainPasswords = new Map();
 
@@ -169,6 +181,9 @@ router.post('/create-employee', async (req, res) => {
     if ((roleUpper === 'ADMIN' || roleUpper === 'COLLECTOR') && !emailVal.endsWith('.com')) {
       return res.status(400).json({ success: false, message: 'Email must use a .com domain.' });
     }
+    if (isGmailMisspelling(emailVal)) {
+      return res.status(400).json({ success: false, message: 'Please use the correct spelling: gmail.com' });
+    }
 
     // Validate second email if provided (optional)
     let secondEmailVal = null;
@@ -179,6 +194,9 @@ router.post('/create-employee', async (req, res) => {
       }
       if ((roleUpper === 'ADMIN' || roleUpper === 'COLLECTOR') && !secondEmailVal.endsWith('.com')) {
         return res.status(400).json({ success: false, message: 'Backup email must use a .com domain.' });
+      }
+      if (isGmailMisspelling(secondEmailVal)) {
+        return res.status(400).json({ success: false, message: 'Please use the correct spelling: gmail.com' });
       }
       // Check if second email is same as primary email
       if (secondEmailVal === emailVal) {
