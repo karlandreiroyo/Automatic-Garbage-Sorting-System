@@ -31,6 +31,12 @@ Servo servoY;
 #define Y_FRONT_TILT 120
 #define Y_BACK_TILT  60
 
+// Smoother servo: track position, step X then Y (to bin), Y then X (return)
+int currentX = X_12_OCLOCK;
+int currentY = Y_NORMAL;
+#define SERVO_SPEED_DELAY 1
+#define SERVO_PAUSE_MS    120
+
 // ============ ULTRASONIC =================
 #define TRIG1 2
 #define ECHO1 3
@@ -145,13 +151,36 @@ long readDistance(int trigPin, int echoPin) {
   return duration * 0.034 / 2;
 }
 
-void moveServos(int xAngle, int yAngle) {
-  servoX.write(xAngle);
-  servoY.write(yAngle);
-  delay(600);
+// Smoother: move X first, then Y (to bin)
+void moveServos(int targetX, int targetY) {
+  while (currentX != targetX) {
+    if (currentX < targetX) currentX++;
+    else currentX--;
+    servoX.write(currentX);
+    delay(SERVO_SPEED_DELAY);
+  }
+  delay(SERVO_PAUSE_MS);
+  while (currentY != targetY) {
+    if (currentY < targetY) currentY++;
+    else currentY--;
+    servoY.write(currentY);
+    delay(SERVO_SPEED_DELAY);
+  }
 }
 
+// Smoother: return to center — Y first, then X
 void normalPosition() {
-  servoX.write(X_12_OCLOCK);
-  servoY.write(Y_NORMAL);
+  while (currentY != Y_NORMAL) {
+    if (currentY < Y_NORMAL) currentY++;
+    else currentY--;
+    servoY.write(currentY);
+    delay(SERVO_SPEED_DELAY);
+  }
+  delay(SERVO_PAUSE_MS);
+  while (currentX != X_12_OCLOCK) {
+    if (currentX < X_12_OCLOCK) currentX++;
+    else currentX--;
+    servoX.write(currentX);
+    delay(SERVO_SPEED_DELAY);
+  }
 }
