@@ -18,10 +18,13 @@ try {
 const PORT_NAME = process.env.ARDUINO_PORT || 'COM3';
 const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
 const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
+const WASTE_TYPE_HOLD_MS = 4000;  // keep lastType as waste type this long so frontend can count (Railway poll ~1s)
 
 let port;
 let parser;
 let serialAttempted = false;
+
+const WASTE_TYPES = ['RECYCABLE', 'NON_BIO', 'BIO', 'UNSORTED'];
 
 const hardwareState = {
   lastType: 'NORMAL',
@@ -30,6 +33,7 @@ const hardwareState = {
   connected: false,
   error: null,
   source: null, // 'serial' | 'bridge' | null
+  _wasteTypeSetAt: 0, // when we last set a waste type (for bridge hold)
 };
 
 function initHardware() {
@@ -86,6 +90,7 @@ function initHardware() {
 
 /**
  * Update state from Arduino bridge (when deployed e.g. Railway). Bridge runs on PC and POSTs here.
+ * Keep waste type visible for WASTE_TYPE_HOLD_MS so frontend poll can count it (Railway).
  */
 function updateStateFromBridge(type, weightG = null, rawLine = null) {
   const upper = String(type || '').toUpperCase();
@@ -97,13 +102,28 @@ function updateStateFromBridge(type, weightG = null, rawLine = null) {
   else if (upper === 'NORMAL' || upper === '') lastType = 'NORMAL';
   else lastType = upper || 'NORMAL';
 
+  const now = Date.now();
+  const isWasteType = WASTE_TYPES.includes(lastType);
+  const withinHold = hardwareState._wasteTypeSetAt && (now - hardwareState._wasteTypeSetAt) < WASTE_TYPE_HOLD_MS;
+  // Don't overwrite a recent waste type with NORMAL so frontend has time to poll and count
+  if (lastType === 'NORMAL' && withinHold && WASTE_TYPES.includes(hardwareState.lastType)) {
+    // Keep lastType as-is; only update connection and lastLine
+    hardwareState.lastLine = rawLine != null ? String(rawLine) : hardwareState.lastLine;
+    hardwareState.connected = true;
+    hardwareState.error = null;
+    hardwareState.source = 'bridge';
+    hardwareState._bridgeLastAt = now;
+    return;
+  }
+
+  if (isWasteType) hardwareState._wasteTypeSetAt = now;
   hardwareState.lastType = lastType;
   hardwareState.lastLine = rawLine != null ? String(rawLine) : hardwareState.lastLine;
   hardwareState.lastUpdated = new Date().toISOString();
   hardwareState.connected = true;
   hardwareState.error = null;
   hardwareState.source = 'bridge';
-  hardwareState._bridgeLastAt = Date.now();
+  hardwareState._bridgeLastAt = now;
 }
 
 function getHardwareState() {
@@ -116,6 +136,7 @@ function getHardwareState() {
     if (elapsed > BRIDGE_CONNECTED_SEC) out.connected = false;
   }
   delete out._bridgeLastAt;
+  delete out._wasteTypeSetAt;
   return out;
 }
 
