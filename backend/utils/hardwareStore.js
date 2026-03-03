@@ -76,11 +76,14 @@ function initHardware() {
         hardwareState.lastType = type.trim().toUpperCase() || 'NORMAL';
         return;
       }
-      if (upper.includes('RECYCABLE')) hardwareState.lastType = 'RECYCABLE';
+      // Accept both RECYCABLE (AGSS.ino) and RECYCLABLE ("Detected: Recyclable")
+      if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) hardwareState.lastType = 'RECYCABLE';
       else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) hardwareState.lastType = 'NON_BIO';
-      else if (upper.includes('BIO')) hardwareState.lastType = 'BIO';
+      else if (upper.includes('BIO') && !upper.includes('NON')) hardwareState.lastType = 'BIO';
       else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
-      else if (upper.includes('NORMAL POSITION')) hardwareState.lastType = 'NORMAL';
+      else if (upper.includes('NORMAL POSITION') || upper.includes('NO OBJECT')) hardwareState.lastType = 'NORMAL';
+      // Weight: X g / Time: X ms / "Detected: No object" = no detection → reset so next detection counts as +10%
+      else hardwareState.lastType = 'NORMAL';
     });
   } catch (err) {
     console.error('Failed to init hardware:', err.message);

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import '../employee/employeecss/CollectionHistory.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
+import { API_BASE } from '../config/api';
 
 /** Normalize API bin_category to display/filter type (e.g. "Non Biodegradable" → "Non-Biodegradable"). */
 const normalizeType = (binCategory) => {

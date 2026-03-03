@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { supabase } from "../supabaseClient";
+import { API_BASE } from "../config/api";
 import HardwareStatus from "../components/HardwareStatus";
 import "../employee/employeecss/BinMonitoring.css";
-
-const API_BASE = import.meta.env.VITE_API_URL || "https://brave-adaptation-production.up.railway.app";
 
 /**
  * Rounds fill level to nearest 10

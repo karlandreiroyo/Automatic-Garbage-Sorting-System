@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../config/api';
 import './HardwareStatus.css';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
 
 export default function HardwareStatus() {
   const [status, setStatus] = useState({
@@ -44,7 +43,9 @@ export default function HardwareStatus() {
   const connectionLabel = status.connected
     ? (status.source === 'bridge' ? 'Connected (bridge)' : 'Serial connected')
     : 'Not connected';
-  const showBridgeHint = !status.connected && !status.error;
+  const isLocalhost = /localhost|127\.0\.0\.1/.test(API_BASE);
+  const showBridgeHint = !status.connected && !status.error && !isLocalhost;
+  const showLocalHint = !status.connected && !status.error && isLocalhost;
 
   return (
     <div className="hardware-status">
@@ -55,9 +56,14 @@ export default function HardwareStatus() {
         </span>
       </div>
       {(status.error) && <div className="hardware-status-error">{status.error}</div>}
+      {showLocalHint && (
+        <div className="hardware-status-hint">
+          Start the backend (e.g. <code>npm start</code> in the <code>backend</code> folder) with <strong>ARDUINO_PORT=COM5</strong> in <code>backend/.env</code>. If the Arduino IDE Serial Monitor is open, close it — only one program can use the COM port.
+        </div>
+      )}
       {showBridgeHint && (
         <div className="hardware-status-hint">
-          When deployed, run the Arduino bridge on your PC (with the Arduino connected) to send data here.
+          <strong>Servo detection on deployment:</strong> Run the Arduino bridge on your PC (Arduino on COM5). Set <code>BACKEND_URL</code> to this app&apos;s backend (<code>{API_BASE}</code>), then run <code>node backend/scripts/arduino-bridge.js</code>. Detections will show here and add +10% to the matching bin.
         </div>
       )}
       <div className="hardware-cards">
