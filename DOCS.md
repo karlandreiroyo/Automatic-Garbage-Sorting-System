@@ -321,10 +321,205 @@ The main app uses `backend/server.js`. There is also a small **backendlogin** se
 
 ---
 
-## 18. Raspberry Pi
+## 18. Raspberry Pi – how it works with the system
 
-- App in **raspberry/** sends sensor data to the backend: `POST API_URL/api/device/sensor` with `category`, `processing_time`, etc. Backend writes to Supabase `waste_items`.
-- On Pi: copy `raspberry` folder, `npm install`, create `.env` with `API_URL=http://<PC_IP>:3001`, then `npm start`. Replace simulated data in `getSimulatedReading()` with real hardware/GPIO if needed.
+**Flow:** Raspberry Pi (sensors/ML) → **backend** (`/api/device/sensor`) → Supabase `waste_items`. The **frontend** (and admin/collector views) read that data from the backend/Supabase. So the Pi only talks to the backend; the backend and frontend run on your laptop or on Railway.
+
+### Using Python on the Pi
+
+1. **Backend must be running** (on your laptop or Railway) and reachable from the Pi (same Wi‑Fi, or use Railway URL).
+2. **On the Pi:** Your Python script should send a **POST** request to the backend.
+
+**Endpoint:** `POST {API_URL}/api/device/sensor`  
+- `API_URL` = your backend (e.g. `http://YOUR_LAPTOP_IP:3001` or your Railway backend URL).
+
+**Request:** JSON body, `Content-Type: application/json`.
+
+| Field (optional unless noted) | Type   | Description |
+|------------------------------|--------|-------------|
+| `category` (required)        | string | One of: `Biodegradable`, `Non-Biodegradable`, `Recyclable`, `Unsorted`. Backend also accepts variants like `bio`, `recycle`, `non bio`. |
+| `processing_time`            | number | Seconds (e.g. for ML inference time). Default 0. |
+| `device_id`                  | string | Identifies this Pi. If you have a `bins` table with `device_id`, backend can link the reading to that bin. |
+| `bin_id`                     | string/number | Optional; use if you already know the bin UUID/id. |
+
+**Example body:**
+```json
+{
+  "category": "Biodegradable",
+  "processing_time": 2,
+  "device_id": "raspberry-pi-1"
+}
+```
+
+**Success:** Backend returns `201` with `{ "success": true, "message": "Sensor reading saved.", "id": <id> }`.  
+**Check connectivity:** `GET {API_URL}/api/device/health` → `{ "status": "ok", "service": "device-api" }`.
+
+3. **In your Python script:** Use `requests` (or `urllib`) to POST that JSON to `API_URL/api/device/sensor`. Run your ML/camera/sensor logic on the Pi to get `category` (and optionally `processing_time`), then send one POST per reading. You can loop with a delay (e.g. every 10 seconds) or send once per detection.
+
+4. **Node.js option:** The repo also has **raspberry/raspberry.js** (Node). On the Pi you can use either: `node raspberry.js` (with `.env` and `API_URL`) or your own Python script that calls the same endpoint.
+
+### ML folder structure (this project)
+
+- **`raspberry/`** – Base folder for Pi and ML (e.g. `raspberry.js`, env).
+- **Trainer:** **`raspberry/LearningMachine/NutriBin-MachineLearning`** – training code and model export (e.g. YOLO/TFLite).
+- **Datasets:** under the trainer, in **`data`** → **`images`** (e.g. `yolo/data/images/` with `train/`, `val/`). The images in there are the datasets used by the trainer.
+
+So: **Trainer** = LearningMachine or NutriBin-MachineLearning. **Datasets** = the `data` folder and its `images` (train/val splits).
+
+### Connect to the system (step-by-step)
+
+Do these so your ML (and Pi) can talk to the app:
+
+1. **Start the backend** (so it accepts sensor data):
+   ```powershell
+   cd C:\Users\karla\Automatic-Garbage-Sorting-System\backend
+   npm start
+   ```
+   Leave this terminal open. Backend runs at `http://localhost:3001`.
+
+2. **Start the frontend** (optional, to see data in the app):
+   ```powershell
+   cd C:\Users\karla\Automatic-Garbage-Sorting-System\frontend
+   npm run dev
+   ```
+   Open the URL shown (e.g. http://localhost:5173).
+
+3. **From your ML / inference script:** Send each classification to the backend using the connector:
+   - **Option A – use the project’s connector:** In `raspberry/` there is **`agss_connect.py`**. From your NutriBin-MachineLearning inference script (e.g. in `raspberry/LearningMachine/NutriBin-MachineLearning/`), add the `raspberry` folder to the path and import:
+     ```python
+     import sys
+     import os
+     # Add raspberry folder to path (from NutriBin-MachineLearning: 3 levels up)
+     _raspberry = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+     sys.path.insert(0, _raspberry)
+     from agss_connect import send_to_backend
+
+     # After your model predicts:
+     category = "Biodegradable"   # or Non-Biodegradable, Recyclable, Unsorted
+     send_to_backend(category, processing_time_seconds=1.5)
+     ```
+   - **Option B – paste the `send_to_backend` code** from the section below into your own script and call it after each prediction.
+
+4. **Set the backend URL** (if the backend is not on this PC):
+   - Same PC: `API_URL` can stay default `http://127.0.0.1:3001` (or set in a `.env` in `raspberry/` with `API_URL=http://127.0.0.1:3001`).
+   - Pi or another device: set `API_URL=http://YOUR_LAPTOP_IP:3001` (same Wi‑Fi) or your Railway backend URL.
+
+5. **Test:** Run your inference script (or call `send_to_backend("Biodegradable", 0)` once). Check the backend terminal for a log line; in the app, the new reading should appear (e.g. Collector Bin / waste data).
+
+The connector module is **`raspberry/agss_connect.py`**; your ML code can import `send_to_backend` from it (Option A above).
+
+---
+
+### Connect your ML trainer + dataset to the system (Raspberry Pi → backend)
+
+1. **On your laptop (or Pi):** Train the model in **`raspberry/LearningMachine/NutriBin-MachineLearning`** using the **datasets in `data/images`**. Export the model (e.g. TFLite or YOLO format) so the Pi can run inference.
+2. **On the Pi:** Copy the **LearningMachine/NutriBin-MachineLearning** folder (trained model + inference script) to the Pi. Run inference (camera/sensor → model → category).
+3. **Send the result to your backend:** Right after you get a `category` (and optional `processing_time`) from your model, call your backend so the app and database stay in sync.
+
+**Where to add the “send to backend” call:** In the same Python script where you run inference (e.g. after you get the predicted class), add a function that POSTs to the backend. Example you can paste into your ML/inference script:
+
+```python
+import os
+import requests
+
+API_URL = os.environ.get("API_URL", "http://YOUR_LAPTOP_IP:3001").rstrip("/")
+DEVICE_ID = os.environ.get("DEVICE_ID", "raspberry-pi-1")
+
+def send_to_backend(category, processing_time_seconds=0):
+    """Send one classification result to your backend. Call this after your model predicts the category."""
+    url = f"{API_URL}/api/device/sensor"
+    body = {
+        "category": category,  # "Biodegradable" | "Non-Biodegradable" | "Recyclable" | "Unsorted"
+        "processing_time": processing_time_seconds,
+        "device_id": DEVICE_ID,
+    }
+    try:
+        r = requests.post(url, json=body, headers={"Content-Type": "application/json"}, timeout=10)
+        if r.ok:
+            print("Sent to backend:", category)
+            return True
+        print("Backend error:", r.status_code, r.text)
+        return False
+    except Exception as e:
+        print("Send failed:", e)
+        return False
+```
+
+**In your inference loop:** When your model outputs a class (e.g. from your dataset labels), map it to one of the four categories above and call:
+
+```python
+# Example: after inference
+category = "Biodegradable"   # or "Non-Biodegradable", "Recyclable", "Unsorted"
+processing_time = 1.5        # seconds your inference took
+send_to_backend(category, processing_time)
+```
+
+**Setup on the Pi:**
+
+- Install: `pip install requests`
+- Set the backend URL (same Wi‑Fi as laptop): `export API_URL=http://YOUR_LAPTOP_IP:3001` (or put `API_URL=http://...` in a `.env` and load it in Python). Use your laptop’s local IP (e.g. `192.168.1.100`). If the backend is on Railway, use that URL instead.
+- Run your inference script on the Pi; each time it classifies an item, it will send the result to your system.
+
+**Summary:** Train with your trainer + datasets → export model → on Pi run inference → after each prediction call `send_to_backend(category, processing_time)` so the Raspberry Pi is connected to your backend and data shows up in your app.
+
+---
+
+## 19. Raspberry Pi – wireless and ML files from laptop
+
+**Goal:** Pi and laptop on same Wi‑Fi; copy ML (and other) files from laptop to Pi over the network.
+
+### 1. Connect Pi to Wi‑Fi (same network as laptop)
+
+- **Raspberry Pi OS (desktop):** Click Wi‑Fi icon → select your network → enter password.
+- **Headless / CLI:** Edit `sudo nano /etc/wpa_supplicant/wpa_supplicant.conf`, add:
+  ```
+  network={
+      ssid="YourWiFiName"
+      psk="YourPassword"
+      key_mgmt=WPA-PSK
+  }
+  ```
+  Reboot: `sudo reboot`. After boot, Pi and laptop should be on the same network.
+
+### 2. Get the Pi’s IP address
+
+On the Pi:
+```bash
+hostname -I
+```
+Note the first address (e.g. `192.168.1.50`). Use this as `PI_IP` below.
+
+### 3. Transfer ML files from laptop (Windows) to Pi
+
+**Option A – SCP (PowerShell on laptop)**  
+Copy the **trainer** (LearningMachine / NutriBin-MachineLearning) to the Pi:
+```powershell
+scp -r "C:\Users\karla\Automatic-Garbage-Sorting-System\raspberry\LearningMachine" admin@PI_IP:~/Automatic-Garbage-Sorting-System/raspberry/
+```
+Replace `PI_IP` with the Pi’s IP. This copies the trainer and its `data/images` datasets to the Pi.
+
+**Option B – Use Git (if ML files are in the repo)**  
+1. On **laptop:** add/commit ML (trainer + data), push to GitHub:
+   ```powershell
+   cd C:\Users\karla\Automatic-Garbage-Sorting-System
+   git add raspberry/LearningMachine
+   git commit -m "Add ML trainer and datasets"
+   git push origin main
+   ```
+2. On **Pi:** pull (or only checkout that folder):
+   ```bash
+   cd ~/Automatic-Garbage-Sorting-System
+   git fetch origin
+   git checkout origin/main -- raspberry/LearningMachine
+   ```
+
+**Option C – Shared folder (advanced)**  
+On Pi you can run Samba and access a shared folder from Windows Explorer; set up once, then copy/paste ML files.
+
+### 4. After copying
+
+- If you use a virtual environment for ML on the Pi, activate it and reinstall if needed.
+- Run your trainer or inference from the path you copied, e.g. `~/Automatic-Garbage-Sorting-System/raspberry/LearningMachine/NutriBin-MachineLearning/` (datasets are under `data/images`, e.g. `yolo/data/images/val/`).
 
 ---
 
