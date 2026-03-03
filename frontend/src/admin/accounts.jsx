@@ -304,6 +304,8 @@ const Accounts = () => {
               error = 'Use gmail.com for complete domain';
             } else if (!emailRegex.test(emailVal)) {
               error = 'Invalid domain format (e.g., .com)';
+            } else if (!emailVal.toLowerCase().endsWith('.com')) {
+              error = 'Email must use a .com domain';
             }
           }
         }
@@ -328,6 +330,8 @@ const Accounts = () => {
             error = 'Use gmail.com for complete domain';
           } else if (!emailRegex.test(emailVal)) {
             error = 'Invalid domain format (e.g., .com)';
+          } else if (!emailVal.toLowerCase().endsWith('.com')) {
+            error = 'Email must use a .com domain';
           }
         }
         break;
@@ -404,6 +408,7 @@ const Accounts = () => {
             if (emailVal.endsWith('@') || emailVal.endsWith('.')) error = 'Email cannot end with @ or a period';
             else if (emailVal.toLowerCase().endsWith('@gmail.co')) error = 'Use gmail.com for complete domain';
             else if (!emailRegex.test(emailVal)) error = 'Invalid domain format (e.g., .com)';
+            else if (!emailVal.toLowerCase().endsWith('.com')) error = 'Email must use a .com domain';
           }
         }
         break;
