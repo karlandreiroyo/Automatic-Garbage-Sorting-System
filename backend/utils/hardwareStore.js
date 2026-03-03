@@ -15,7 +15,7 @@ try {
   console.warn('serialport not installed: npm install serialport');
 }
 
-const PORT_NAME = process.env.ARDUINO_PORT || 'COM3';
+const PORT_NAME = process.env.ARDUINO_PORT || 'COM5';
 const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
 const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
 const WASTE_TYPE_HOLD_MS = 4000;  // keep lastType as waste type this long so frontend can count (Railway poll ~1s)
