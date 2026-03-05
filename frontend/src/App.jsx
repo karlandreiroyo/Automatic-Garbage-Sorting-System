@@ -30,50 +30,84 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // Check if user is logged in when app loads; also ensure archived (INACTIVE) users cannot stay logged in
+  // Handles "Invalid Refresh Token" (e.g. on Railway when token was revoked or from another env)
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        const role = localStorage.getItem('userRole');
-        if (role) {
-          // Verify user is still ACTIVE in users table (e.g. not archived by superadmin)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        // If we have a session, ensure refresh token is still valid (fixes Railway 400 refresh_token error)
+        if (session) {
           try {
-            const { data: userRow } = await supabase
-              .from('users')
-              .select('status')
-              .eq('auth_id', session.user.id)
-              .maybeSingle();
-            if (userRow && userRow.status === 'INACTIVE') {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (!refreshed?.session) throw new Error('No session after refresh');
+          } catch (refreshErr) {
+            const msg = (refreshErr?.message || String(refreshErr)).toLowerCase();
+            if (msg.includes('refresh') && (msg.includes('invalid') || msg.includes('not found'))) {
               await supabase.auth.signOut();
               localStorage.removeItem('userRole');
               localStorage.removeItem('userEmail');
               localStorage.removeItem('userName');
               setIsLoggedIn(false);
               setUserRole(null);
-            } else {
+              setLoading(false);
+              return;
+            }
+            throw refreshErr;
+          }
+        }
+
+        if (session) {
+          const role = localStorage.getItem('userRole');
+          if (role) {
+            // Verify user is still ACTIVE in users table (e.g. not archived by superadmin)
+            try {
+              const { data: userRow } = await supabase
+                .from('users')
+                .select('status')
+                .eq('auth_id', session.user.id)
+                .maybeSingle();
+              if (userRow && userRow.status === 'INACTIVE') {
+                await supabase.auth.signOut();
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+                setIsLoggedIn(false);
+                setUserRole(null);
+              } else {
+                setUserRole(role);
+                setIsLoggedIn(true);
+              }
+            } catch {
               setUserRole(role);
               setIsLoggedIn(true);
             }
-          } catch {
-            setUserRole(role);
-            setIsLoggedIn(true);
+          } else {
+            // Session exists but no role in localStorage, sign out
+            await supabase.auth.signOut();
+            setIsLoggedIn(false);
+            setUserRole(null);
           }
         } else {
-          // Session exists but no role in localStorage, sign out
-          await supabase.auth.signOut();
+          // No session, clear everything
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userEmail');
+          localStorage.removeItem('userName');
           setIsLoggedIn(false);
           setUserRole(null);
         }
-      } else {
-        // No session, clear everything
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userName');
-        setIsLoggedIn(false);
-        setUserRole(null);
+      } catch (err) {
+        const msg = (err?.message || String(err)).toLowerCase();
+        if (msg.includes('refresh') && (msg.includes('invalid') || msg.includes('not found'))) {
+          await supabase.auth.signOut();
+          localStorage.removeItem('userRole');
+          localStorage.removeItem('userEmail');
+          localStorage.removeItem('userName');
+          setIsLoggedIn(false);
+          setUserRole(null);
+        }
       }
-      
+
       setLoading(false);
     };
 

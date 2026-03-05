@@ -15,9 +15,11 @@ try {
   console.warn('serialport not installed: npm install serialport');
 }
 
-// Use any COM port (COM3, COM5, COM7, COM8, etc.) via ARDUINO_PORT in backend/.env
-const PORT_NAME = process.env.ARDUINO_PORT || 'COM5';
-const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
+// Use any COM port and baud from env (read at init so .env / Railway vars are used)
+const getSerialPortConfig = () => ({
+  path: process.env.ARDUINO_PORT || 'COM5',
+  baudRate: Number(process.env.ARDUINO_BAUD || 9600),
+});
 const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
 const WASTE_TYPE_HOLD_MS = 4000;  // keep lastType as waste type this long so frontend can count (Railway poll ~1s)
 
@@ -51,9 +53,10 @@ function getAndClearPendingSortCommand() {
 function initHardware() {
   if (port || !SerialPort) return;
   serialAttempted = true;
+  const { path: portPath, baudRate } = getSerialPortConfig();
   try {
     port = new SerialPort(
-      { path: PORT_NAME, baudRate: BAUD_RATE },
+      { path: portPath, baudRate },
       (err) => {
         if (err) {
           console.error('Error opening serial port:', err.message);
@@ -65,7 +68,7 @@ function initHardware() {
     parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
     port.on('open', () => {
-      console.log(`✅ Serial port opened on ${PORT_NAME} @ ${BAUD_RATE}`);
+      console.log(`✅ Serial port opened on ${portPath} @ ${baudRate}`);
       hardwareState.connected = true;
       hardwareState.error = null;
       hardwareState.source = 'serial';
