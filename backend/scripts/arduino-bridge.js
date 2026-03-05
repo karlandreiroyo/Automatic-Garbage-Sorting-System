@@ -68,11 +68,12 @@ async function sendToBackend(payload) {
 
 async function pollPendingSort(port) {
   try {
+    if (!port || typeof port.write !== 'function') return;
     const res = await fetch(`${BACKEND_URL}/api/hardware/pending-sort`);
     if (!res.ok) return;
     const data = await res.json();
     const cmd = data && data.command;
-    if (!cmd || typeof port.write !== 'function') return;
+    if (!cmd) return;
     port.write(String(cmd).trim() + '\n');
     console.log('Bridge sent to Arduino:', cmd);
   } catch (err) {
@@ -89,7 +90,7 @@ function main() {
         process.exit(1);
       }
       console.log('Arduino bridge: reading from', ARDUINO_PORT, '->', BACKEND_URL);
-      console.log('Polling for sort commands (same as localhost when you click Sort here in the app).');
+      console.log('Polling for sort commands — click "Sort here" in the app to move the servo.');
     }
   );
 
@@ -102,7 +103,10 @@ function main() {
     sendToBackend(body);
   });
 
-  setInterval(() => pollPendingSort(port), 1500);
+  // Only poll for sort commands after port is open (so write() works)
+  port.on('open', () => {
+    setInterval(() => pollPendingSort(port), 1200);
+  });
 
   port.on('error', (err) => {
     console.error('Serial error:', err.message);
