@@ -509,8 +509,15 @@ const BinMonitoring = () => {
         });
       }
 
-      setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%)`);
-      setTimeout(() => setNotification(""), 2500);
+      const msg = (data?.message || '').toString().toLowerCase();
+      const isQueuedForBridge = msg.includes('queued');
+      const isRailway = !/localhost|127\.0\.0\.1/.test(API_BASE);
+      if (isQueuedForBridge || isRailway) {
+        setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%). Run the Arduino bridge on your PC (see instructions above) to move the servo.`);
+      } else {
+        setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%)`);
+      }
+      setTimeout(() => setNotification(""), 5000);
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {
