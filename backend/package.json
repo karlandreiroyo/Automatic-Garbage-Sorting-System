@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "esbuild server.js --bundle --platform=node --outfile=dist/app.js"
+    "build": "esbuild server.js --bundle --platform=node --outfile=dist/app.js",
+    "list-ports": "node scripts/list-ports.js"
   },
   "keywords": [
     "password-reset",
