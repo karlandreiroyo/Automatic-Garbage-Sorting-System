@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 /**
  * Arduino Bridge — run this on your PC when the app is deployed (e.g. Railway).
- * Reads from the Arduino serial port (e.g. COM5) and POSTs detections to your backend.
+ * Reads from the Arduino serial port (any COM: COM3, COM5, COM7, COM8, etc.) and POSTs detections to your backend.
  *
  * Usage (PowerShell):
  *   set BACKEND_URL=https://your-backend.up.railway.app
  *   set ARDUINO_PORT=COM5
  *   node backend/scripts/arduino-bridge.js
  *
- * Or with .env in backend folder:
- *   BACKEND_URL=https://... ARDUINO_PORT=COM5 node backend/scripts/arduino-bridge.js
+ * Use whatever port your Arduino is on: ARDUINO_PORT=COM7, ARDUINO_PORT=COM8, etc.
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const BACKEND_URL = (process.env.BACKEND_URL || process.env.API_URL || process.env.VITE_API_URL || '').replace(/\/$/, '');
-const ARDUINO_PORT = process.env.ARDUINO_PORT || 'COM5';
+const ARDUINO_PORT = process.env.ARDUINO_PORT || 'COM5'; // or COM7, COM8, etc. — any COM port
 const BAUD = Number(process.env.ARDUINO_BAUD || 9600);
 
 if (!BACKEND_URL) {

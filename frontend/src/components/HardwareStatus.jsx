@@ -58,12 +58,12 @@ export default function HardwareStatus() {
       {(status.error) && <div className="hardware-status-error">{status.error}</div>}
       {showLocalHint && (
         <div className="hardware-status-hint">
-          Start the backend (e.g. <code>npm start</code> in the <code>backend</code> folder) with <strong>ARDUINO_PORT=COM5</strong> in <code>backend/.env</code>. If the Arduino IDE Serial Monitor is open, close it — only one program can use the COM port.
+          In <code>backend/.env</code> set <strong>ARDUINO_LOCAL=true</strong> and <strong>ARDUINO_PORT=</strong> your port (e.g. COM5, COM7, COM8), then start the backend. If the Arduino IDE Serial Monitor is open, close it — only one program can use the COM port.
         </div>
       )}
       {showBridgeHint && (
         <div className="hardware-status-hint">
-          <strong>Servo detection on deployment:</strong> Run the Arduino bridge on your PC (Arduino on COM5). Set <code>BACKEND_URL</code> to this app&apos;s backend (<code>{API_BASE}</code>), then run <code>node backend/scripts/arduino-bridge.js</code>. Detections will show here and add +10% to the matching bin.
+          <strong>Servo detection (Railway):</strong> This app uses backend <code className="hardware-url">{API_BASE}</code>. On your PC run the Arduino bridge: set <code>BACKEND_URL={API_BASE}</code> and <code>ARDUINO_PORT=</code> your port (e.g. COM5, COM7), then <code>node backend/scripts/arduino-bridge.js</code>. Detections will show here and add +10% to the matching bin.
         </div>
       )}
       <div className="hardware-cards">

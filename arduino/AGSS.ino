@@ -10,7 +10,7 @@
  * 
  * IMPORTANT: Close Arduino Serial Monitor when running the backend!
  * Both use the same COM port – only one can connect at a time.
- * Set ARDUINO_PORT=COM5 (or your port) in backend/.env
+ * Set ARDUINO_PORT=COMx (e.g. COM5, COM7, COM8) in backend/.env
  */
 
 #include <Servo.h>

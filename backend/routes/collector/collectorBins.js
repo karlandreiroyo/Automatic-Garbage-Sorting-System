@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../../utils/supabase');
-const { getBinsState, setBinsState } = require('../../utils/collectorBinStore');
+const { getBinsState, setBinsState, loadFromDb, saveToDb } = require('../../utils/collectorBinStore');
 const { getCollectionLog, addCollectionLogEntries } = require('../../utils/collectionLogStore');
 const requireAuth = require('../../middleware/requireAuth');
 
@@ -377,14 +377,24 @@ router.delete('/notifications/:id', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/', (req, res) => { try { res.json({ bins: getBinsState() || [] }); } catch (err) { res.status(500).json({ error: err.message }); } });
-router.post('/', (req, res) => {
+router.get('/', async (req, res) => {
+  try {
+    await loadFromDb();
+    res.json({ bins: getBinsState() || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.post('/', async (req, res) => {
   try {
     const bins = req.body?.bins;
     if (!Array.isArray(bins)) return res.status(400).json({ error: 'bins must be an array' });
     setBinsState(bins);
+    await saveToDb();
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Collection history: per-collector from notification_bin (real-time); fallback to collection-log.json

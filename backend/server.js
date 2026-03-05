@@ -146,12 +146,10 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server error' });
 });
 
-// Arduino: open serial when ARDUINO_PORT is set and we're local (not production).
-// On localhost: just set ARDUINO_PORT=COM5 in backend/.env and start the backend.
-// On Railway (production): do not set ARDUINO_PORT; use the Arduino bridge on your PC instead.
+// Arduino: only open serial when ARDUINO_LOCAL=true (localhost with Arduino attached).
+// On Railway: do NOT set ARDUINO_LOCAL or ARDUINO_PORT — use the Arduino bridge on your PC instead.
 try {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const wantArduino = process.env.ARDUINO_PORT && (!isProduction || process.env.ARDUINO_LOCAL === 'true');
+  const wantArduino = process.env.ARDUINO_PORT && process.env.ARDUINO_LOCAL === 'true';
   if (wantArduino) {
     const { initHardware } = require('./utils/hardwareStore');
     initHardware();

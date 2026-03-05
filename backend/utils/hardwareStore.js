@@ -15,6 +15,7 @@ try {
   console.warn('serialport not installed: npm install serialport');
 }
 
+// Use any COM port (COM3, COM5, COM7, COM8, etc.) via ARDUINO_PORT in backend/.env
 const PORT_NAME = process.env.ARDUINO_PORT || 'COM5';
 const BAUD_RATE = Number(process.env.ARDUINO_BAUD || 9600);
 const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
