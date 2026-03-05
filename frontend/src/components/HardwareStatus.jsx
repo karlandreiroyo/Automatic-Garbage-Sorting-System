@@ -63,15 +63,17 @@ export default function HardwareStatus() {
       )}
       {showBridgeHint && (
         <div className="hardware-status-hint">
-          <strong>Railway — use Arduino bridge on your PC</strong>
-          <p>Backend: <code className="hardware-url">{API_BASE}</code></p>
-          <p>On the PC with the Arduino connected, run (PowerShell):</p>
+          <strong>Railway — connect Arduino from your PC</strong>
+          <ol className="hardware-steps">
+            <li>On the PC with the Arduino plugged in via USB, open PowerShell in the <strong>project folder</strong> (where <code>backend</code> and <code>frontend</code> folders are).</li>
+            <li>Run these three lines (replace <code>COM7</code> with your Arduino port — e.g. from Device Manager or <code>cd backend && npm run list-ports</code>):</li>
+          </ol>
           <pre className="hardware-bridge-cmd">
 {`$env:BACKEND_URL="${API_BASE}"
 $env:ARDUINO_PORT="COM7"
 node backend/scripts/arduino-bridge.js`}
           </pre>
-          <p>Then <strong>click &quot;Sort here&quot;</strong> on a bin below — the bridge will send the command to the Arduino and the servo will move. Detections and +10% will show here.</p>
+          <p>Keep the terminal open. Then <strong>click &quot;Sort here&quot;</strong> on a bin below — the servo will move and the bin will get +10%.</p>
         </div>
       )}
       <div className="hardware-cards">

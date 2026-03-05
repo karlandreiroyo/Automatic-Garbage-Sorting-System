@@ -13,6 +13,8 @@
   overflow-x: auto; white-space: pre;
 }
 .hardware-status-hint p { margin: 0.25rem 0; }
+.hardware-status-hint .hardware-steps { margin: 0.5rem 0; padding-left: 1.25rem; }
+.hardware-status-hint .hardware-steps li { margin: 0.35rem 0; }
 .hardware-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 .hardware-card { padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; flex-direction: column; gap: 0.25rem; }
 .hardware-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
