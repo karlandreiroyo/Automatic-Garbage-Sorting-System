@@ -111,7 +111,8 @@ const accountsRoutes = require('./routes/superadmin/accounts');
 const adminRoutes = require('./routes/admin');
 const hardwareRoutes = require('./routes/hardware');
 const collectorBinsRoutes = require('./routes/collector/collectorBins');
-const deviceRoutes = require('./routes/collector/device');
+// Device/sensor API (Raspberry Pi, Python) – disabled; backend only serves frontend + Arduino serial
+// const deviceRoutes = require('./routes/collector/device');
 
 // Test only
 app.get('/', (req, res) => {
@@ -132,7 +133,7 @@ app.use('/api/accounts', accountsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/hardware', hardwareRoutes);
 app.use('/api/collector-bins', collectorBinsRoutes);
-app.use('/api/device', deviceRoutes);
+// app.use('/api/device', deviceRoutes);  // Raspberry Pi / Python – disabled
 
 // 404 for unknown API routes — return JSON so frontend never gets HTML
 app.use('/api', (req, res) => {

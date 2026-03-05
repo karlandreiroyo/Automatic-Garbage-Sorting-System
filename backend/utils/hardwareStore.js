@@ -37,6 +37,17 @@ const hardwareState = {
   _wasteTypeSetAt: 0, // when we last set a waste type (for bridge hold)
 };
 
+// Railway (no serial): store pending sort so bridge on PC can poll and send to Arduino
+let pendingSortCommand = null;
+function setPendingSortCommand(cmd) {
+  pendingSortCommand = cmd ? String(cmd).trim() : null;
+}
+function getAndClearPendingSortCommand() {
+  const c = pendingSortCommand;
+  pendingSortCommand = null;
+  return c;
+}
+
 function initHardware() {
   if (port || !SerialPort) return;
   serialAttempted = true;
@@ -77,13 +88,14 @@ function initHardware() {
         hardwareState.lastType = type.trim().toUpperCase() || 'NORMAL';
         return;
       }
+      // Bin fullness lines (e.g. "Bin 1: 50%") – do not overwrite lastType
+      if (/^BIN \d+:\s*\d+%?$/i.test(clean)) return;
       // Accept both RECYCABLE (AGSS.ino) and RECYCLABLE ("Detected: Recyclable")
       if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) hardwareState.lastType = 'RECYCABLE';
       else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) hardwareState.lastType = 'NON_BIO';
       else if (upper.includes('BIO') && !upper.includes('NON')) hardwareState.lastType = 'BIO';
       else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
       else if (upper.includes('NORMAL POSITION') || upper.includes('NO OBJECT')) hardwareState.lastType = 'NORMAL';
-      // Weight: X g / Time: X ms / "Detected: No object" = no detection → reset so next detection counts as +10%
       else hardwareState.lastType = 'NORMAL';
     });
   } catch (err) {
@@ -144,8 +156,27 @@ function getHardwareState() {
   return out;
 }
 
+/**
+ * Send a command to the Arduino over serial (e.g. "Recycle", "Non-Bio", "Biodegradable", "Unsorted").
+ * Used by POST /api/hardware/sort. No-op if serial not open.
+ */
+function sendCommandToArduino(command) {
+  if (!port || typeof port.write !== 'function') return false;
+  try {
+    const line = String(command).trim() + '\n';
+    port.write(line);
+    return true;
+  } catch (err) {
+    console.error('Send command to Arduino failed:', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   initHardware,
   getHardwareState,
   updateStateFromBridge,
+  sendCommandToArduino,
+  setPendingSortCommand,
+  getAndClearPendingSortCommand,
 };

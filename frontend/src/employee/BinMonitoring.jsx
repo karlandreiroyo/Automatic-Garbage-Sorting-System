@@ -29,9 +29,32 @@ const getFillLevelColor = (fillLevel) => {
   return '#ef4444'; 
 };
 
+// Map bin id to API category for POST /api/hardware/sort (Arduino servo tilt)
+const BIN_TO_SORT_CATEGORY = {
+  'Biodegradable': 'Biodegradable',
+  'Non Biodegradable': 'Non-Bio',
+  'Recyclable': 'Recycle',
+  'Unsorted': 'Unsorted',
+};
+// Reverse: API category → bin id (for adding % after sort)
+const SORT_CATEGORY_TO_BIN_ID = {
+  'Recycle': 'Recyclable',
+  'Non-Bio': 'Non Biodegradable',
+  'Biodegradable': 'Biodegradable',
+  'Unsorted': 'Unsorted',
+};
+// API category → lastType value (so hardware poll doesn't double-add)
+const SORT_CATEGORY_TO_LAST_TYPE = {
+  'Recycle': 'RECYCABLE',
+  'Non-Bio': 'NON_BIO',
+  'Biodegradable': 'BIO',
+  'Unsorted': 'UNSORTED',
+};
+
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain: _onDrain, isSelected, onToggle: _onToggle }) => {
+const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain: _onDrain, onSort, sortCategory, isSorting, isSelected, onToggle: _onToggle }) => {
   const isEmpty = fillLevel === 0;
+  const canSort = sortCategory && typeof onSort === 'function';
 
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
@@ -51,6 +74,17 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
         <div className="meta-info">
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
         </div>
+        {canSort && (
+          <button
+            type="button"
+            className="bin-sort-here-btn"
+            onClick={() => onSort(sortCategory)}
+            disabled={isSorting}
+            title={`Tilt servo to sort into ${title} bin`}
+          >
+            {isSorting ? 'Tilting…' : 'Sort here'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -86,6 +120,7 @@ const BinMonitoring = () => {
   const [_hasPersistedBinState, setHasPersistedBinState] = useState(false);
   const [_restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [sortingCategory, setSortingCategory] = useState(null);
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
   binsRef.current = bins;
@@ -434,6 +469,55 @@ const BinMonitoring = () => {
     }
   };
 
+  /** Send sort command to Arduino so servo tilts to the selected bin; add +10% to that bin. */
+  const handleSortToBin = async (category) => {
+    if (!category) return;
+    setSortingCategory(category);
+    setNotification("");
+    try {
+      const res = await fetch(`${API_BASE}/api/hardware/sort`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category }),
+      });
+      const data = res.ok ? await res.json().catch(() => ({})) : {};
+      if (!res.ok) {
+        const msg = data.message || (res.status === 503 ? 'Arduino not connected. Check cable and backend.' : 'Sort failed.');
+        setNotification(msg);
+        return;
+      }
+      // So hardware poll doesn't double-add when Arduino echoes TYPE:XXX
+      const lastTypeValue = SORT_CATEGORY_TO_LAST_TYPE[category];
+      if (lastTypeValue) lastArduinoTypeRef.current = lastTypeValue;
+
+      const binId = SORT_CATEGORY_TO_BIN_ID[category];
+      if (binId) {
+        setBins((prevBins) => {
+          const nextBins = prevBins.map((bin) => {
+            if (bin.id !== binId) return bin;
+            const raw = Math.min(100, bin.fillLevel + 10);
+            const rounded = roundToTen(raw);
+            return {
+              ...bin,
+              fillLevel: rounded,
+              status: rounded >= 90 ? 'Full' : rounded >= 75 ? 'Almost Full' : rounded >= 50 ? 'Normal' : 'Empty',
+              lastCollection: 'Just now',
+            };
+          });
+          persistBinsToBackendAndStorage(nextBins);
+          return nextBins;
+        });
+      }
+
+      setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%)`);
+      setTimeout(() => setNotification(""), 2500);
+    } catch (err) {
+      setNotification(err.message || 'Could not send sort command.');
+    } finally {
+      setSortingCategory(null);
+    }
+  };
+
   const performDrain = async () => {
     const idsToDrain = confirmModal.binsToDrain.map(b => b.id);
     
@@ -499,6 +583,9 @@ const BinMonitoring = () => {
             isSelected={selectedBins.includes(bin.id)}
             onToggle={() => handleToggleSelect(bin.id)}
             onDrain={() => handleDrainSingle(bin.id)}
+            onSort={handleSortToBin}
+            sortCategory={BIN_TO_SORT_CATEGORY[bin.id]}
+            isSorting={sortingCategory === BIN_TO_SORT_CATEGORY[bin.id]}
             icon={bin.icon}
           />
         ))}

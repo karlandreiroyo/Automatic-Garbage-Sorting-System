@@ -1,20 +1,21 @@
 /**
  * AGSS Arduino – Automatic Garbage Sorting System
- * 
- * Output format (backend expects these exact strings, one per line):
- *   RECYCABLE   – sensor 1 (d1) detects object
- *   NON_BIO     – sensor 2 (d2) detects object
- *   BIO         – sensor 3 (d3) detects object
- *   UNSORTED    – sensor 4 (d4) detects object
- *   Weight: X.X g – no object, show weight only
- * 
- * IMPORTANT: Close Arduino Serial Monitor when running the backend!
- * Both use the same COM port – only one can connect at a time.
- * Set ARDUINO_PORT=COMx (e.g. COM5, COM7, COM8) in backend/.env
+ * Servos + 4 bin fullness ultrasonics + validation sensor + LED.
+ *
+ * CONNECTED TO:
+ * - Backend: backend sends same commands over Serial (collector clicks "Sort here" in app).
+ * - Arduino IDE: open Serial Monitor (9600 baud, "Newline" line ending), type one of the
+ *   commands below and press Enter – servo tilts to that bin.
+ *
+ * SERIAL COMMANDS (same from IDE or backend):
+ *   Recycle        → tilt to Recyclable bin (X 2 o'clock, Y front)
+ *   Non-Bio        → tilt to Non-Biodegradable bin (X 2 o'clock, Y back)
+ *   Biodegradable  → tilt to Biodegradable bin (X 10 o'clock, Y front)
+ *   Unsorted       → tilt to Unsorted bin (X 10 o'clock, Y back)
+ *
+ * Set ARDUINO_PORT=COMx in backend/.env. Close Serial Monitor when using the web app.
  */
-
 #include <Servo.h>
-#include "HX711.h"
 
 // ================= SERVOS =================
 Servo servoX;
@@ -26,124 +27,178 @@ Servo servoY;
 #define X_10_OCLOCK  40
 #define X_12_OCLOCK  90
 #define X_2_OCLOCK   140
-
 #define Y_NORMAL     90
 #define Y_FRONT_TILT 120
 #define Y_BACK_TILT  60
 
-// Smoother servo: track position, step X then Y (to bin), Y then X (return)
 int currentX = X_12_OCLOCK;
 int currentY = Y_NORMAL;
-#define SERVO_SPEED_DELAY 1
-#define SERVO_PAUSE_MS    120
+#define SERVO_SPEED_DELAY 8
 
-// ============ ULTRASONIC =================
-#define TRIG1 2
-#define ECHO1 3
-#define TRIG2 4
-#define ECHO2 5
-#define TRIG3 8
-#define ECHO3 9
-#define TRIG4 10
-#define ECHO4 11
+// ============ FULLNESS ULTRASONICS (4 bins) ============
+#define F_TRIG1 2
+#define F_ECHO1 3
+#define F_TRIG2 4
+#define F_ECHO2 5
+#define F_TRIG3 8
+#define F_ECHO3 9
+#define F_TRIG4 10
+#define F_ECHO4 11
 
-#define DETECT_DISTANCE 15
+#define BIN_HEIGHT_CM 45.7 // 18 inches
 
-// ============ LOAD CELL ==================
-#define HX_DOUT A0
-#define HX_SCK  A1
+// ============ VALIDATION SENSOR ============
+#define VALID_TRIG A0
+#define VALID_ECHO A1
 
-HX711 scale;
+// ============ LED PINS ============
+#define LED_READY 13
+#define LED_NOT_READY A2
 
-// Change this after calibration
-float calibration_factor = -7050;
+// ============ PRINT TIMING ============
+unsigned long lastPrintTime = 0;
+#define PRINT_INTERVAL 1000  // 1 second
 
-// ===== PROCESSING TIME (optional; backend ignores "Time: X ms" but keeps same flow) =====
-unsigned long startTime;
-unsigned long endTime;
-unsigned long processingTime;
-
-// =========================================
-
+// =====================================================
 void setup() {
   Serial.begin(9600);
 
   servoX.attach(SERVO_X_PIN);
   servoY.attach(SERVO_Y_PIN);
 
-  pinMode(TRIG1, OUTPUT); pinMode(ECHO1, INPUT);
-  pinMode(TRIG2, OUTPUT); pinMode(ECHO2, INPUT);
-  pinMode(TRIG3, OUTPUT); pinMode(ECHO3, INPUT);
-  pinMode(TRIG4, OUTPUT); pinMode(ECHO4, INPUT);
+  pinMode(F_TRIG1, OUTPUT); pinMode(F_ECHO1, INPUT);
+  pinMode(F_TRIG2, OUTPUT); pinMode(F_ECHO2, INPUT);
+  pinMode(F_TRIG3, OUTPUT); pinMode(F_ECHO3, INPUT);
+  pinMode(F_TRIG4, OUTPUT); pinMode(F_ECHO4, INPUT);
 
-  // HX711 init
-  scale.begin(HX_DOUT, HX_SCK);
-  scale.set_scale(calibration_factor);
-  scale.tare(); // zero weight
+  pinMode(VALID_TRIG, OUTPUT); pinMode(VALID_ECHO, INPUT);
 
-  Serial.println("System Ready");
+  pinMode(LED_READY, OUTPUT);
+  pinMode(LED_NOT_READY, OUTPUT);
+
   normalPosition();
+  Serial.println(F("AGSS ready. Send: Recycle | Non-Bio | Biodegradable | Unsorted"));
 }
 
-// ================= MAIN LOOP =================
+// ================= LOOP ===================
 void loop() {
-
-  startTime = millis();   // START TIMER
-
-  long d1 = readDistance(TRIG1, ECHO1);
-  long d2 = readDistance(TRIG2, ECHO2);
-  long d3 = readDistance(TRIG3, ECHO3);
-  long d4 = readDistance(TRIG4, ECHO4);
-
-  // ===== ULTRASONIC HAS PRIORITY =====
-  if (d1 < DETECT_DISTANCE) {
-    Serial.println("RECYCABLE");
-    moveServos(X_2_OCLOCK, Y_FRONT_TILT);
+  // --- Slow down Serial prints ---
+  if (millis() - lastPrintTime >= PRINT_INTERVAL) {
+    lastPrintTime = millis();
+    printBinPercentages(); // Only bins >=10% printed inside
   }
 
-  else if (d2 < DETECT_DISTANCE) {
-    Serial.println("NON_BIO");
-    moveServos(X_2_OCLOCK, Y_BACK_TILT);
-  }
-
-  else if (d3 < DETECT_DISTANCE) {
-    Serial.println("BIO");
-    moveServos(X_10_OCLOCK, Y_FRONT_TILT);
-  }
-
-  else if (d4 < DETECT_DISTANCE) {
-    Serial.println("UNSORTED");
-    moveServos(X_10_OCLOCK, Y_BACK_TILT);
-  }
-
-  // ===== NO OBJECT → SHOW WEIGHT ONLY =====
-  else {
-    normalPosition();
-
-    if (scale.is_ready()) {
-      float weight = scale.get_units(5);
-      Serial.print("Weight: ");
-      Serial.print(weight, 1);
-      Serial.println(" g");
+  // --- Check if any bin is full (priority for LEDs) ---
+  if (isAnyBinFull()) {
+    digitalWrite(LED_READY, HIGH);
+    digitalWrite(LED_NOT_READY, HIGH);
+  } else {
+    // --- Check validation sensor ---
+    if (!isDistanceStable()) {
+      setReadyState(false);  // READY OFF, NOT READY ON
+      return;                // Skip sorting
+    } else {
+      setReadyState(true);   // READY ON, NOT READY OFF
     }
   }
 
-  endTime = millis();
-  processingTime = endTime - startTime;
-  Serial.print("Time: ");
-  Serial.print(processingTime);
-  Serial.println(" ms");
-
-  delay(300);
+  // --- Serial command processing (from backend) ---
+  if (Serial.available()) {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    processCommand(command);
+  }
 }
 
-// ================= FUNCTIONS =================
+// ==================== LED CONTROL ======================
+void setReadyState(bool ready) {
+  if (ready) {
+    digitalWrite(LED_READY, HIGH);
+    digitalWrite(LED_NOT_READY, LOW);
+  } else {
+    digitalWrite(LED_READY, LOW);
+    digitalWrite(LED_NOT_READY, HIGH);
+  }
+}
 
+// ==================== FULLNESS CHECK ==================
+bool isAnyBinFull() {
+  return (isBinFull(1) || isBinFull(2) || isBinFull(3) || isBinFull(4));
+}
+
+bool isBinFull(int binNumber) {
+  float percent = getBinPercentage(binNumber);
+  return (percent >= 100);
+}
+
+float getBinPercentage(int binNumber) {
+  long distance = 999;
+
+  if (binNumber == 1) distance = readDistance(F_TRIG1, F_ECHO1);
+  if (binNumber == 2) distance = readDistance(F_TRIG2, F_ECHO2);
+  if (binNumber == 3) distance = readDistance(F_TRIG3, F_ECHO3);
+  if (binNumber == 4) distance = readDistance(F_TRIG4, F_ECHO4);
+
+  float percent = (1 - (distance / BIN_HEIGHT_CM)) * 100;
+  percent = constrain(percent, 0, 100);
+  percent = round(percent / 10.0) * 10; // tenths
+  return percent;
+}
+
+// Print fullness percentages for bins >=10%
+void printBinPercentages() {
+  for (int i = 1; i <= 4; i++) {
+    float percent = getBinPercentage(i);
+    if (percent >= 10) {
+      Serial.print("Bin ");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.print(percent);
+      Serial.println("%");
+    }
+  }
+}
+
+// ==================== DISTANCE VALIDATION ==================
+bool isDistanceStable() {
+  long d1 = readDistance(VALID_TRIG, VALID_ECHO);
+  delay(50);
+  long d2 = readDistance(VALID_TRIG, VALID_ECHO);
+  delay(50);
+  long d3 = readDistance(VALID_TRIG, VALID_ECHO);
+
+  bool stable = (abs(d1 - d2) < 3 && abs(d2 - d3) < 3);
+
+  // Disable sorting if validation sensor reads over 1 foot (~30.48 cm)
+  if (d1 > 30.48 || d2 > 30.48 || d3 > 30.48) {
+    stable = false;
+  }
+
+  return stable;
+}
+
+// ==================== SERIAL COMMAND PROCESSING ==================
+// Commands from backend (POST /api/hardware/sort). Reply TYPE:XXX so frontend updates.
+void processCommand(String cmd) {
+  if (cmd == "Recycle" && !isBinFull(1)) {
+    sortTo(X_2_OCLOCK, Y_FRONT_TILT);
+    Serial.println("TYPE:RECYCABLE");
+  } else if (cmd == "Non-Bio" && !isBinFull(2)) {
+    sortTo(X_2_OCLOCK, Y_BACK_TILT);
+    Serial.println("TYPE:NON_BIO");
+  } else if (cmd == "Biodegradable" && !isBinFull(3)) {
+    sortTo(X_10_OCLOCK, Y_FRONT_TILT);
+    Serial.println("TYPE:BIO");
+  } else if (cmd == "Unsorted" && !isBinFull(4)) {
+    sortTo(X_10_OCLOCK, Y_BACK_TILT);
+    Serial.println("TYPE:UNSORTED");
+  }
+}
+
+// ==================== ULTRASONIC HELPER ==================
 long readDistance(int trigPin, int echoPin) {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW); delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH); delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
 
   long duration = pulseIn(echoPin, HIGH, 30000);
@@ -151,35 +206,39 @@ long readDistance(int trigPin, int echoPin) {
   return duration * 0.034 / 2;
 }
 
-// Smoother: move X first, then Y (to bin)
+// ==================== SERVO MOVEMENT ==================
+void sortTo(int targetX, int targetY) {
+  digitalWrite(LED_READY, LOW);
+  digitalWrite(LED_NOT_READY, HIGH);
+
+  moveServos(targetX, targetY);
+  delay(800);
+  normalPosition();
+
+  setReadyState(true);
+}
+
 void moveServos(int targetX, int targetY) {
   while (currentX != targetX) {
-    if (currentX < targetX) currentX++;
-    else currentX--;
+    currentX += (currentX < targetX) ? 1 : -1;
     servoX.write(currentX);
     delay(SERVO_SPEED_DELAY);
   }
-  delay(SERVO_PAUSE_MS);
   while (currentY != targetY) {
-    if (currentY < targetY) currentY++;
-    else currentY--;
+    currentY += (currentY < targetY) ? 1 : -1;
     servoY.write(currentY);
     delay(SERVO_SPEED_DELAY);
   }
 }
 
-// Smoother: return to center — Y first, then X
 void normalPosition() {
   while (currentY != Y_NORMAL) {
-    if (currentY < Y_NORMAL) currentY++;
-    else currentY--;
+    currentY += (currentY < Y_NORMAL) ? 1 : -1;
     servoY.write(currentY);
     delay(SERVO_SPEED_DELAY);
   }
-  delay(SERVO_PAUSE_MS);
   while (currentX != X_12_OCLOCK) {
-    if (currentX < X_12_OCLOCK) currentX++;
-    else currentX--;
+    currentX += (currentX < X_12_OCLOCK) ? 1 : -1;
     servoX.write(currentX);
     delay(SERVO_SPEED_DELAY);
   }

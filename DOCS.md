@@ -331,7 +331,8 @@ On Railway there is no COM port. Use the **Arduino bridge** on your PC:
    node backend/scripts/arduino-bridge.js
    ```
 3. The bridge reads from the Arduino and POSTs each line to `POST /api/hardware/arduino`. Bin Monitoring will show **"Connected (bridge)"** and the detected type.
-4. Do **not** set `ARDUINO_PORT` or `ARDUINO_LOCAL` on Railway; the backend will not try to open a serial port and you will not see the "cannot open COM5" error.
+4. **Sort button (same as localhost):** The bridge also polls `GET /api/hardware/pending-sort`. When you click **"Sort here"** on a bin in the collector app (on Railway), the backend queues the command; the bridge picks it up and sends it to the Arduino. The servo tilts to that bin and the app adds +10% to the bin—same behavior as when running locally.
+5. Do **not** set `ARDUINO_PORT` or `ARDUINO_LOCAL` on Railway; the backend will not try to open a serial port and you will not see the "cannot open COM5" error.
 
 ---
 
