@@ -381,6 +381,32 @@
   transform: none;
 }
 
+.bin-drain-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 2px solid #047857;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+}
+.bin-drain-btn:hover:not(:disabled) {
+  background: #047857;
+  color: white;
+  transform: translateY(-1px);
+}
+.bin-drain-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Bottom Button */
 .drain-btn {
   width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;

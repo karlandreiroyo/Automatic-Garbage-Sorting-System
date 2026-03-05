@@ -391,8 +391,8 @@ const CollectionHistory = () => {
                   </div>
                 </div>
                 <div className="card-right">
-                  <span className="status-completed">
-                    <CheckCircleIcon /> {item.status || 'Unknown'}
+                  <span className={`status-completed ${(item.status || '').toLowerCase() === 'sorted' ? 'status-sorted' : ''}`}>
+                    <CheckCircleIcon /> {item.status === 'Sorted' ? `Sorted into ${item.type} bin` : (item.status || 'Unknown')}
                   </span>
                 </div>
               </div>

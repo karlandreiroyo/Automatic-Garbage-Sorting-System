@@ -196,6 +196,10 @@ function notificationRowToUI(row, binName) {
     type = 'success';
     title = 'Bin Drained';
     message = `${category} bin was drained.`;
+  } else if (status === 'Sorted') {
+    type = 'info';
+    title = 'Sorted';
+    message = `Sorted into ${category} bin.`;
   } else if (status.includes('100') || status === 'Full' || status === 'Full - no more') {
     type = 'critical';
     title = 'Bin Full Alert';
@@ -428,7 +432,7 @@ router.get('/collection-history', requireAuth, async (req, res) => {
     // Fallback: notification_bin without collector_id (match by first_name+middle_name+last_name)
     const { data: allRows, error: allErr } = await supabase
       .from('notification_bin')
-      .select('id, bin_id, status, first_name, middle_name, last_name, created_at')
+      .select('id, bin_id, bin_category, status, first_name, middle_name, last_name, created_at')
       .order('created_at', { ascending: false });
     if (!allErr && Array.isArray(allRows) && allRows.length > 0 && collectorFullName) {
       const match = allRows.filter((r) => {
@@ -596,6 +600,41 @@ router.post('/drain', requireAuth, async (req, res) => {
     res.json({ success: true, drained: allowedIds });
   } catch (err) {
     console.error('collector-bins drain error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Record a "Sort here" action → notification_bin (Notifications + Collection History; works local + Railway)
+router.post('/sort-notification', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { data: userRow, error: userError } = await supabase.from('users').select('id, first_name, middle_name, last_name').eq('auth_id', authId).maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+    const binCategory = (req.body?.bin_category || req.body?.category || '').trim() || 'Unsorted';
+    const { data: bins } = await supabase.from('bins').select('id, name').eq('assigned_collector_id', userRow.id).eq('status', 'ACTIVE').limit(1);
+    const bin = (bins && bins[0]) ? bins[0] : null;
+    const binId = bin ? bin.id : null;
+    const baseRow = {
+      bin_id: binId,
+      status: 'Sorted',
+      first_name: userRow.first_name ?? '',
+      last_name: userRow.last_name ?? '',
+      middle_name: userRow.middle_name ?? '',
+      bin_category: binCategory,
+      ...(userRow.id != null && { collector_id: userRow.id }),
+    };
+    if (binId == null) {
+      return res.status(400).json({ success: false, message: 'No bin assigned to this collector' });
+    }
+    const { error: insErr } = await supabase.from('notification_bin').insert(baseRow);
+    if (insErr) {
+      const fallback = await supabase.from('notification_bin').insert({ ...baseRow, bin_category: undefined });
+      if (fallback.error) return res.status(500).json({ success: false, message: insErr.message });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('sort-notification error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

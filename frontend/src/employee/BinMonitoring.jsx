@@ -52,9 +52,10 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
 };
 
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain: _onDrain, onSort, sortCategory, isSorting, isSelected, onToggle: _onToggle }) => {
+const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain, onSort, sortCategory, isSorting, isDraining, isSelected, onToggle: _onToggle }) => {
   const isEmpty = fillLevel === 0;
   const canSort = sortCategory && typeof onSort === 'function';
+  const canDrain = typeof onDrain === 'function';
 
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
@@ -83,6 +84,17 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
             title={`Tilt servo to sort into ${title} bin`}
           >
             {isSorting ? 'Tilting…' : 'Sort here'}
+          </button>
+        )}
+        {canDrain && (
+          <button
+            type="button"
+            className="bin-drain-btn"
+            onClick={() => onDrain()}
+            disabled={isDraining}
+            title={`Drain ${title} bin (notifies and adds to Collection History)`}
+          >
+            {isDraining ? 'Draining…' : 'Drain'}
           </button>
         )}
       </div>
@@ -121,9 +133,25 @@ const BinMonitoring = () => {
   const [_restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const [sortingCategory, setSortingCategory] = useState(null);
+  const [drainingBinId, setDrainingBinId] = useState(null);
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
   binsRef.current = bins;
+
+  // Map card category id to physical bin_id (for drain API)
+  const getBinIdForCard = (cardId, assignedBins) => {
+    if (!Array.isArray(assignedBins) || assignedBins.length === 0) return null;
+    const n = (cardId || '').toLowerCase();
+    const match = assignedBins.find((b) => {
+      const name = (b.name || '').toLowerCase();
+      if (n.includes('recycl') && name.includes('recycl')) return true;
+      if (n.includes('biodegradable') && !n.includes('non') && name.includes('bio') && !name.includes('non')) return true;
+      if (n.includes('non') && n.includes('bio') && (name.includes('non') || name.includes('non-bio'))) return true;
+      if (n.includes('unsorted') && name.includes('unsort')) return true;
+      return false;
+    });
+    return (match || assignedBins[0])?.id ?? null;
+  };
 
   // Persist bins to backend + localStorage (so tab switch / refresh keeps percentages)
   const persistBinsToBackendAndStorage = (binsToSave) => {
@@ -458,9 +486,7 @@ const BinMonitoring = () => {
 
   const handleDrainSingle = (id) => {
     const bin = bins.find(b => b.id === id);
-    if (bin && bin.fillLevel > 0) {
-      setConfirmModal({ show: true, binsToDrain: [bin] });
-    }
+    if (bin) setConfirmModal({ show: true, binsToDrain: [bin] });
   };
   
   const _handleMainButtonAction = () => {
@@ -509,15 +535,29 @@ const BinMonitoring = () => {
         });
       }
 
+      const displayCategory = SORT_CATEGORY_TO_BIN_ID[category] || category;
       const msg = (data?.message || '').toString().toLowerCase();
       const isQueuedForBridge = msg.includes('queued');
       const isRailway = !/localhost|127\.0\.0\.1/.test(API_BASE);
       if (isQueuedForBridge || isRailway) {
-        setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%). Run the Arduino bridge on your PC (see instructions above) to move the servo.`);
+        setNotification(`Sorted into ${displayCategory} bin (+10%). Run the Arduino bridge on your PC (see instructions above) to move the servo.`);
       } else {
-        setNotification(`Sorted into ${SORT_CATEGORY_TO_BIN_ID[category] || category} bin (+10%)`);
+        setNotification(`Sorted into ${displayCategory} bin (+10%)`);
       }
-      setTimeout(() => setNotification(""), 5000);
+      setTimeout(() => setNotification(''), 5000);
+
+      // Record "Sorted into X bin" in Notifications + Collection History (same for local and Railway)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          await fetch(`${API_BASE}/api/collector-bins/sort-notification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ bin_category: displayCategory }),
+          });
+        }
+      } catch (_) {}
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {
@@ -526,28 +566,52 @@ const BinMonitoring = () => {
   };
 
   const performDrain = async () => {
-    const idsToDrain = confirmModal.binsToDrain.map(b => b.id);
-    
-    // Update database (if you have category_bins table)
-    try {
-      // In a real system, you'd update the category_bins table
-      // For now, we'll just update local state
-      // await supabase.from('category_bins').update({ fill_level: 0 }).in('category', idsToDrain);
-    } catch (error) {
-      console.error('Error updating database:', error);
+    const binsToDrain = confirmModal.binsToDrain;
+    const categories = binsToDrain.map((b) => b.id);
+    const binIds = [...new Set(binsToDrain.map((b) => getBinIdForCard(b.id, collectorBins)).filter(Boolean))];
+    if (binIds.length === 0) {
+      setNotification('No assigned bin for this category. Ask admin to assign bins.');
+      setConfirmModal({ show: false, binsToDrain: [] });
+      return;
     }
-    
-    setBins(prevBins => prevBins.map(bin => {
-      if (idsToDrain.includes(bin.id)) {
-        return { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' };
+    setDrainingBinId(binsToDrain[0]?.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setNotification('Please sign in again.');
+        setConfirmModal({ show: false, binsToDrain: [] });
+        return;
       }
-      return bin;
-    }));
-
-    setSelectedBins([]); // Clear selection after action
-    setConfirmModal({ show: false, binsToDrain: [] });
-    setNotification("Draining Process Complete.");
-    setTimeout(() => { setNotification(""); }, 3000);
+      const res = await fetch(`${API_BASE}/api/collector-bins/drain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bin_ids: binIds, categories }),
+      });
+      const data = res.ok ? await res.json().catch(() => ({})) : {};
+      if (!res.ok) {
+        setNotification(data.message || 'Drain failed.');
+        setConfirmModal({ show: false, binsToDrain: [] });
+        return;
+      }
+      setBins((prevBins) =>
+        prevBins.map((bin) =>
+          categories.includes(bin.id) ? { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' } : bin
+        )
+      );
+      persistBinsToBackendAndStorage(
+        binsRef.current.map((b) => (categories.includes(b.id) ? { ...b, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' } : b))
+      );
+      setSelectedBins([]);
+      setConfirmModal({ show: false, binsToDrain: [] });
+      setNotification('Bin(s) drained. See Notifications and Collection History.');
+      setTimeout(() => setNotification(''), 4000);
+    } catch (err) {
+      setNotification(err.message || 'Drain failed.');
+      setConfirmModal({ show: false, binsToDrain: [] });
+    } finally {
+      setDrainingBinId(null);
+    }
   };
 
   return (
@@ -593,6 +657,7 @@ const BinMonitoring = () => {
             onSort={handleSortToBin}
             sortCategory={BIN_TO_SORT_CATEGORY[bin.id]}
             isSorting={sortingCategory === BIN_TO_SORT_CATEGORY[bin.id]}
+            isDraining={drainingBinId === bin.id}
             icon={bin.icon}
           />
         ))}

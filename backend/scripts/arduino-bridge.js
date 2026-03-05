@@ -66,18 +66,28 @@ async function sendToBackend(payload) {
   }
 }
 
+let _pendingSortLoggedFailure = false;
 async function pollPendingSort(port) {
   try {
     if (!port || typeof port.write !== 'function') return;
     const res = await fetch(`${BACKEND_URL}/api/hardware/pending-sort`);
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (!_pendingSortLoggedFailure) {
+        console.warn('Bridge could not reach backend (pending-sort):', res.status, BACKEND_URL);
+        _pendingSortLoggedFailure = true;
+      }
+      return;
+    }
     const data = await res.json();
     const cmd = data && data.command;
     if (!cmd) return;
     port.write(String(cmd).trim() + '\n');
-    console.log('Bridge sent to Arduino:', cmd);
+    console.log('>>> Bridge sent to Arduino:', cmd, '- servo should move now.');
   } catch (err) {
-    // ignore
+    if (!_pendingSortLoggedFailure) {
+      console.warn('Bridge pending-sort error:', err.message, '- is BACKEND_URL correct?', BACKEND_URL);
+      _pendingSortLoggedFailure = true;
+    }
   }
 }
 
