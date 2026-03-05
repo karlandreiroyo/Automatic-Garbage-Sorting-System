@@ -381,18 +381,108 @@ router.delete('/notifications/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Category order for the 4 bin cards (same as frontend)
+const CATEGORY_IDS = ['Biodegradable', 'Non Biodegradable', 'Recyclable', 'Unsorted'];
+
+function cardIdFromBinName(binName) {
+  const c = normalizeCategory(binName);
+  return c;
+}
+
+/**
+ * GET /api/collector-bins
+ * With auth (Railway/deployment): returns bin state from Supabase bins table (persists across restarts).
+ * Without auth (localhost): returns in-memory state + agss_bin_state fallback.
+ */
 router.get('/', async (req, res) => {
   try {
+    const header = req.headers.authorization || '';
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    const token = match?.[1];
+    if (token) {
+      const { data: userData } = await supabase.auth.getUser(token);
+      const authId = userData?.user?.id;
+      if (authId) {
+        const { data: userRow } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+        if (userRow) {
+          const { data: assignedBins } = await supabase
+            .from('bins')
+            .select('id, name, fill_level, last_update')
+            .eq('assigned_collector_id', userRow.id)
+            .eq('status', 'ACTIVE')
+            .order('id', { ascending: true });
+          if (Array.isArray(assignedBins) && assignedBins.length > 0) {
+            const byCategory = {};
+            CATEGORY_IDS.forEach((cat) => { byCategory[cat] = { fillLevel: 0, lastCollection: 'Just now', status: 'Empty' }; });
+            assignedBins.forEach((b) => {
+              const cat = cardIdFromBinName(b.name);
+              if (byCategory[cat] !== undefined) {
+                const fill = b.fill_level != null ? Number(b.fill_level) : 0;
+                byCategory[cat] = {
+                  fillLevel: Math.min(100, Math.round(fill)),
+                  lastCollection: b.last_update ? new Date(b.last_update).toLocaleString() : 'Just now',
+                  status: fill >= 90 ? 'Full' : fill >= 75 ? 'Almost Full' : fill >= 50 ? 'Normal' : fill > 0 ? 'Normal' : 'Empty',
+                };
+              }
+            });
+            const bins = CATEGORY_IDS.map((id) => ({
+              id,
+              fillLevel: byCategory[id].fillLevel,
+              lastCollection: byCategory[id].lastCollection,
+              status: byCategory[id].status,
+            }));
+            return res.json({ bins });
+          }
+        }
+      }
+    }
     await loadFromDb();
     res.json({ bins: getBinsState() || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * POST /api/collector-bins
+ * With auth (Railway/deployment): updates Supabase bins table (persists across restarts).
+ * Without auth (localhost): updates in-memory + agss_bin_state.
+ */
 router.post('/', async (req, res) => {
   try {
     const bins = req.body?.bins;
     if (!Array.isArray(bins)) return res.status(400).json({ error: 'bins must be an array' });
+
+    const header = req.headers.authorization || '';
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    const token = match?.[1];
+    if (token) {
+      const { data: userData } = await supabase.auth.getUser(token);
+      const authId = userData?.user?.id;
+      if (authId) {
+        const { data: userRow } = await supabase.from('users').select('id').eq('auth_id', authId).maybeSingle();
+        if (userRow) {
+          const { data: assignedBins } = await supabase
+            .from('bins')
+            .select('id, name')
+            .eq('assigned_collector_id', userRow.id)
+            .eq('status', 'ACTIVE');
+          if (Array.isArray(assignedBins) && assignedBins.length > 0) {
+            const now = new Date().toISOString();
+            for (const card of bins) {
+              const cardId = card.id && String(card.id).trim();
+              if (!cardId) continue;
+              const fillLevel = card.fillLevel != null ? Math.min(100, Math.max(0, Number(card.fillLevel))) : 0;
+              const bin = assignedBins.find((b) => cardIdFromBinName(b.name) === cardId);
+              if (bin) {
+                await supabase.from('bins').update({ fill_level: fillLevel, last_update: now }).eq('id', bin.id);
+              }
+            }
+            return res.json({ ok: true });
+          }
+        }
+      }
+    }
     setBinsState(bins);
     await saveToDb();
     res.json({ ok: true });

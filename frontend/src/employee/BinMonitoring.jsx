@@ -153,50 +153,69 @@ const BinMonitoring = () => {
     return (match || assignedBins[0])?.id ?? null;
   };
 
-  // Persist bins to backend + localStorage (so tab switch / refresh keeps percentages)
+  // Persist bins to backend + localStorage. With auth: saves to Supabase (Railway + localhost). Without: in-memory fallback.
   const persistBinsToBackendAndStorage = (binsToSave) => {
     const list = Array.isArray(binsToSave) ? binsToSave : binsRef.current;
     const serializable = list.map((b) => ({ id: b.id, fillLevel: b.fillLevel, status: b.status, lastCollection: b.lastCollection }));
     try {
       localStorage.setItem("agss_bin_state", JSON.stringify(serializable));
-      fetch(`${API_BASE}/api/collector-bins`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bins: serializable }) }).catch(() => {});
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          const headers = { "Content-Type": "application/json" };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          await fetch(`${API_BASE}/api/collector-bins`, { method: "POST", headers, body: JSON.stringify({ bins: serializable }) });
+        } catch (_) {}
+      })();
     } catch {}
   };
 
-  // Restore: backend first, then localStorage. No DB fetch / no auto-decrease.
+  // Restore: backend (Supabase when auth = Railway + localhost) + localStorage merged so fill levels persist.
   useEffect(() => {
     let cancelled = false;
     const restore = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/collector-bins`);
-        const data = res.ok ? await res.json() : {};
-        const backendBins = data?.bins;
-        if (cancelled) return;
-        if (Array.isArray(backendBins) && backendBins.length > 0) {
-          setBins(INITIAL_BINS.map((base) => {
-            const ov = backendBins.find((b) => b.id === base.id);
-            if (!ov) return base;
-            return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
-          }));
-          setHasPersistedBinState(true);
-          setRestoreAttempted(true);
-          if (!cancelled) setIsRestoring(false);
-          return;
-        }
-        const saved = localStorage.getItem("agss_bin_state");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0 && !cancelled) {
-            setBins(INITIAL_BINS.map((base) => {
-              const ov = parsed.find((b) => b.id === base.id);
-              if (!ov) return base;
-              return { ...base, fillLevel: ov.fillLevel ?? base.fillLevel, status: ov.status ?? base.status, lastCollection: ov.lastCollection ?? base.lastCollection };
-            }));
-            setHasPersistedBinState(true);
+        let backendBins = [];
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          const headers = {};
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const res = await fetch(`${API_BASE}/api/collector-bins`, { headers });
+          const data = res.ok ? await res.json() : {};
+          backendBins = Array.isArray(data?.bins) ? data.bins : [];
+        } catch (_) {}
+        const savedRaw = localStorage.getItem("agss_bin_state");
+        let localBins = [];
+        try {
+          if (savedRaw) {
+            const parsed = JSON.parse(savedRaw);
+            if (Array.isArray(parsed)) localBins = parsed;
           }
-        }
-      } catch {}
-      if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); }
+        } catch (_) {}
+        if (cancelled) return;
+        setBins(INITIAL_BINS.map((base) => {
+          const fromBackend = backendBins.find((b) => b.id === base.id);
+          const fromLocal = localBins.find((b) => b.id === base.id);
+          const fillBackend = fromBackend?.fillLevel ?? 0;
+          const fillLocal = fromLocal?.fillLevel ?? 0;
+          const fillLevel = Math.max(fillBackend, fillLocal);
+          const status = (fromBackend?.status ?? fromLocal?.status ?? base.status);
+          const lastCollection = (fromBackend?.lastCollection ?? fromLocal?.lastCollection ?? base.lastCollection);
+          return {
+            ...base,
+            fillLevel,
+            status: fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : fillLevel > 0 ? 'Normal' : 'Empty',
+            lastCollection,
+          };
+        }));
+        setHasPersistedBinState(true);
+        setRestoreAttempted(true);
+        if (!cancelled) setIsRestoring(false);
+      } catch (_) {
+        if (!cancelled) { setRestoreAttempted(true); setIsRestoring(false); }
+      }
     };
     restore();
     return () => { cancelled = true; };
