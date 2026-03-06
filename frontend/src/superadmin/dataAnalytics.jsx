@@ -402,7 +402,7 @@ const calculateYAxisLabels = () => {
                 setSelectedDate(date.toISOString().split('T')[0]);
               }
             }}
-            disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+            disabled={selectedDate >= todayLocalYYYYMMDD()}
             title={timeFilter === 'daily' ? 'Next Day' : timeFilter === 'weekly' ? 'Next Week' : 'Next Month'}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
