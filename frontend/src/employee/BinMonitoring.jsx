@@ -120,8 +120,32 @@ const INITIAL_BINS = [
   { id: 'Unsorted', title: 'Unsorted', capacity: '100 L', fillLevel: 0, lastCollection: 'Just now', colorClass: 'lime', status: 'Empty', icon: GearIcon },
 ];
 
+// Hydrate initial state from localStorage so refresh/sidebar navigation doesn't flash 0%
+function getInitialBinsFromStorage() {
+  try {
+    const raw = localStorage.getItem("agss_bin_state");
+    if (!raw) return INITIAL_BINS;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return INITIAL_BINS;
+    return INITIAL_BINS.map((base) => {
+      const saved = parsed.find((b) => b.id === base.id);
+      const fillLevel = saved?.fillLevel != null ? Math.min(100, Math.max(0, Number(saved.fillLevel))) : 0;
+      const lastCollection = saved?.lastCollection ?? base.lastCollection;
+      const status = saved?.status ?? (fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel > 0 ? 'Normal' : 'Empty');
+      return {
+        ...base,
+        fillLevel,
+        lastCollection,
+        status,
+      };
+    });
+  } catch {
+    return INITIAL_BINS;
+  }
+}
+
 const BinMonitoring = () => {
-  const [bins, setBins] = useState(INITIAL_BINS);
+  const [bins, setBins] = useState(getInitialBinsFromStorage);
   const [notification, setNotification] = useState("");
   const [selectedBins, setSelectedBins] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ show: false, binsToDrain: [] });
