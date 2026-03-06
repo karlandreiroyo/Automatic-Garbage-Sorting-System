@@ -370,21 +370,6 @@ const fetchDashboardData = async () => {
           </div>
         </div>
 
-        <div
-          className="stat-card stat-card-link"
-          role="button"
-          tabIndex={0}
-          onClick={() => onNavigateTo?.('data')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigateTo?.('data'); } }}
-          aria-label="Go to Data Analytics"
-        >
-          <div className="stat-icon-bg"><Icons.ProcessingTime /></div>
-          <div className="stat-info">
-            <span className="stat-label">Average Processing Time</span>
-            <h2 className="stat-value">{stats.avgProcessingTime}s</h2>
-          </div>
-        </div>
-
         <div className="stat-card-wrapper stat-card-collectors-dropdown" ref={collectorsDropdownRef}>
           <div
             className="stat-card stat-card-dropdown-trigger"
