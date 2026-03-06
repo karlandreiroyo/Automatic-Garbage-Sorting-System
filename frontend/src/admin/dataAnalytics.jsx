@@ -164,20 +164,8 @@ const fetchAnalyticsData = async () => {
       setLoading(false);
       return;
     }
-    // Admin sees analytics by collector only; require a collector to be selected
-    if (!selectedCollector?.id) {
-      setWasteDistribution([
-        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
-        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
-        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
-        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
-      ]);
-      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
-      setDailyTrend([]);
-      setLoading(false);
-      return;
-    }
-    const params = new URLSearchParams({ timeFilter, selectedDate, collectorId: selectedCollector.id });
+    const params = new URLSearchParams({ timeFilter, selectedDate });
+    if (selectedCollector?.id) params.set('collectorId', selectedCollector.id);
     const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -497,12 +485,6 @@ const calculateYAxisLabels = () => {
           </p>
         </div>
       </div>
-
-      {!selectedCollector && (
-        <div className="data-analytics-select-prompt">
-          <p>Choose a collector from the search bar above to see their waste sorting statistics and charts.</p>
-        </div>
-      )}
 
       {/* Time Filters + Calendar (same as superadmin Data Analytics) */}
       <div className="time-filters">
