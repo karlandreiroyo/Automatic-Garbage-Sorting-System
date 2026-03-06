@@ -77,7 +77,7 @@ const todayLocalYYYYMMDD = () => {
 
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
-  const [selectedDate, setSelectedDate] = useState(todayLocalYYYYMMDD);
+  const [selectedDate, setSelectedDate] = useState(() => todayLocalYYYYMMDD());
   const [collectorsWithStats, setCollectorsWithStats] = useState([]);
   const [loadingCollectors, setLoadingCollectors] = useState(true);
   const [selectedCollector, setSelectedCollector] = useState(null); // { id, name }
@@ -172,7 +172,7 @@ const fetchAnalyticsData = async () => {
       setLoading(false);
       return;
     }
-    const dateForApi = selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : todayLocalYYYYMMDD();
+    const dateForApi = (typeof selectedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) ? selectedDate : todayLocalYYYYMMDD();
     const params = new URLSearchParams({ timeFilter, selectedDate: dateForApi });
     if (selectedCollector?.id) params.set('collectorId', String(selectedCollector.id));
     const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {

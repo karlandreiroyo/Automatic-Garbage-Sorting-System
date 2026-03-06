@@ -77,7 +77,7 @@ const todayLocalYYYYMMDD = () => {
 
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
-  const [selectedDate, setSelectedDate] = useState(todayLocalYYYYMMDD);
+  const [selectedDate, setSelectedDate] = useState(() => todayLocalYYYYMMDD());
   const [categoryAccuracy, setCategoryAccuracy] = useState({
   'Unsorted': 0,
   'Biodegradable': 0,
@@ -116,7 +116,7 @@ const [wasteDistribution, setWasteDistribution] = useState([
         setLoading(false);
         return;
       }
-      const dateForApi = selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : todayLocalYYYYMMDD();
+      const dateForApi = (typeof selectedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) ? selectedDate : todayLocalYYYYMMDD();
       const params = new URLSearchParams({ timeFilter, selectedDate: dateForApi });
       const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
         headers: { Authorization: `Bearer ${token}` }

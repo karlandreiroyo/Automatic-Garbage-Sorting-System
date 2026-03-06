@@ -5,15 +5,25 @@ const router = express.Router();
 const supabase = require('../../utils/supabase');
 const requireAuth = require('../../middleware/requireAuth');
 
-// Normalize to YYYY-MM-DD for database date filters
+// Normalize to YYYY-MM-DD for database date filters (accepts YYYY-MM-DD or MM/DD/YYYY)
 function normalizeDateParam(dateStr) {
   if (!dateStr || typeof dateStr !== 'string') return new Date().toISOString().split('T')[0];
-  const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!match) return new Date().toISOString().split('T')[0];
-  const [, year, month, day] = match;
-  const y = parseInt(year, 10);
-  const m = Math.max(1, Math.min(12, parseInt(month, 10)));
-  const d = Math.max(1, Math.min(31, parseInt(day, 10)));
+  const s = dateStr.trim();
+  let y, m, d;
+  const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (isoMatch) {
+    [, y, m, d] = isoMatch.map(Number);
+  } else if (slashMatch) {
+    const [, month, day, year] = slashMatch;
+    y = parseInt(year, 10);
+    m = parseInt(month, 10);
+    d = parseInt(day, 10);
+  } else {
+    return new Date().toISOString().split('T')[0];
+  }
+  m = Math.max(1, Math.min(12, m));
+  d = Math.max(1, Math.min(31, d));
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
