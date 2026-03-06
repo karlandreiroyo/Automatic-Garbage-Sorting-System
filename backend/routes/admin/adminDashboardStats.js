@@ -7,7 +7,8 @@ const requireAuth = require('../../middleware/requireAuth');
 
 /**
  * GET /api/admin/dashboard-stats
- * Returns overall items sorted (count from waste_items) and avg processing time.
+ * Returns overall items sorted = count of rows (ids) in waste_items.
+ * E.g. 614 rows => overallItemsSorted 614; when new items are added, count increases.
  * For admin and superadmin dashboards; works with same DB on Railway.
  */
 router.get('/', requireAuth, async (req, res) => {

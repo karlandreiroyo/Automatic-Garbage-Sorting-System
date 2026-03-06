@@ -131,9 +131,10 @@ const fetchDashboardData = async () => {
     const totalEmployees = allEmployees.length;
     setEmployeesList(allEmployees);
 
-    // Overall items sorted + avg processing time: from backend (waste_items table) so it works on Railway
+    // Overall items sorted = count of ids in waste_items (e.g. 614 rows => 614). From backend so it works on Railway; updates when table changes.
     let overallItemsSorted = 0;
     let avgTime = 0;
+    let usedApi = false;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -146,11 +147,12 @@ const fetchDashboardData = async () => {
           if (data?.success && typeof data.overallItemsSorted === 'number') {
             overallItemsSorted = data.overallItemsSorted;
             avgTime = Number(data.avgProcessingTime) || 0;
+            usedApi = true;
           }
         }
       }
     } catch (_) {}
-    if (overallItemsSorted === 0 && avgTime === 0) {
+    if (!usedApi) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const { data: itemsData, error: itemsError } = await supabase
