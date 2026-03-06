@@ -67,9 +67,17 @@ const GearIcon = ({ color = '#6b7280' }) => (
   </svg>
 );
 
+const todayLocalYYYYMMDD = () => {
+  const t = new Date();
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, '0');
+  const d = String(t.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(todayLocalYYYYMMDD);
   const [categoryAccuracy, setCategoryAccuracy] = useState({
   'Unsorted': 0,
   'Biodegradable': 0,
@@ -108,7 +116,8 @@ const [wasteDistribution, setWasteDistribution] = useState([
         setLoading(false);
         return;
       }
-      const params = new URLSearchParams({ timeFilter, selectedDate });
+      const dateForApi = selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate) ? selectedDate : todayLocalYYYYMMDD();
+      const params = new URLSearchParams({ timeFilter, selectedDate: dateForApi });
       const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -374,7 +383,7 @@ const calculateYAxisLabels = () => {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]}
+            max={todayLocalYYYYMMDD()}
             className="analytics-date-input"
           />
           <button

@@ -5,6 +5,18 @@ const router = express.Router();
 const supabase = require('../../utils/supabase');
 const requireAuth = require('../../middleware/requireAuth');
 
+// Normalize to YYYY-MM-DD for database date filters
+function normalizeDateParam(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return new Date().toISOString().split('T')[0];
+  const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return new Date().toISOString().split('T')[0];
+  const [, year, month, day] = match;
+  const y = parseInt(year, 10);
+  const m = Math.max(1, Math.min(12, parseInt(month, 10)));
+  const d = Math.max(1, Math.min(31, parseInt(day, 10)));
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 router.get('/', requireAuth, async (req, res) => {
   try {
     const authId = req.authUser?.id;
@@ -20,17 +32,20 @@ router.get('/', requireAuth, async (req, res) => {
     if (role !== 'ADMIN' && role !== 'SUPERADMIN') return res.status(403).json({ success: false, message: 'Admin access required' });
 
     const timeFilter = (req.query.timeFilter || 'daily').toLowerCase();
-    const selectedDate = req.query.selectedDate || new Date().toISOString().split('T')[0];
-    const collectorId = req.query.collectorId ? String(req.query.collectorId).trim() : null;
+    const selectedDate = normalizeDateParam(req.query.selectedDate);
+    const collectorIdRaw = req.query.collectorId;
+    const collectorId = collectorIdRaw != null && collectorIdRaw !== '' ? String(collectorIdRaw).trim() : null;
     const [y, m, d] = selectedDate.split('-').map(Number);
     const dateObj = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
 
     let query = supabase.from('waste_items').select('category, created_at, bin_id');
     if (collectorId) {
+      const collectorIdNum = /^\d+$/.test(collectorId) ? parseInt(collectorId, 10) : null;
+      const assignedCollectorId = collectorIdNum != null && !isNaN(collectorIdNum) ? collectorIdNum : collectorId;
       const { data: bins, error: binsErr } = await supabase
         .from('bins')
         .select('id')
-        .eq('assigned_collector_id', collectorId);
+        .eq('assigned_collector_id', assignedCollectorId);
       if (binsErr) return res.status(500).json({ success: false, message: binsErr.message });
       const binIds = (bins || []).map((b) => b.id);
       if (binIds.length === 0) return res.json({ success: true, data: [] });
