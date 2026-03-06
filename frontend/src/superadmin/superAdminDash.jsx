@@ -220,45 +220,22 @@ const fetchDashboardData = async () => {
 
 const fetchWasteDistribution = async (dateString) => {
   try {
-    // Parse the selected date
-    const selectedDateObj = new Date(dateString);
-    selectedDateObj.setHours(0, 0, 0, 0);
-    const startOfDay = selectedDateObj.toISOString();
-    
-    // End of selected day
-    const endOfDay = new Date(selectedDateObj);
-    endOfDay.setHours(23, 59, 59, 999);
-    const endOfDayISO = endOfDay.toISOString();
-    
-    // Fetch waste items for the selected date
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('waste_items')
-      .select('*, bins(name)')
-      .gte('created_at', startOfDay)
-      .lte('created_at', endOfDayISO);
-
-    if (itemsError) throw itemsError;
-
-    // Create distribution data by category
-    const categoryCounts = {
-      'Biodegradable': 0,
-      'Non-Bio': 0,
-      'Recycle': 0,
-      'Unsorted': 0
-    };
-    
-    itemsData?.forEach(item => {
-      if (categoryCounts.hasOwnProperty(item.category)) {
-        categoryCounts[item.category]++;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const dateParam = encodeURIComponent(dateString || new Date().toISOString().split('T')[0]);
+    if (token) {
+      const res = await fetch(`${API_BASE}/api/admin/waste-distribution?selectedDate=${dateParam}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.success && Array.isArray(data.wasteDistribution)) {
+          setDistribution(data.wasteDistribution);
+          return;
+        }
       }
-    });
-
-    const distributionArray = Object.entries(categoryCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
-
-    setDistribution(distributionArray);
+    }
+    setDistribution([]);
   } catch (error) {
     console.error('Error fetching waste distribution:', error);
     setDistribution([]);
