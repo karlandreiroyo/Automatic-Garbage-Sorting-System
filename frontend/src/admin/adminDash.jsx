@@ -48,7 +48,6 @@ const AdminDash = ({ onNavigateTo }) => {
     overallItemsSorted: 0,
     avgProcessingTime: 0,
     collectors: 0,
-    supervisor: 0,
     totalEmployees: 0
   });
   
@@ -58,9 +57,6 @@ const AdminDash = ({ onNavigateTo }) => {
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
   const collectorsDropdownRef = React.useRef(null);
-  const [superadminsList, setSuperadminsList] = useState([]);
-  const [superadminsDropdownOpen, setSuperadminsDropdownOpen] = useState(false);
-  const superadminsDropdownRef = React.useRef(null);
   const [employeesList, setEmployeesList] = useState([]);
   const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
   const employeesDropdownRef = React.useRef(null);
@@ -91,18 +87,15 @@ const AdminDash = ({ onNavigateTo }) => {
       if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
         setCollectorsDropdownOpen(false);
       }
-      if (superadminsDropdownRef.current && !superadminsDropdownRef.current.contains(e.target)) {
-        setSuperadminsDropdownOpen(false);
-      }
       if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
         setEmployeesDropdownOpen(false);
       }
     };
-    if (collectorsDropdownOpen || superadminsDropdownOpen || employeesDropdownOpen) {
+    if (collectorsDropdownOpen || employeesDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [collectorsDropdownOpen, superadminsDropdownOpen, employeesDropdownOpen]);
+  }, [collectorsDropdownOpen, employeesDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
@@ -124,9 +117,6 @@ const fetchDashboardData = async () => {
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const supervisorUsers = usersData?.filter(u => u.role === 'SUPERVISOR' || u.role === 'SUPERADMIN') || [];
-    const supervisors = supervisorUsers.length;
-    setSuperadminsList(supervisorUsers);
     const allEmployees = usersData || [];
     const totalEmployees = allEmployees.length;
     setEmployeesList(allEmployees);
@@ -235,7 +225,6 @@ const fetchDashboardData = async () => {
       overallItemsSorted,
       avgProcessingTime: avgTime,
       collectors,
-      supervisor: supervisors,
       totalEmployees
     });
 
@@ -397,41 +386,6 @@ const fetchDashboardData = async () => {
                   collectorsList.map((c) => (
                     <li key={c.id || `${c.first_name}-${c.last_name}`} className="stat-card-dropdown-item">
                       {[c.first_name, c.last_name].filter(Boolean).join(' ') || 'Unnamed'}
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="stat-card-wrapper stat-card-superadmins-dropdown" ref={superadminsDropdownRef}>
-          <div
-            className="stat-card stat-card-dropdown-trigger"
-            role="button"
-            tabIndex={0}
-            onClick={() => setSuperadminsDropdownOpen((prev) => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSuperadminsDropdownOpen((prev) => !prev); } }}
-            aria-expanded={superadminsDropdownOpen}
-            aria-label="Superadmin count, click to view list"
-          >
-            <div className="stat-icon-bg"><Icons.Supervisor /></div>
-            <div className="stat-info">
-              <span className="stat-label">Superadmin</span>
-              <h2 className="stat-value">{stats.supervisor}</h2>
-            </div>
-            <span className={`stat-card-dropdown-caret ${superadminsDropdownOpen ? 'open' : ''}`}>▾</span>
-          </div>
-          {superadminsDropdownOpen && (
-            <div className="stat-card-dropdown">
-              <div className="stat-card-dropdown-title">All Superadmins</div>
-              <ul className="stat-card-dropdown-list">
-                {superadminsList.length === 0 ? (
-                  <li className="stat-card-dropdown-item empty">No superadmins</li>
-                ) : (
-                  superadminsList.map((s) => (
-                    <li key={s.id || `${s.first_name}-${s.last_name}`} className="stat-card-dropdown-item">
-                      {[s.first_name, s.last_name].filter(Boolean).join(' ') || 'Unnamed'}
                     </li>
                   ))
                 )}
