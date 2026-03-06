@@ -47,8 +47,7 @@ const AdminDash = ({ onNavigateTo }) => {
     totalBins: 0,
     overallItemsSorted: 0,
     avgProcessingTime: 0,
-    collectors: 0,
-    totalEmployees: 0
+    collectors: 0
   });
   
   const [distribution, setDistribution] = useState([]);
@@ -57,9 +56,6 @@ const AdminDash = ({ onNavigateTo }) => {
   const [collectorsList, setCollectorsList] = useState([]);
   const [collectorsDropdownOpen, setCollectorsDropdownOpen] = useState(false);
   const collectorsDropdownRef = React.useRef(null);
-  const [employeesList, setEmployeesList] = useState([]);
-  const [employeesDropdownOpen, setEmployeesDropdownOpen] = useState(false);
-  const employeesDropdownRef = React.useRef(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -87,15 +83,12 @@ const AdminDash = ({ onNavigateTo }) => {
       if (collectorsDropdownRef.current && !collectorsDropdownRef.current.contains(e.target)) {
         setCollectorsDropdownOpen(false);
       }
-      if (employeesDropdownRef.current && !employeesDropdownRef.current.contains(e.target)) {
-        setEmployeesDropdownOpen(false);
-      }
     };
-    if (collectorsDropdownOpen || employeesDropdownOpen) {
+    if (collectorsDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [collectorsDropdownOpen, employeesDropdownOpen]);
+  }, [collectorsDropdownOpen]);
 
 const fetchDashboardData = async () => {
   try {
@@ -117,10 +110,6 @@ const fetchDashboardData = async () => {
     const collectorUsers = usersData?.filter(u => u.role === 'COLLECTOR') || [];
     const collectors = collectorUsers.length;
     setCollectorsList(collectorUsers);
-    const allEmployees = usersData || [];
-    const totalEmployees = allEmployees.length;
-    setEmployeesList(allEmployees);
-
     // Overall items sorted = count of ids in waste_items (e.g. 614 rows => 614). From backend so it works on Railway; updates when table changes.
     let overallItemsSorted = 0;
     let avgTime = 0;
@@ -224,8 +213,7 @@ const fetchDashboardData = async () => {
       totalBins: binsData?.length || 0,
       overallItemsSorted,
       avgProcessingTime: avgTime,
-      collectors,
-      totalEmployees
+      collectors
     });
 
     setRecentActivity(formattedActivity);
@@ -394,73 +382,6 @@ const fetchDashboardData = async () => {
           )}
         </div>
 
-        <div className="stat-card-wrapper stat-card-employees-dropdown" ref={employeesDropdownRef}>
-          <div
-            className="stat-card stat-card-dropdown-trigger"
-            role="button"
-            tabIndex={0}
-            onClick={() => setEmployeesDropdownOpen((prev) => !prev)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEmployeesDropdownOpen((prev) => !prev); } }}
-            aria-expanded={employeesDropdownOpen}
-            aria-label="Total employees count, click to view list"
-          >
-            <div className="stat-icon-bg"><Icons.TotalEmployees /></div>
-            <div className="stat-info">
-              <span className="stat-label">Total Employees</span>
-              <h2 className="stat-value">{stats.totalEmployees}</h2>
-            </div>
-            <span className={`stat-card-dropdown-caret ${employeesDropdownOpen ? 'open' : ''}`}>▾</span>
-          </div>
-          {employeesDropdownOpen && (
-            <div className="stat-card-dropdown">
-              {(() => {
-                const collectors = employeesList.filter(e => e.role === 'COLLECTOR');
-                const admins = employeesList.filter(e => e.role === 'ADMIN');
-                const superAdmins = employeesList.filter(e => e.role === 'SUPERVISOR');
-                return (
-                  <>
-                    <div className="stat-card-dropdown-title">All Collectors</div>
-                    <ul className="stat-card-dropdown-list">
-                      {collectors.length === 0 ? (
-                        <li className="stat-card-dropdown-item empty">No collectors</li>
-                      ) : (
-                        collectors.map((emp) => (
-                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-collector`} className="stat-card-dropdown-item">
-                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                    <div className="stat-card-dropdown-title">All Admins</div>
-                    <ul className="stat-card-dropdown-list">
-                      {admins.length === 0 ? (
-                        <li className="stat-card-dropdown-item empty">No admins</li>
-                      ) : (
-                        admins.map((emp) => (
-                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-admin`} className="stat-card-dropdown-item">
-                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                    <div className="stat-card-dropdown-title">All Super Admins</div>
-                    <ul className="stat-card-dropdown-list">
-                      {superAdmins.length === 0 ? (
-                        <li className="stat-card-dropdown-item empty">No super admins</li>
-                      ) : (
-                        superAdmins.map((emp) => (
-                          <li key={emp.id || `${emp.first_name}-${emp.last_name}-superadmin`} className="stat-card-dropdown-item">
-                            {[emp.first_name, emp.last_name].filter(Boolean).join(' ').toUpperCase() || 'Unnamed'}
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="main-charts-layout">
