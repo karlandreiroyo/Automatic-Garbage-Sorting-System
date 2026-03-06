@@ -260,27 +260,37 @@ const [wasteDistribution, setWasteDistribution] = useState([
     }
   };
 
-  // Calculate pie chart segments
+  // Calculate pie chart segments (skip 0% to avoid degenerate paths; full circle drawn as two arcs)
   const calculateDonutSegments = () => {
+    const radius = 90;
+    const cx = 100;
+    const cy = 100;
+    const segments = [];
     let currentAngle = -90; // Start from top
-    const radius = 90; // Increased radius for larger pie chart
-    const segments = wasteDistribution.map(item => {
-      const percentage = parseFloat(item.percentage);
+    wasteDistribution.forEach((item) => {
+      const percentage = parseFloat(item.percentage) || 0;
       const angle = (percentage / 100) * 360;
+      if (angle <= 0) return; // Skip 0% so path is not degenerate
       const startAngle = currentAngle;
       const endAngle = currentAngle + angle;
       currentAngle = endAngle;
-
-      const startX = 100 + radius * Math.cos((startAngle * Math.PI) / 180);
-      const startY = 100 + radius * Math.sin((startAngle * Math.PI) / 180);
-      const endX = 100 + radius * Math.cos((endAngle * Math.PI) / 180);
-      const endY = 100 + radius * Math.sin((endAngle * Math.PI) / 180);
-      const largeArcFlag = angle > 180 ? 1 : 0;
-
-      return {
-        ...item,
-        path: `M 100 100 L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`
-      };
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+      const startX = cx + radius * Math.cos(startRad);
+      const startY = cy + radius * Math.sin(startRad);
+      const endX = cx + radius * Math.cos(endRad);
+      const endY = cy + radius * Math.sin(endRad);
+      let path;
+      if (angle >= 359.9) {
+        // Full circle: SVG arc can't do 360 in one go, use two 180° arcs
+        const midX = cx + radius * Math.cos((startAngle + 180) * Math.PI / 180);
+        const midY = cy + radius * Math.sin((startAngle + 180) * Math.PI / 180);
+        path = `M ${cx} ${cy} L ${startX} ${startY} A ${radius} ${radius} 0 1 1 ${midX} ${midY} A ${radius} ${radius} 0 1 1 ${startX} ${startY} Z`;
+      } else {
+        const largeArcFlag = angle > 180 ? 1 : 0;
+        path = `M ${cx} ${cy} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+      }
+      segments.push({ ...item, path });
     });
     return segments;
   };
