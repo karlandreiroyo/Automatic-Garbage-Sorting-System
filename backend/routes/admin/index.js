@@ -10,7 +10,9 @@ const adminDataAnalyticsRoutes = require('./adminDataAnalytics');
 const adminRecordedItemsRoutes = require('./adminRecordedItems');
 const adminWasteDistributionRoutes = require('./adminWasteDistribution');
 const adminCollectorsRoutes = require('./adminCollectors');
+const adminDashboardStatsRoutes = require('./adminDashboardStats');
 
+router.use('/dashboard-stats', adminDashboardStatsRoutes);
 router.use('/waste-categories', adminWasteRoutes);
 router.use('/data-analytics', adminDataAnalyticsRoutes);
 router.use('/recorded-items', adminRecordedItemsRoutes);

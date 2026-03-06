@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { API_BASE } from '../config/api';
 import './admincss/adminDash.css';
 
 // SVG Icons matching the photo
@@ -130,23 +131,39 @@ const fetchDashboardData = async () => {
     const totalEmployees = allEmployees.length;
     setEmployeesList(allEmployees);
 
-    // Fetch waste items for statistics
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('waste_items')
-      .select('*, bins(name)')
-      .gte('created_at', today.toISOString());
-
-    if (itemsError) throw itemsError;
-
-    const overallItemsSorted = itemsData?.length || 0;
-    
-    // Calculate average processing time
-    const avgTime = itemsData?.length > 0
-      ? (itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1)
-      : 0;
+    // Overall items sorted + avg processing time: from backend (waste_items table) so it works on Railway
+    let overallItemsSorted = 0;
+    let avgTime = 0;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token) {
+        const res = await fetch(`${API_BASE}/api/admin/dashboard-stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.success && typeof data.overallItemsSorted === 'number') {
+            overallItemsSorted = data.overallItemsSorted;
+            avgTime = Number(data.avgProcessingTime) || 0;
+          }
+        }
+      }
+    } catch (_) {}
+    if (overallItemsSorted === 0 && avgTime === 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('waste_items')
+        .select('*, bins(name)')
+        .gte('created_at', today.toISOString());
+      if (!itemsError) {
+        overallItemsSorted = itemsData?.length || 0;
+        avgTime = itemsData?.length > 0
+          ? Number((itemsData.reduce((sum, item) => sum + (item.processing_time || 0), 0) / itemsData.length).toFixed(1))
+          : 0;
+      }
+    }
 
     // Get current admin (logged-in user) for recent activity filter
     let currentAdminUser = null;
