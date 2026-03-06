@@ -40,10 +40,13 @@ export default function HardwareStatus() {
     }
   };
 
+  const isLocalhost = /localhost|127\.0\.0\.1/.test(API_BASE);
+  const isRailwayOrRemote = !isLocalhost;
   const connectionLabel = status.connected
     ? (status.source === 'bridge' ? 'Connected (bridge)' : 'Serial connected')
-    : 'Not connected';
-  const isLocalhost = /localhost|127\.0\.0\.1/.test(API_BASE);
+    : isRailwayOrRemote
+      ? 'Bridge required'
+      : 'Not connected';
   const showBridgeHint = !status.connected && !status.error && !isLocalhost;
   const showLocalHint = !status.connected && !status.error && isLocalhost;
 
@@ -64,6 +67,7 @@ export default function HardwareStatus() {
       {showBridgeHint && (
         <div className="hardware-status-hint">
           <strong>Railway — connect Arduino from your PC</strong>
+          <p className="hardware-bridge-note">The badge above shows &quot;Bridge required&quot; because the server has no Arduino. Run the bridge on your PC to enable sorting.</p>
           <ol className="hardware-steps">
             <li>On the PC with the Arduino plugged in via USB, open PowerShell in the <strong>project folder</strong> (where <code>backend</code> and <code>frontend</code> folders are).</li>
             <li>Run these three lines (replace <code>COM7</code> with your Arduino port — e.g. from Device Manager or <code>cd backend && npm run list-ports</code>):</li>
