@@ -219,15 +219,6 @@ const Dashboard = ({ onLogout }) => {
       <div className={`sidebar ${isMobile && !isSidebarCollapsed ? 'mobile-open' : ''} ${!isMobile && isSidebarCollapsed ? 'collapsed' : ''}`}>
         
         <div className="sidebar-header">
-          {/* System Power at Top */}
-          <div className="power-indicator">
-            <span>SYSTEM POWER</span>
-            <div className="battery-icon">
-              <div className="battery-level" style={{ width: '100%' }}></div>
-            </div>
-            <span>100%</span>
-          </div>
-
           {/* Logo in Middle */}
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-img-large" />

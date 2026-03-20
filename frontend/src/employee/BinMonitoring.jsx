@@ -92,7 +92,7 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
             className="bin-drain-btn"
             onClick={() => onDrain()}
             disabled={isDraining}
-            title={`Drain ${title} bin (notifies and adds to Collection History)`}
+            title={`Drain ${title} bin (saved to Collection History)`}
           >
             {isDraining ? 'Draining…' : 'Drain'}
           </button>
@@ -265,6 +265,101 @@ const BinMonitoring = () => {
     };
     load();
   }, []);
+
+  const [recordedItems, setRecordedItems] = useState([]);
+  const [loadingRecordedItems, setLoadingRecordedItems] = useState(false);
+  const recordedItemsInitRef = useRef(false);
+
+  /** Same fill % as admin Bin Monitoring (from waste_items via /levels). */
+  const syncFillFromLevels = React.useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/collector-bins/levels`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const j = await res.json();
+      if (!j.success || !Array.isArray(j.categories)) return;
+      const categories = j.categories;
+      const next = INITIAL_BINS.map((base) => {
+        const cat = categories.find((c) => c.id === base.id);
+        if (!cat) {
+          return { ...base, fillLevel: 0, lastCollection: 'Just now', status: 'Empty' };
+        }
+        const fl = Math.min(100, Number(cat.fillLevel) || 0);
+        const last = cat.lastCollection
+          ? new Date(cat.lastCollection).toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              year: '2-digit',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+          : 'Just now';
+        return {
+          ...base,
+          fillLevel: fl,
+          lastCollection: last,
+          status:
+            fl >= 90 ? 'Full' : fl >= 75 ? 'Almost Full' : fl >= 50 ? 'Normal' : fl > 0 ? 'Normal' : 'Empty',
+        };
+      });
+      setBins(next);
+      const serializable = next.map((b) => ({ id: b.id, fillLevel: b.fillLevel, status: b.status, lastCollection: b.lastCollection }));
+      try {
+        localStorage.setItem('agss_bin_state', JSON.stringify(serializable));
+        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+        await fetch(`${API_BASE}/api/collector-bins`, { method: 'POST', headers, body: JSON.stringify({ bins: serializable }) });
+      } catch (_) {}
+    } catch (_) {}
+  }, []);
+
+  const fetchRecordedItems = React.useCallback(async (opts = {}) => {
+    const { showLoadingOnlyFirst = true } = opts;
+    const firstLoad = showLoadingOnlyFirst && !recordedItemsInitRef.current;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setRecordedItems([]);
+        return;
+      }
+      if (firstLoad) setLoadingRecordedItems(true);
+      const res = await fetch(`${API_BASE}/api/collector-bins/recorded-items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => ({}));
+      setRecordedItems(res.ok && Array.isArray(j.data) ? j.data : []);
+      recordedItemsInitRef.current = true;
+    } catch (_) {
+      setRecordedItems([]);
+    } finally {
+      if (firstLoad) setLoadingRecordedItems(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isRestoring) return;
+    let cancelled = false;
+    const tick = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token || cancelled) return;
+      await syncFillFromLevels();
+      if (cancelled) return;
+      await fetchRecordedItems();
+    };
+    tick();
+    const id = setInterval(() => {
+      syncFillFromLevels();
+      fetchRecordedItems({ showLoadingOnlyFirst: false });
+    }, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isRestoring, syncFillFromLevels, fetchRecordedItems]);
 
   // Arduino detection: NORMAL -> type adds 10% to matching bin, persist, notification, waste_items
   useEffect(() => {
@@ -559,25 +654,6 @@ const BinMonitoring = () => {
       const lastTypeValue = SORT_CATEGORY_TO_LAST_TYPE[category];
       if (lastTypeValue) lastArduinoTypeRef.current = lastTypeValue;
 
-      const binId = SORT_CATEGORY_TO_BIN_ID[category];
-      if (binId) {
-        setBins((prevBins) => {
-          const nextBins = prevBins.map((bin) => {
-            if (bin.id !== binId) return bin;
-            const raw = Math.min(100, bin.fillLevel + 10);
-            const rounded = roundToTen(raw);
-            return {
-              ...bin,
-              fillLevel: rounded,
-              status: rounded >= 90 ? 'Full' : rounded >= 75 ? 'Almost Full' : rounded >= 50 ? 'Normal' : 'Empty',
-              lastCollection: 'Just now',
-            };
-          });
-          persistBinsToBackendAndStorage(nextBins);
-          return nextBins;
-        });
-      }
-
       const displayCategory = SORT_CATEGORY_TO_BIN_ID[category] || category;
       const msg = (data?.message || '').toString().toLowerCase();
       const isQueuedForBridge = msg.includes('queued');
@@ -589,7 +665,7 @@ const BinMonitoring = () => {
       }
       setTimeout(() => setNotification(''), 5000);
 
-      // Record "Sorted into X bin" in Notifications + Collection History (same for local and Railway)
+      // notification_bin (Notifications) + waste_items (Supabase — visible in Table Editor & used on drain)
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
@@ -599,8 +675,26 @@ const BinMonitoring = () => {
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ bin_category: displayCategory }),
           });
+          const wasteBinId = getBinIdForCard(displayCategory, collectorBins);
+          if (wasteBinId && collectorInfo) {
+            await fetch(`${API_BASE}/api/collector-bins/waste-item`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                bin_id: wasteBinId,
+                category: displayCategory,
+                weight: null,
+                processing_time: 0,
+                first_name: collectorInfo.first_name ?? '',
+                middle_name: collectorInfo.middle_name ?? '',
+                last_name: collectorInfo.last_name ?? '',
+              }),
+            });
+          }
         }
       } catch (_) {}
+      await syncFillFromLevels();
+      await fetchRecordedItems({ showLoadingOnlyFirst: false });
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {
@@ -647,8 +741,10 @@ const BinMonitoring = () => {
       );
       setSelectedBins([]);
       setConfirmModal({ show: false, binsToDrain: [] });
-      setNotification('Bin(s) drained. See Notifications and Collection History.');
+      setNotification('Bin(s) drained. See Collection History.');
       setTimeout(() => setNotification(''), 4000);
+      await syncFillFromLevels();
+      await fetchRecordedItems({ showLoadingOnlyFirst: false });
     } catch (err) {
       setNotification(err.message || 'Drain failed.');
       setConfirmModal({ show: false, binsToDrain: [] });
@@ -662,7 +758,15 @@ const BinMonitoring = () => {
       <div className="header-section">
         <div className="header-titles">
           <h1>Bin Monitoring</h1>
-          <p>Monitor bin fill levels</p>
+          <p>
+            Monitor bin fill levels
+            {collectorBins.length === 1 && collectorBins[0]?.id != null && (
+              <> · Bin ID: {collectorBins[0].id}</>
+            )}
+            {collectorBins.length > 1 && (
+              <> · {collectorBins.length} assigned bins</>
+            )}
+          </p>
           {collectorName && <p className="collector-name">Collector: <strong>{collectorName}</strong></p>}
           {assignedBinLocationText && (
             <div className="assigned-bin-location-card">
@@ -705,6 +809,42 @@ const BinMonitoring = () => {
           />
         ))}
       </div>
+      )}
+
+      {collectorBins.length > 0 && (
+        <div className="collection-history-inline">
+          <div className="collection-history-inline-header">
+            <h3>
+              Recorded Items – {collectorBins.map((b) => b.name || `Bin ${b.id}`).join(', ')}
+            </h3>
+          </div>
+          {loadingRecordedItems && recordedItems.length === 0 ? (
+            <div className="collection-history-inline-loading">Loading…</div>
+          ) : recordedItems.length === 0 ? (
+            <div className="collection-history-inline-empty">No items recorded in this bin yet.</div>
+          ) : (
+            <div className="collection-history-inline-list-wrap">
+              <ul className="collection-history-inline-list">
+                {recordedItems.map((item) => (
+                  <li key={item.id} className="collection-history-inline-item">
+                    <span className="collection-history-inline-date">
+                      {item.created_at
+                        ? new Date(item.created_at).toLocaleString('en-US', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })
+                        : '—'}
+                    </span>
+                    <span className="collection-history-inline-category">{item.category || 'Unsorted'}</span>
+                    {item.processing_time != null && (
+                      <span className="collection-history-inline-time">{item.processing_time}s</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
 
       {confirmModal.show && (

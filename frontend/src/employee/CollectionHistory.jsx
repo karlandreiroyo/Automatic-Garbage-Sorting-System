@@ -88,6 +88,22 @@ const SearchIcon = () => (
 );
 
 const CollectionHistory = () => {
+  const getQueryDate = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const date = params.get('date');
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    } catch {
+      // ignore
+    }
+    // Fallback: today's date in YYYY-MM-DD
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [selectedDate, setSelectedDate] = useState(getQueryDate());
   const [activeFilters, setActiveFilters] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [historyData, setHistoryData] = useState([]);
@@ -97,17 +113,25 @@ const CollectionHistory = () => {
 
   // Real-time collection history: fetch from API + Supabase Realtime on notification_bin
   const fetchHistory = React.useCallback(async (showLoading = true) => {
+    if (!selectedDate) {
+      setHistoryData([]);
+      setLoading(false);
+      return;
+    }
+
     if (showLoading) setLoading(true);
     setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE}/api/collector-bins/collection-history`, { headers });
+      const res = await fetch(`${API_BASE}/api/collector-bins/collection-history?date=${selectedDate}`, { headers });
       if (!res.ok) throw new Error('Failed to load collection history');
       const data = await res.json();
       const raw = data?.history ?? [];
-      const mapped = raw.map((entry) => {
+      // Frontend safety: only show true drain events in Collection History
+      const drainOnly = raw.filter((entry) => (entry.status || 'Drained') === 'Drained');
+      const mapped = drainOnly.map((entry) => {
         const d = entry.drained_at ? new Date(entry.drained_at) : new Date();
         return {
           id: entry.id,
@@ -126,16 +150,16 @@ const CollectionHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     let cancelled = false;
     fetchHistory(true);
     const interval = setInterval(() => { if (!cancelled) fetchHistory(false); }, 10000);
-    // Supabase Realtime: listen for new notification_bin rows (instant update when collector drains)
+    // Supabase Realtime: new rows in history_binitem when collector drains (enable Realtime on that table in Supabase)
     const channel = supabase
-      .channel('notification_bin_realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notification_bin' }, () => {
+      .channel('history_binitem_realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'history_binitem' }, () => {
         if (!cancelled) fetchHistory(false);
       })
       .subscribe();
@@ -220,6 +244,13 @@ const CollectionHistory = () => {
   };
 
   // Event handlers
+
+  const handleDateChange = (event) => {
+    const value = event.target.value;
+    setSelectedDate(value);
+    setCurrentPage(1);
+  };
+
   const handleFilterClick = (type) => {
     if (!filterTypes.includes(type)) return;
     setActiveFilters(prev =>
@@ -253,6 +284,19 @@ const CollectionHistory = () => {
         <div className="history-header-text">
           <h1>Collection History</h1>
           <p>Track all waste collection activities and logs</p>
+        </div>
+        <div className="history-header-actions">
+          <div className="date-picker">
+            <label>
+              <span className="sr-only">Select date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                title="Show collection history for this date"
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -346,13 +390,17 @@ const CollectionHistory = () => {
 
       {/* Content Area */}
       {loading || error ? null : !hasData ? (
-        // No data state
+        // No data (or date doesn't match March 6)
         <div className="empty-state-container">
           <div className="empty-icon-large">
             <AlertIcon />
           </div>
           <h3>No Collection History</h3>
-          <p>Collection records appear here when bins are drained in Bin Monitoring.</p>
+          <p>
+            {selectedDate
+              ? 'No collection records found for this date.'
+              : 'Select a date to load collection history.'}
+          </p>
         </div>
       ) : !hasFilteredResults ? (
         // No results state (filters active but no match)

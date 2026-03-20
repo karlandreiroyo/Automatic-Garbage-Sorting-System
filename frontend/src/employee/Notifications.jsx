@@ -36,7 +36,45 @@ const getBinClassName = (subtext) => {
   return `bin-${subtext.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-')}`;
 };
 
+const formatTimeAgo = (input) => {
+  if (!input || typeof input !== 'string') return input;
+  const match = input.trim().match(/^(\d+)\s*mins?\s*ago$/i);
+  if (!match) return input;
+
+  const mins = Number(match[1]);
+  if (Number.isNaN(mins)) return input;
+  if (mins < 60) return mins === 1 ? '1 min ago' : `${mins} mins ago`;
+
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs === 1 ? '1h ago' : `${hrs}h ago`;
+
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days === 1 ? '1 day ago' : `${days} days ago`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return months === 1 ? '1 month ago' : `${months} months ago`;
+
+  const years = Math.floor(months / 12);
+  return years === 1 ? '1 year ago' : `${years} years ago`;
+};
+
 const Notifications = () => {
+  const getQueryDate = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const date = params.get('date');
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    } catch {
+      // ignore
+    }
+    // Fallback: today's date in YYYY-MM-DD
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const [selectedDate, setSelectedDate] = useState(getQueryDate());
   const [notifications, setNotifications] = useState(loadInitialNotifications);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
@@ -46,11 +84,21 @@ const Notifications = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [deletedNotifications, setDeletedNotifications] = useState([]);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Fetch notifications from database (Supabase notification_bin — same DB locally and on Railway)
   useEffect(() => {
+    if (!selectedDate) {
+      setLoading(false);
+      setNotifications([]);
+      return;
+    }
+
     let cancelled = false;
     setApiError(null);
+    setLoading(true);
+
     const fetchFromApi = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -59,7 +107,7 @@ const Notifications = () => {
           if (!cancelled) setLoading(false);
           return;
         }
-        const res = await fetch(`${API_BASE}/api/collector-bins/notifications`, {
+        const res = await fetch(`${API_BASE}/api/collector-bins/notifications?date=${selectedDate}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (cancelled) return;
@@ -82,7 +130,7 @@ const Notifications = () => {
     };
     fetchFromApi();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     try {
@@ -114,6 +162,12 @@ const Notifications = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  const handleDateChange = (event) => {
+    setSelectedDate(event.target.value);
+    setCurrentPage(1);
+  };
+
 
   const handleMarkAllRead = async () => {
     const unread = notifications.filter(n => n.isUnread);
@@ -253,6 +307,20 @@ const Notifications = () => {
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
 
+  // Pagination over filtered notifications for the currently selected date
+  const totalPages = Math.max(1, Math.ceil(filteredNotifications.length / itemsPerPage));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  const indexOfLastItem = safePage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredNotifications.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (page) => {
+    const newPage = Math.min(Math.max(1, page), totalPages);
+    if (newPage !== currentPage) {
+      setCurrentPage(newPage);
+    }
+  };
+
   return (
     <div className="notifications-page-container">
       {/* Success Message */}
@@ -282,6 +350,17 @@ const Notifications = () => {
           </p>
         </div>
         <div className="header-actions">
+          <div className="date-picker">
+            <label>
+              <span className="sr-only">Select date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                title="Show notifications for this date"
+              />
+            </label>
+          </div>
           {notifications.length > 0 && (
             <button 
               className="mark-all-btn" 
@@ -336,7 +415,11 @@ const Notifications = () => {
         <div className="empty-state">
           <div className="empty-icon">{Icons.info}</div>
           <h3>No notifications</h3>
-          <p>You don't have any notifications at the moment. Check back later!</p>
+          <p>
+            {selectedDate
+              ? 'You don\'t have any notifications on this date.'
+              : 'Select a date to view notifications.'}
+          </p>
         </div>
       ) : !hasFilteredNotifications ? (
         <div className="empty-state">
@@ -358,7 +441,7 @@ const Notifications = () => {
         </div>
       ) : (
         <div className="notification-list">
-          {filteredNotifications.map((notif) => (
+          {currentItems.map((notif) => (
             <div 
               key={notif.id} 
               className={`notif-card ${notif.type} ${notif.isUnread ? 'unread' : ''} ${deleteConfirm === notif.id ? 'deleting' : ''}`}
@@ -378,7 +461,7 @@ const Notifications = () => {
                 </div>
               </div>
               <div className="notif-actions">
-                <span className="time-text">{notif.time}</span>
+                <span className="time-text">{formatTimeAgo(notif.time)}</span>
                 <div className="action-buttons">
                   {deleteConfirm === notif.id ? (
                     <div className="delete-confirm">
@@ -422,6 +505,29 @@ const Notifications = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination – only for filtered results of the selected date */}
+      {!loading && hasFilteredNotifications && filteredNotifications.length > itemsPerPage && (
+        <div className="pagination">
+          <button
+            className="page-btn nav-btn"
+            onClick={() => handlePageChange(safePage - 1)}
+            disabled={safePage === 1}
+          >
+            Previous
+          </button>
+          <span className="page-info">
+            Page {safePage} of {totalPages}
+          </span>
+          <button
+            className="page-btn nav-btn"
+            onClick={() => handlePageChange(safePage + 1)}
+            disabled={safePage === totalPages}
+          >
+            Next
+          </button>
         </div>
       )}
 

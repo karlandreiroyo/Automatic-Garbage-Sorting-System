@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { API_BASE } from '../config/api';
 import './admincss/accounts.css';
 import AddressDropdowns from '../components/AddressDropdowns';
 
@@ -25,7 +26,7 @@ const isGmailMisspelling = (email) => {
   return GMAIL_MISSPELLINGS.has(domain);
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = API_BASE;
 
 const Accounts = () => { 
   const [users, setUsers] = useState([]);
@@ -225,7 +226,6 @@ const Accounts = () => {
     setConfirmAction(() => async () => {
       try {
         setLoading(true);
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const res = await fetch(`${API_BASE_URL}/api/accounts/user-status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
