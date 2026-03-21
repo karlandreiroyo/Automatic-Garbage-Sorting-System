@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { supabase } from "../supabaseClient";
-import { API_BASE } from "../config/api";
+import { API_BASE, getWsUrl } from "../config/api";
 import HardwareStatus from "../components/HardwareStatus";
 import "../employee/employeecss/BinMonitoring.css";
 
@@ -50,16 +50,56 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
   'Biodegradable': 'BIO',
   'Unsorted': 'UNSORTED',
 };
+const WS_BIN_TO_CARD_ID = {
+  bin_1: 'Biodegradable',
+  bin_2: 'Recyclable',
+  bin_3: 'Non Biodegradable',
+  bin_4: 'Unsorted',
+};
+
+const playAlertSound = (type) => {
+  try {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const makeBeep = (start, freq = 880, duration = 0.09) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.09, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+    if (type === 'critical') {
+      makeBeep(now, 900);
+      makeBeep(now + 0.14, 900);
+      makeBeep(now + 0.28, 900);
+    } else {
+      makeBeep(now, 720);
+      makeBeep(now + 0.16, 720);
+    }
+  } catch (_) {}
+};
 
 // --- SINGLE BIN CARD COMPONENT ---
-const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain, onSort, sortCategory, isSorting, isDraining, isSelected, onToggle: _onToggle }) => {
+const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollection, colorClass, status: _status, icon: _Icon, onDrain, onSort, sortCategory, isSorting, isDraining, isSelected, onToggle: _onToggle, last_ml_category, last_ml_confidence, last_ml_detected_at }) => {
   const isEmpty = fillLevel === 0;
+  const isAlmostFull = fillLevel >= 80 && fillLevel < 100;
+  const isFull = fillLevel >= 100;
   const canSort = sortCategory && typeof onSort === 'function';
   const canDrain = typeof onDrain === 'function';
 
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
+        {isAlmostFull && <div className="bin-alert-badge warning">⚠️ Almost Full — Sorting Active</div>}
+        {isFull && <div className="bin-alert-badge critical">🚨 FULL — Sorting Paused</div>}
         <div className="icon-circle"><_Icon /></div>
         <h3>{title}</h3>
       </div>
@@ -74,16 +114,26 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
          </div>
         <div className="meta-info">
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
+          {last_ml_category && (
+            <div className="meta-row">
+              <span className="meta-label">ML Detection</span>
+              <strong className="meta-val">
+                {last_ml_category}
+                {Number.isFinite(Number(last_ml_confidence)) ? ` (${(Number(last_ml_confidence) * 100).toFixed(1)}%)` : ""}
+                {last_ml_detected_at ? ` • ${new Date(last_ml_detected_at).toLocaleTimeString()}` : ""}
+              </strong>
+            </div>
+          )}
         </div>
         {canSort && (
           <button
             type="button"
             className="bin-sort-here-btn"
             onClick={() => onSort(sortCategory)}
-            disabled={isSorting}
-            title={`Tilt servo to sort into ${title} bin`}
+            disabled={isSorting || isFull}
+            title={isFull ? `${title} is full` : `Tilt servo to sort into ${title} bin`}
           >
-            {isSorting ? 'Tilting…' : 'Sort here'}
+            {isFull ? 'Bin Full' : isSorting ? 'Tilting…' : 'Sort here'}
           </button>
         )}
         {canDrain && (
@@ -158,6 +208,11 @@ const BinMonitoring = () => {
   const [isRestoring, setIsRestoring] = useState(true);
   const [sortingCategory, setSortingCategory] = useState(null);
   const [drainingBinId, setDrainingBinId] = useState(null);
+  const wsRef = useRef(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [wsAlertBanner, setWsAlertBanner] = useState(null);
+  const wsBannerTimerRef = useRef(null);
+  const fullBinsLockRef = useRef(new Set());
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
   binsRef.current = bins;
@@ -436,6 +491,141 @@ const BinMonitoring = () => {
     const id = setInterval(poll, 1000);
     return () => { cancelled = true; clearInterval(id); };
   }, [collectorInfo, collectorBins]);
+
+  // Unlock full-bin WS pause only after existing drain logic resets fillLevel to 0.
+  useEffect(() => {
+    bins.forEach((b) => {
+      if (b.fillLevel === 0) fullBinsLockRef.current.delete(b.id);
+    });
+  }, [bins]);
+
+  // WebSocket: ML desktop app -> realtime updates for biodeg/non-bio cards only.
+  useEffect(() => {
+    let reconnectTimer = null;
+    let closedByCleanup = false;
+
+    const pushLocalNotification = (alertObj) => {
+      try {
+        const raw = localStorage.getItem("agss_notifications");
+        const existing = raw ? JSON.parse(raw) : [];
+        localStorage.setItem("agss_notifications", JSON.stringify([...existing, alertObj].slice(-100)));
+      } catch (_) {}
+    };
+
+    const sendAlertToBackend = async (alert) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const status = alert.type === 'critical' ? "100% - Bin Full" : `${alert.fill_level}% - Almost Full`;
+        await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            bin_category: alert.bin_label,
+            status,
+            isUnread: true,
+          }),
+        });
+      } catch (_) {}
+    };
+
+    const applyWsBinUpdate = (wsData) => {
+      if (!wsData || typeof wsData !== "object") return;
+      setBins((prevBins) =>
+        prevBins.map((bin) => {
+          const wsKey = Object.keys(WS_BIN_TO_CARD_ID).find((k) => WS_BIN_TO_CARD_ID[k] === bin.id);
+          const wsBin = wsKey ? wsData[wsKey] : null;
+          if (wsBin) {
+            const incomingFill = Number(wsBin.fill_level ?? bin.fillLevel);
+            const isLocked = fullBinsLockRef.current.has(bin.id);
+            const nextFill = (isLocked && incomingFill > bin.fillLevel) ? bin.fillLevel : incomingFill;
+            return {
+              ...bin,
+              fillLevel: Math.min(100, Math.max(0, Number.isFinite(nextFill) ? nextFill : bin.fillLevel)),
+              status: (Number.isFinite(nextFill) ? nextFill : bin.fillLevel) >= 100 ? 'Full' : bin.status,
+              last_ml_category: wsBin.last_category ?? null,
+              last_ml_confidence: wsBin.last_confidence ?? null,
+              last_ml_detected_at: wsBin.last_detected_at ?? null,
+            };
+          }
+          return bin;
+        })
+      );
+    };
+
+    const connect = () => {
+      const ws = new WebSocket(getWsUrl());
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (!payload || (payload.type !== "init" && payload.type !== "update")) return;
+          applyWsBinUpdate(payload.data);
+          if (payload.alert) {
+            const alert = payload.alert;
+            const cardId = WS_BIN_TO_CARD_ID[alert.bin_id] || alert.bin_label;
+            if (alert.type === 'critical' && cardId) {
+              fullBinsLockRef.current.add(cardId);
+            }
+            const bannerMessage = alert.type === 'critical'
+              ? `🚨 ${alert.bin_label} bin is FULL — automatic sorting paused for this bin`
+              : `⚠️ ${alert.bin_label} bin is almost full — machine will continue sorting`;
+            setWsAlertBanner({ type: alert.type, message: bannerMessage });
+            if (wsBannerTimerRef.current) clearTimeout(wsBannerTimerRef.current);
+            wsBannerTimerRef.current = setTimeout(() => setWsAlertBanner(null), 8000);
+            playAlertSound(alert.type);
+
+            const binForMeta = binsRef.current.find((b) => b.id === cardId);
+            const fillText = `${Math.min(100, Number(alert.fill_level) || 0)}%`;
+            const notificationObj = {
+              id: Date.now(),
+              type: alert.type,
+              title: alert.type === 'critical' ? "Bin Full Alert" : "Bin update",
+              time: "Just now",
+              date: "",
+              message: bannerMessage,
+              subtext: alert.bin_label,
+              fillLevel: fillText,
+              capacity: binForMeta?.capacity || "100 L",
+              location: assignedBinLocationText || "",
+              isUnread: true,
+            };
+            pushLocalNotification(notificationObj);
+            sendAlertToBackend(alert);
+          }
+        } catch (_) {}
+      };
+
+      ws.onerror = () => {
+        setWsConnected(false);
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        if (!closedByCleanup) {
+          reconnectTimer = setTimeout(connect, 3000);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      closedByCleanup = true;
+      setWsConnected(false);
+      if (wsBannerTimerRef.current) clearTimeout(wsBannerTimerRef.current);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      try {
+        wsRef.current?.close();
+      } catch (_) {}
+    };
+  }, [assignedBinLocationText]);
 
   // Persist on every bins change + on unmount
   useEffect(() => { persistBinsToBackendAndStorage(bins); }, [bins]);
@@ -787,8 +977,17 @@ const BinMonitoring = () => {
       )}
 
       {notification && <div className="notification-banner success"><span>✓</span> <p>{notification}</p></div>}
+      {wsAlertBanner && (
+        <div className={`notification-banner ${wsAlertBanner.type === 'critical' ? 'ml-critical' : 'ml-warning'}`}>
+          <span>{wsAlertBanner.type === 'critical' ? '🚨' : '⚠️'}</span>
+          <p>{wsAlertBanner.message}</p>
+        </div>
+      )}
 
       <HardwareStatus />
+      <div style={{ marginTop: "0.5rem", color: wsConnected ? "#16a34a" : "#6b7280", fontSize: "0.9rem" }}>
+        ● ML Camera: {wsConnected ? "Live" : "Disconnected"}
+      </div>
 
       {isRestoring ? (
         <div className="bin-levels-loading" style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b' }}>Loading bin levels…</div>

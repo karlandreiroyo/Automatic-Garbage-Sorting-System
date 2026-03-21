@@ -11,6 +11,31 @@ function getApiBase() {
   return import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
 }
 export const API_BASE = getApiBase();
+
+/**
+ * ML Bin Monitoring WebSocket URL.
+ * - Optional override: window.__AGSS_WS_URL__ or VITE_WS_URL (e.g. separate WS host).
+ * - Default: derive from API_BASE — https → wss, http → ws (same host as backend; ML WS is attached in server.js).
+ * - Local unchanged when VITE_API_URL=http://localhost:3001 → ws://localhost:3001
+ */
+export function getWsUrl() {
+  if (typeof window !== 'undefined' && window.__AGSS_WS_URL__) {
+    const u = String(window.__AGSS_WS_URL__).trim().replace(/\/+$/, '');
+    if (u) return u;
+  }
+  const explicit = import.meta.env.VITE_WS_URL;
+  if (explicit != null && String(explicit).trim() !== '') {
+    return String(explicit).trim().replace(/\/+$/, '');
+  }
+  const api = getApiBase();
+  try {
+    const url = new URL(api);
+    const wsScheme = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${wsScheme}//${url.host}`;
+  } catch {
+    return 'ws://localhost:3001';
+  }
+}
 /**
  * Parse response as JSON. If the server returns HTML (e.g. error page), throws a clear error
  * so the UI can show a friendly message instead of "Unexpected token '<'".

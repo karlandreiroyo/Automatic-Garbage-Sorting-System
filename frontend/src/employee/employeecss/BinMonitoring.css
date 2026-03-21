@@ -112,6 +112,8 @@
 }
 .notification-banner.success { background-color: #dcfce7; border: 1px solid #86efac; color: #166534; }
 .notification-banner.warning { background-color: #fef2f2; border: 1px solid #fee2e2; color: #991b1b; }
+.notification-banner.ml-warning { background-color: #fef3c7; border: 1px solid #f59e0b; color: #92400e; }
+.notification-banner.ml-critical { background-color: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
 
 /* Fill-level alert: full-width top banner that "lifts" in so notification is seen immediately; page adjusts below it */
 .bin-monitoring-container.has-fill-alert {
@@ -269,6 +271,36 @@
 .icon-circle svg { width: 32px; height: 32px; color: white; }
 
 .bin-header h3 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; }
+
+.bin-alert-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 12;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: bin-alert-pulse 1.3s ease-in-out infinite;
+}
+.bin-alert-badge.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+}
+.bin-alert-badge.critical {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+@keyframes bin-alert-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.85; }
+  100% { transform: scale(1); opacity: 1; }
+}
 
 /* Status Pill */
 .bin-status { 

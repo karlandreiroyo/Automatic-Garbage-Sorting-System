@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agss-backend-local
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agss-frontend-local
+    depends_on:
+      - backend
+    environment:
+      - PORT=80
+      - BACKEND_URL=http://backend:3001
+    ports:
+      - "5173:80"
+    restart: unless-stopped

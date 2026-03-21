@@ -1,4 +1,5 @@
 const path = require('path');
+const http = require('http');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
@@ -159,9 +160,18 @@ try {
   // ignore if serialport not installed
 }
 
-// Start server
+// Start server (HTTP + ML WebSocket on same port for local ws:// and deployed wss://)
 const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
-app.listen(PORT, '0.0.0.0', () => {
+const httpServer = http.createServer(app);
+try {
+  const { attachMlRealtimeWebSocket } = require('./utils/mlRealtimeWs');
+  attachMlRealtimeWebSocket(httpServer);
+  console.log('ML realtime WebSocket attached (same port as API)');
+} catch (e) {
+  console.warn('ML realtime WebSocket not started:', e.message);
+}
+
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`API base: ${backendBase}`);
   console.log(`Health: ${backendBase}/api/health`);
