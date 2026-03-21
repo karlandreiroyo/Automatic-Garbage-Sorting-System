@@ -903,6 +903,68 @@ router.post('/bin-alert', requireAuth, async (req, res) => {
   }
 });
 
+// Log ML detection events for categories that need explicit history/notification tracking
+// (requested: Recyclable + Unsorted). This is read/write-safe and never throws to caller.
+router.post('/detected-log', requireAuth, async (req, res) => {
+  try {
+    const authId = req.authUser?.id;
+    if (!authId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, middle_name, last_name')
+      .eq('auth_id', authId)
+      .maybeSingle();
+    if (userError || !userRow) return res.status(403).json({ success: false, message: 'User not found' });
+
+    const rawCategory = String(req.body?.bin_category || req.body?.category || '').trim();
+    const normalized = normalizeCategory(rawCategory);
+    if (normalized !== 'Recyclable' && normalized !== 'Unsorted') {
+      return res.json({ success: true, skipped: true });
+    }
+
+    const inputBinId = req.body?.bin_id;
+    let binId = inputBinId != null ? Number(inputBinId) : null;
+    if (!Number.isFinite(binId) || binId <= 0) {
+      const { data: anyAssigned } = await supabase
+        .from('bins')
+        .select('id')
+        .eq('assigned_collector_id', userRow.id)
+        .eq('status', 'ACTIVE')
+        .limit(1)
+        .maybeSingle();
+      binId = anyAssigned?.id ?? null;
+    }
+    if (!binId) return res.json({ success: true, skipped: true });
+
+    const nowIso = new Date().toISOString();
+    // notification_bin entry for detected recycle/unsorted
+    await supabase.from('notification_bin').insert({
+      bin_id: binId,
+      status: 'Detected',
+      first_name: userRow.first_name ?? '',
+      middle_name: userRow.middle_name ?? '',
+      last_name: userRow.last_name ?? '',
+      collector_id: userRow.id,
+      bin_category: normalized,
+    });
+
+    // history_binitem entry (requested behavior for detected events)
+    await supabase.from('history_binitem').insert({
+      bin_id: binId,
+      category: normalized,
+      weight: null,
+      processing_time: req.body?.processing_time != null ? Number(req.body.processing_time) : null,
+      drained_at: nowIso,
+      collector_id: userRow.id,
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('detected-log error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Log one or more bin drains (called when collector drains bins in Bin Monitoring)
 router.post('/collection-log', (req, res) => {
   try {

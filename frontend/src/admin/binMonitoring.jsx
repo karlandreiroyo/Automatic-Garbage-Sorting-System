@@ -8,10 +8,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { API_BASE } from '../config/api';
 import BinListCard from '../components/BinListCard';
 import './admincss/binMonitoring.css';
 
-import { API_BASE } from '../config/api';
 
 // Add this helper function at the top of your BinMonitoring.jsx file, after the imports
 
@@ -302,29 +302,90 @@ const [collectors, setCollectors] = useState([]);
     setLoadingCollectionHistory(true);
     setCollectionHistoryItems([]);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        setCollectionHistoryItems([]);
-        setLoadingCollectionHistory(false);
-        return;
+      let query = supabase
+        .from('waste_items')
+        .select(`
+          id,
+          category,
+          processing_time,
+          created_at,
+          bin_id,
+          first_name,
+          middle_name,
+          last_name,
+          bins:bins!waste_items_bin_id_fkey(
+            id,
+            assigned_collector_id,
+            users:users!bins_assigned_collector_id_fkey(first_name, middle_name, last_name)
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      const collectorId = Number(binToUse?.assigned_collector_id);
+      if (collectorId) {
+        const { data: collectorBins } = await supabase
+          .from('bins')
+          .select('id')
+          .eq('assigned_collector_id', collectorId)
+          .eq('status', 'ACTIVE');
+        const collectorBinIds = (collectorBins || []).map((b) => Number(b.id)).filter(Boolean);
+        if (collectorBinIds.length > 0) query = query.in('bin_id', collectorBinIds);
+        else query = query.eq('bin_id', Number(binToUse.id));
+      } else {
+        query = query.eq('bin_id', Number(binToUse.id));
       }
-      const params = new URLSearchParams({ bin_id: String(binToUse.id) });
       if (categoryLabel) {
-        const dbCategory = categoryLabel === 'Non Biodegradable' ? 'Non-Bio' : categoryLabel === 'Recyclable' ? 'Recycle' : categoryLabel;
-        params.set('category', dbCategory);
+        if (categoryLabel === 'Non Biodegradable') query = query.or('category.eq.Non Biodegradable,category.eq.Non-Bio,category.eq.Non-Biodegradable');
+        else if (categoryLabel === 'Recyclable') query = query.or('category.eq.Recyclable,category.eq.Recycle');
+        else query = query.eq('category', categoryLabel);
       }
-      const res = await fetch(`${API_BASE}/api/admin/recorded-items?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const { data, error } = await query;
+      if (error) throw error;
+      let sourceRows = data || [];
+      if (sourceRows.length === 0) {
+        try {
+          const collectorId = Number(binToUse?.assigned_collector_id);
+          let notifQuery = supabase
+            .from('notification_bin')
+            .select('id, bin_id, bin_category, status, created_at, first_name, middle_name, last_name')
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (collectorId) {
+            const { data: collectorBins } = await supabase
+              .from('bins')
+              .select('id')
+              .eq('assigned_collector_id', collectorId)
+              .eq('status', 'ACTIVE');
+            const collectorBinIds = (collectorBins || []).map((b) => Number(b.id)).filter(Boolean);
+            if (collectorBinIds.length > 0) notifQuery = notifQuery.in('bin_id', collectorBinIds);
+            else notifQuery = notifQuery.eq('bin_id', Number(binToUse.id));
+          } else {
+            notifQuery = notifQuery.eq('bin_id', Number(binToUse.id));
+          }
+          const { data: notifRows } = await notifQuery;
+          sourceRows = (notifRows || [])
+            .filter((r) => String(r.status || '').toLowerCase() !== 'drained')
+            .map((r) => ({
+              id: `notif-${r.id}`,
+              category: categoryFromNotification(r.bin_category) || 'Unsorted',
+              processing_time: null,
+              created_at: r.created_at,
+              bin_id: r.bin_id,
+              first_name: r.first_name,
+              middle_name: r.middle_name,
+              last_name: r.last_name,
+              bins: null,
+            }));
+        } catch (_) {}
+      }
+      const mapped = sourceRows.map((row) => {
+        const u = row?.bins?.users;
+        const collector_name = [u?.first_name, u?.middle_name, u?.last_name].filter(Boolean).join(' ').trim()
+          || [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(' ').trim()
+          || 'Unknown';
+        return { ...row, collector_name };
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error('Recorded items API error:', json.message || res.statusText);
-        setCollectionHistoryItems([]);
-        setLoadingCollectionHistory(false);
-        return;
-      }
-      setCollectionHistoryItems(Array.isArray(json.data) ? json.data : []);
+      setCollectionHistoryItems(mapped);
     } catch (err) {
       console.error('Error fetching collection history:', err);
       setCollectionHistoryItems([]);
@@ -373,10 +434,22 @@ const [collectors, setCollectors] = useState([]);
   
   const interval = setInterval(() => {
     updateBinFillLevelsFromWasteItems();
-  }, 2000);
+  }, 10000);
 
   return () => clearInterval(interval);
 }, [isArchiveView]);
+
+  useEffect(() => {
+    if (view !== 'detail' || !selectedBinId) return undefined;
+    const tick = () => {
+      updateBinFillLevelsFromWasteItems();
+      const selected = binsRef.current.find((b) => b.id === selectedBinId);
+      if (selected) openCollectionHistory(selected, null, true);
+    };
+    tick();
+    const interval = setInterval(tick, 10000);
+    return () => clearInterval(interval);
+  }, [view, selectedBinId]);
 
   // Reset to page 1 when filter selection (Search Bin checkboxes) or search term changes
   useEffect(() => {
@@ -487,10 +560,37 @@ const ITEMS_FOR_FULL_CATEGORY = 20; // 20 items per category = 100%
 const normalizeCategory = (cat) => {
   if (!cat) return 'Unsorted';
   const s = String(cat).toLowerCase();
-  if (s.includes('bio') && !s.includes('non')) return 'Biodegradable';
-  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
-  if (s.includes('recycl')) return 'Recyclable';
+  if (s === 'biodegradable' || (s.includes('bio') && !s.includes('non'))) return 'Biodegradable';
+  if (s === 'non biodegradable' || s === 'non-biodegradable' || s === 'non bio' || s === 'non-bio' || (s.includes('non') && s.includes('bio'))) return 'Non Biodegradable';
+  if (s === 'recyclable' || s === 'recycle' || s.includes('recycl')) return 'Recyclable';
   return 'Unsorted';
+};
+
+const categoryFromBinName = (name) => {
+  const s = String(name || '').toLowerCase();
+  if (s.includes('non') && s.includes('bio')) return 'Non Biodegradable';
+  if (s.includes('bio')) return 'Biodegradable';
+  if (s.includes('recycl')) return 'Recyclable';
+  if (s.includes('unsort')) return 'Unsorted';
+  return null;
+};
+
+const categoryFromNotification = (cat) => {
+  const s = String(cat || '').trim().toLowerCase();
+  if (s === 'non biodegradable' || s === 'non-biodegradable' || s === 'non bio' || s === 'non-bio') return 'Non Biodegradable';
+  if (s === 'biodegradable') return 'Biodegradable';
+  if (s === 'recyclable' || s === 'recycle') return 'Recyclable';
+  if (s === 'unsorted') return 'Unsorted';
+  return null;
+};
+
+const categoryFromCollectorCardId = (id) => {
+  const s = String(id || '').toLowerCase();
+  if (s === 'biodegradable') return 'Biodegradable';
+  if (s === 'nonbio' || s === 'non-bio' || s === 'non biodegradable') return 'Non Biodegradable';
+  if (s === 'recyclable' || s === 'recycle') return 'Recyclable';
+  if (s === 'unsorted') return 'Unsorted';
+  return null;
 };
 
 /** Fetch waste_items counts per bin and update fill levels from real data */
@@ -499,17 +599,35 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
   const binIds = (currentBins || []).map(b => b.id);
   if (binIds.length === 0) return;
   try {
+    const collectorIds = [...new Set((currentBins || []).map((b) => Number(b.assigned_collector_id)).filter(Boolean))];
+    const collectorBinsMap = {};
+    if (collectorIds.length > 0) {
+      const { data: collectorBinsRows } = await supabase
+        .from('bins')
+        .select('id, name, assigned_collector_id, status')
+        .in('assigned_collector_id', collectorIds)
+        .eq('status', 'ACTIVE');
+      (collectorBinsRows || []).forEach((row) => {
+        const cid = Number(row.assigned_collector_id);
+        if (!collectorBinsMap[cid]) collectorBinsMap[cid] = [];
+        collectorBinsMap[cid].push(row);
+      });
+    }
+    const relevantBinIds = [...new Set([
+      ...binIds,
+      ...Object.values(collectorBinsMap).flat().map((b) => Number(b.id)).filter(Boolean),
+    ])];
     const { data, error } = await supabase
       .from('waste_items')
       .select('bin_id, category, created_at')
-      .in('bin_id', binIds);
+      .in('bin_id', relevantBinIds);
 
     if (error) {
       console.warn('Error fetching waste_items for fill levels:', error);
       return;
     }
     const byBin = {};
-    binIds.forEach(id => {
+    relevantBinIds.forEach(id => {
       byBin[id] = { total: 0, byCategory: { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 }, lastAt: null };
     });
     (data || []).forEach(item => {
@@ -522,21 +640,71 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
         if (ts && (!byBin[bid].lastAt || ts > byBin[bid].lastAt)) byBin[bid].lastAt = ts;
       }
     });
+    const relevantCollectorBinIds = [...new Set(Object.values(collectorBinsMap).flat().map((b) => Number(b.id)).filter(Boolean))];
+    const { data: notifRows } = await supabase
+      .from('notification_bin')
+      .select('bin_id, bin_category, status, created_at')
+      .in('bin_id', relevantCollectorBinIds.length ? relevantCollectorBinIds : binIds)
+      .order('created_at', { ascending: false });
+    const notifLatestByBinCategory = {};
+    const notifLatestByBin = {};
+    (notifRows || []).forEach((n) => {
+      const bid = Number(n.bin_id);
+      const cat = categoryFromNotification(n.bin_category);
+      if (!bid || !cat) return;
+      const ts = n.created_at ? new Date(n.created_at).getTime() : 0;
+      if (ts && (!notifLatestByBin[bid] || ts > notifLatestByBin[bid])) notifLatestByBin[bid] = ts;
+      if (!notifLatestByBinCategory[bid]) notifLatestByBinCategory[bid] = {};
+      if (notifLatestByBinCategory[bid][cat] != null) return; // already latest due desc order
+      const status = String(n.status || '').toLowerCase();
+      if (status === 'drained') {
+        notifLatestByBinCategory[bid][cat] = 0;
+        return;
+      }
+      const pct = parseInt(String(n.status || '').replace(/[^\d]/g, ''), 10);
+      notifLatestByBinCategory[bid][cat] = Number.isNaN(pct) ? null : Math.min(100, Math.max(0, pct));
+    });
+
     const merged = (currentBins || []).map(bin => {
-      const stats = byBin[bin.id] || { total: 0, byCategory: {}, lastAt: null };
-      const mainFill = Math.min(100, Math.round((stats.total / ITEMS_FOR_FULL_BIN) * 100));
+      const collectorId = Number(bin.assigned_collector_id);
+      const isSelectedDetailBin = view === 'detail' && Number(selectedBinId) === Number(bin.id);
+      const relatedBins = (isSelectedDetailBin && collectorId && collectorBinsMap[collectorId]?.length)
+        ? collectorBinsMap[collectorId]
+        : [{ id: bin.id, name: bin.name }];
+      const categoryCounts = { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 };
+      let latestTs = 0;
+      relatedBins.forEach((rb) => {
+        const bid = Number(rb.id);
+        const cat = categoryFromBinName(rb.name);
+        if (!bid || !cat) return;
+        const s = byBin[bid] || { total: 0, lastAt: null };
+        categoryCounts[cat] += s.total || 0;
+        if (s.lastAt && s.lastAt > latestTs) latestTs = s.lastAt;
+        const notifTs = Number(notifLatestByBin[bid] || 0);
+        if (notifTs && notifTs > latestTs) latestTs = notifTs;
+      });
       const categoryMap = {
-        'Biodegradable': stats.byCategory.Biodegradable || 0,
-        'Non Biodegradable': stats.byCategory['Non Biodegradable'] || 0,
-        Recyclable: stats.byCategory.Recyclable || 0,
-        Unsorted: stats.byCategory.Unsorted || 0
+        'Biodegradable': categoryCounts.Biodegradable,
+        'Non Biodegradable': categoryCounts['Non Biodegradable'],
+        Recyclable: categoryCounts.Recyclable,
+        Unsorted: categoryCounts.Unsorted
       };
-      const lastUpdateStr = stats.lastAt ? formatLastCollection(new Date(stats.lastAt).toISOString()) : bin.lastUpdate;
+      const fillFromNotifByCategory = { Biodegradable: 0, 'Non Biodegradable': 0, Recyclable: 0, Unsorted: 0 };
+      relatedBins.forEach((rb) => {
+        const cat = categoryFromBinName(rb.name);
+        const bid = Number(rb.id);
+        if (!cat || !bid) return;
+        const notifFill = notifLatestByBinCategory[bid]?.[cat];
+        if (notifFill != null) fillFromNotifByCategory[cat] = Math.max(fillFromNotifByCategory[cat] || 0, roundToTen(notifFill));
+      });
+      const lastUpdateStr = latestTs ? formatLastCollection(new Date(latestTs).toISOString()) : 'Just now';
       const updatedCategoryBins = bin.categoryBins.map(cb => {
         const count = categoryMap[cb.category] || 0;
-        const catFill = Math.min(100, Math.round((count / ITEMS_FOR_FULL_CATEGORY) * 100));
-        return { ...cb, fillLevel: roundToTen(catFill) };
+        const catFillFromItems = Math.min(100, count * 10);
+        const catFillFromNotif = fillFromNotifByCategory[cb.category] || 0;
+        return { ...cb, fillLevel: Math.max(roundToTen(catFillFromItems), catFillFromNotif) };
       });
+      const mainFill = Math.max(0, ...updatedCategoryBins.map((cb) => Number(cb.fillLevel) || 0));
       return {
         ...bin,
         fillLevel: roundToTen(mainFill),
@@ -544,7 +712,63 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
         categoryBins: updatedCategoryBins
       };
     });
-    setBins(merged);
+    const hasAnyLiveFill = merged.some((b) => (b.categoryBins || []).some((cb) => Number(cb.fillLevel) > 0));
+    if (hasAnyLiveFill) {
+      setBins(merged);
+      return;
+    }
+
+    // Final fallback: mirror collector runtime state from backend local store (/api/collector-bins).
+    // Apply ONLY in detail view for the currently opened bin to avoid leaking one
+    // collector's runtime state into other admin list cards.
+    if (view !== 'detail' || !selectedBinId) {
+      setBins(merged);
+      return;
+    }
+    try {
+      let token = null;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token || null;
+      } catch (_) {}
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const resp = await fetch(`${API_BASE}/api/collector-bins`, { headers });
+      if (!resp.ok) {
+        setBins(merged);
+        return;
+      }
+      const json = await resp.json();
+      const runtimeBins = Array.isArray(json?.bins) ? json.bins : [];
+      if (runtimeBins.length === 0) {
+        setBins(merged);
+        return;
+      }
+      const runtimeByCategory = {};
+      runtimeBins.forEach((r) => {
+        const cat = categoryFromCollectorCardId(r.id);
+        if (!cat) return;
+        runtimeByCategory[cat] = {
+          fillLevel: Math.min(100, Math.max(0, Number(r.fillLevel) || 0)),
+          lastCollection: r.lastCollection || 'Just now',
+        };
+      });
+      const withRuntime = merged.map((bin) => {
+        if (bin.id !== selectedBinId) return bin;
+        const categoryBins = (bin.categoryBins || []).map((cb) => {
+          const runtime = runtimeByCategory[cb.category];
+          if (!runtime) return cb;
+          return { ...cb, fillLevel: roundToTen(runtime.fillLevel), lastCollection: runtime.lastCollection };
+        });
+        const mainFill = Math.max(0, ...categoryBins.map((cb) => Number(cb.fillLevel) || 0));
+        const runtimeLatest = categoryBins
+          .map((cb) => cb.lastCollection)
+          .find((x) => x && x !== 'Just now' && x !== '—');
+        return { ...bin, categoryBins, fillLevel: roundToTen(mainFill), lastUpdate: runtimeLatest || 'Just now' };
+      });
+      setBins(withRuntime);
+    } catch (_) {
+      setBins(merged);
+    }
   } catch (err) {
     console.warn('updateBinFillLevelsFromWasteItems:', err);
   }
@@ -572,6 +796,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
    */
   const handleBack = () => {
     setShowCollectionHistoryInline(false);
+    setSelectedBinId(null);
     setView('list');
   };
 
@@ -935,6 +1160,7 @@ await supabase.from('activity_logs').insert([{
                         {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                       </span>
                       <span className="collection-history-inline-category">{item.category || 'Unsorted'}</span>
+                      <span className="collection-history-inline-category">{item.collector_name || 'Unknown'}</span>
                       {item.processing_time != null && (
                         <span className="collection-history-inline-time">{item.processing_time}s</span>
                       )}
@@ -1362,6 +1588,7 @@ const handleAddBin = async (e) => {
                         {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                       </span>
                       <span className="collection-history-category">{item.category || 'Unsorted'}</span>
+                      <span className="collection-history-category">{item.collector_name || 'Unknown'}</span>
                       {item.processing_time != null && (
                         <span className="collection-history-time">{item.processing_time}s</span>
                       )}

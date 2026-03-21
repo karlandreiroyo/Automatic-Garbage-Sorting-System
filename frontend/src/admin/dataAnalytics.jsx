@@ -8,8 +8,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import './admincss/dataAnalytics.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://brave-adaptation-production.up.railway.app';
-
 // Time filter icons
 const ClockIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -75,6 +73,39 @@ const todayLocalYYYYMMDD = () => {
   return `${y}-${m}-${d}`;
 };
 
+const normalizeCategory = (cat) => {
+  if (!cat) return 'Unsorted';
+  const c = String(cat).trim().toLowerCase();
+  if (c === 'recyclable' || c === 'recycle') return 'Recycle';
+  if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
+  if (c === 'biodegradable') return 'Biodegradable';
+  return 'Unsorted';
+};
+
+const getRangeByFilter = (filter, dateStr) => {
+  const [y, m, d] = String(dateStr || todayLocalYYYYMMDD()).split('-').map(Number);
+  const base = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+  if (filter === 'daily') {
+    return {
+      start: new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0, 0)),
+      end: new Date(Date.UTC(y, (m || 1) - 1, d || 1, 23, 59, 59, 999)),
+    };
+  }
+  if (filter === 'weekly') {
+    const dayOfWeek = base.getUTCDay();
+    const start = new Date(base);
+    start.setUTCDate(base.getUTCDate() - dayOfWeek);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 6);
+    end.setUTCHours(23, 59, 59, 999);
+    return { start, end };
+  }
+  const start = new Date(Date.UTC(y, (m || 1) - 1, 1, 0, 0, 0, 0));
+  const end = new Date(Date.UTC(y, (m || 1), 0, 23, 59, 59, 999));
+  return { start, end };
+};
+
 const DataAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState('daily');
   const [selectedDate, setSelectedDate] = useState(() => todayLocalYYYYMMDD());
@@ -110,22 +141,41 @@ const [wasteDistribution, setWasteDistribution] = useState([
     setLoadingCollectors(true);
     const run = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) {
-          if (!cancelled) setLoadingCollectors(false);
-          return;
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, first_name, middle_name, last_name, status')
+          .eq('role', 'COLLECTOR')
+          .order('first_name', { ascending: true });
+        if (error) throw error;
+        let collectors = (data || [])
+          .filter((u) => !u.status || String(u.status).toUpperCase() === 'ACTIVE')
+          .map((u) => ({
+            id: u.id,
+            name: [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ').trim() || `Collector ${u.id}`,
+            source: 'users',
+          }));
+        if (collectors.length === 0) {
+          const { data: wasteNameRows, error: wasteNamesErr } = await supabase
+            .from('waste_items')
+            .select('first_name, middle_name, last_name')
+            .order('created_at', { ascending: false })
+            .limit(1000);
+          if (!wasteNamesErr) {
+            const seen = new Set();
+            collectors = (wasteNameRows || []).map((r) => {
+              const full = [r.first_name, r.middle_name, r.last_name].filter(Boolean).join(' ').trim();
+              if (!full) return null;
+              const key = `${(r.first_name || '').toUpperCase()}|${(r.middle_name || '').toUpperCase()}|${(r.last_name || '').toUpperCase()}`;
+              if (seen.has(key)) return null;
+              seen.add(key);
+              return { id: key, name: full, source: 'waste_names', first_name: r.first_name || '', middle_name: r.middle_name || '', last_name: r.last_name || '' };
+            }).filter(Boolean);
+          }
         }
-        const res = await fetch(`${API_BASE}/api/admin/collectors-with-stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (json.success && Array.isArray(json.collectors)) {
-          setCollectorsWithStats(json.collectors);
-          if (json.collectors.length > 0 && !selectedCollector) {
-            const first = json.collectors[0];
-            setSelectedCollector({ id: first.id, name: first.name });
+        if (!cancelled) {
+          setCollectorsWithStats(collectors);
+          if (collectors.length > 0 && !selectedCollector) {
+            setSelectedCollector({ id: collectors[0].id, name: collectors[0].name });
           }
         }
       } catch (e) {
@@ -155,12 +205,17 @@ const [wasteDistribution, setWasteDistribution] = useState([
     setSelectedBar(null); // Clear selection when filter changes
   }, [timeFilter, selectedDate, selectedCollector?.id]);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchAnalyticsData();
+    }, 10000);
+    return () => clearInterval(id);
+  }, [timeFilter, selectedDate, selectedCollector?.id]);
+
 const fetchAnalyticsData = async () => {
   setLoading(true);
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
+    if (!selectedCollector?.id) {
       setWasteDistribution([
         { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
         { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
@@ -169,47 +224,81 @@ const fetchAnalyticsData = async () => {
       ]);
       setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
       setDailyTrend([]);
-      setLoading(false);
       return;
     }
-    const dateForApi = (typeof selectedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) ? selectedDate : todayLocalYYYYMMDD();
-    const params = new URLSearchParams({ timeFilter, selectedDate: dateForApi });
-    if (selectedCollector?.id) params.set('collectorId', String(selectedCollector.id));
-    const res = await fetch(`${API_BASE}/api/admin/data-analytics?${params}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      console.error('Data analytics API error:', json.message || res.statusText);
-      setWasteDistribution([
-        { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
-        { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
-        { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
-        { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
-      ]);
-      setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
-      setDailyTrend([]);
-      setLoading(false);
-      return;
+
+    const { start, end } = getRangeByFilter(timeFilter, selectedDate);
+    let data = [];
+    if (selectedCollector.source === 'waste_names') {
+      let q = supabase
+        .from('waste_items')
+        .select('category, created_at, bin_id, first_name, middle_name, last_name')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .eq('first_name', selectedCollector.first_name || '');
+      if (selectedCollector.last_name) q = q.eq('last_name', selectedCollector.last_name);
+      const byName = await q;
+      if (byName.error) throw byName.error;
+      data = byName.data || [];
+    } else {
+      const { data: collectorBins, error: binsErr } = await supabase
+        .from('bins')
+        .select('id')
+        .eq('assigned_collector_id', selectedCollector.id);
+      if (binsErr) throw binsErr;
+      const binIds = (collectorBins || []).map((b) => b.id);
+      if (binIds.length === 0) {
+        setWasteDistribution([
+          { name: 'Biodegradable', count: 0, percentage: 0, color: '#10b981' },
+          { name: 'Non-Biodegradable', count: 0, percentage: 0, color: '#ef4444' },
+          { name: 'Recycle', count: 0, percentage: 0, color: '#f97316' },
+          { name: 'Unsorted', count: 0, percentage: 0, color: '#6b7280' }
+        ]);
+        setCategoryAccuracy({ Biodegradable: 0, 'Non-Biodegradable': 0, Recycle: 0, Unsorted: 0 });
+        setDailyTrend([]);
+        return;
+      }
+      const byBin = await supabase
+        .from('waste_items')
+        .select('category, created_at, bin_id')
+        .in('bin_id', binIds)
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString());
+      if (byBin.error) throw byBin.error;
+      data = byBin.data || [];
     }
-    const data = json.success && Array.isArray(json.data) ? json.data : [];
 
     // Calculate distribution from backend data (normalize DB category values)
+    if (!data || data.length === 0) {
+      let notifRows = [];
+      if (selectedCollector.source === 'waste_names') {
+        const byNameNotif = await supabase
+          .from('notification_bin')
+          .select('bin_category, status, created_at, first_name, middle_name, last_name')
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString())
+          .eq('first_name', selectedCollector.first_name || '');
+        if (!byNameNotif.error) notifRows = byNameNotif.data || [];
+      } else {
+        const byCollectorNotif = await supabase
+          .from('notification_bin')
+          .select('bin_category, status, created_at, collector_id')
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString())
+          .eq('collector_id', selectedCollector.id);
+        if (!byCollectorNotif.error) notifRows = byCollectorNotif.data || [];
+      }
+      data = (notifRows || [])
+        .filter((n) => String(n.status || '').trim().toLowerCase() !== 'drained')
+        .map((n) => ({ category: n.bin_category, created_at: n.created_at }));
+    }
+
     if (data && data.length > 0) {
       const categoryCounts = {
         'Biodegradable': 0,
         'Non-Biodegradable': 0,
         'Recycle': 0,
         'Unsorted': 0
-      };
-
-      const normalizeCategory = (cat) => {
-        if (!cat) return 'Unsorted';
-        const c = String(cat).trim().toLowerCase();
-        if (c === 'recyclable' || c === 'recycle') return 'Recycle';
-        if (c === 'non biodegradable' || c === 'non-biodegradable' || c === 'non bio' || c === 'non-bio') return 'Non-Biodegradable';
-        if (c === 'biodegradable' || c === 'unsorted') return c === 'biodegradable' ? 'Biodegradable' : 'Unsorted';
-        return 'Unsorted';
       };
 
       data.forEach(item => {
@@ -244,7 +333,7 @@ const fetchAnalyticsData = async () => {
       setCategoryAccuracy(accuracy);
 
       // Calculate daily trend based on time filter
-      await calculateDailyTrend(timeFilter, data);
+      await calculateDailyTrend(timeFilter, data, selectedDate);
     } else {
       // No data available - set to zeros
       setWasteDistribution([
@@ -268,7 +357,7 @@ const fetchAnalyticsData = async () => {
   }
 };
 
-const calculateDailyTrend = async (filter, wasteData) => {
+const calculateDailyTrend = async (filter, wasteData, dateSeed) => {
   try {
     let trendData = [];
     
@@ -298,49 +387,34 @@ const calculateDailyTrend = async (filter, wasteData) => {
       }));
       
     } else if (filter === 'weekly') {
-      // Group by day of week
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const dayCounts = new Array(7).fill(0);
-      
-      wasteData.forEach(item => {
-        const dayOfWeek = new Date(item.created_at).getDay();
-        dayCounts[dayOfWeek]++;
-      });
-      
-      trendData = dayNames.map((day, idx) => ({
-        day,
-        value: dayCounts[idx]
-      }));
-      
-    } else if (filter === 'monthly') {
-      // Group by week
-      const weekCounts = {};
-      
-      wasteData.forEach(item => {
-        const date = new Date(item.created_at);
-        const weekNum = Math.ceil(date.getDate() / 7);
-        const weekKey = `Week ${weekNum}`;
-        weekCounts[weekKey] = (weekCounts[weekKey] || 0) + 1;
-      });
-      
-      trendData = Object.keys(weekCounts).map(week => ({
-        day: week,
-        value: weekCounts[week]
-      }));
-      
-      // Ensure we have all 4 weeks
-      for (let i = 1; i <= 4; i++) {
-        const weekKey = `Week ${i}`;
-        if (!trendData.find(d => d.day === weekKey)) {
-          trendData.push({ day: weekKey, value: 0 });
-        }
+      const { start } = getRangeByFilter('weekly', dateSeed);
+      const labels = [];
+      const values = {};
+      for (let i = 0; i < 7; i++) {
+        const dt = new Date(start);
+        dt.setUTCDate(start.getUTCDate() + i);
+        const key = dt.toISOString().slice(0, 10);
+        labels.push(key);
+        values[key] = 0;
       }
-      
-      trendData.sort((a, b) => {
-        const weekA = parseInt(a.day.split(' ')[1]);
-        const weekB = parseInt(b.day.split(' ')[1]);
-        return weekA - weekB;
+      wasteData.forEach((item) => {
+        const key = new Date(item.created_at).toISOString().slice(0, 10);
+        if (values[key] !== undefined) values[key] += 1;
       });
+      trendData = labels.map((k) => ({ day: k.slice(5), value: values[k] }));
+    } else if (filter === 'monthly') {
+      const [y, m] = String(dateSeed || todayLocalYYYYMMDD()).split('-').map(Number);
+      const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const values = {};
+      for (let day = 1; day <= daysInMonth; day++) {
+        const key = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        values[key] = 0;
+      }
+      wasteData.forEach((item) => {
+        const key = new Date(item.created_at).toISOString().slice(0, 10);
+        if (values[key] !== undefined) values[key] += 1;
+      });
+      trendData = Object.keys(values).map((k) => ({ day: String(Number(k.slice(8))), value: values[k] }));
     }
     
     setDailyTrend(trendData);

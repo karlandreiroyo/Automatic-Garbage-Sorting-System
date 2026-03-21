@@ -75,6 +75,7 @@ const Accounts = () => {
   const [backupEmailError, setBackupEmailError] = useState('');
   const [backupEmailAddress, setBackupEmailAddress] = useState('');
   const [resendingEmail, setResendingEmail] = useState(false);
+  const [collectorActivity, setCollectorActivity] = useState(null);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -141,6 +142,21 @@ const Accounts = () => {
       setEditAssignedBinId(currentBin ? String(currentBin.id) : '');
     }
   }, [editingUser, bins]);
+
+  useEffect(() => {
+    if (!editingUser?.id) return;
+    let cancelled = false;
+    const run = async () => {
+      const details = await fetchCollectorActivity(editingUser);
+      if (!cancelled) setCollectorActivity(details);
+    };
+    run();
+    const id = setInterval(run, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [editingUser?.id]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -274,8 +290,55 @@ const Accounts = () => {
 
   const openEditModal = (user) => {
     setEditingUser({ ...user });
+    setCollectorActivity(null);
     setEditErrors({});
     setEditTouched({});
+  };
+
+  const fetchCollectorActivity = async (collector) => {
+    try {
+      const collectorId = collector?.id;
+      if (!collectorId) return null;
+      const [binsRes, histRes, notifRes] = await Promise.all([
+        supabase
+          .from('bins')
+          .select('id, name, location, fill_level, last_update')
+          .eq('assigned_collector_id', collectorId)
+          .eq('status', 'ACTIVE')
+          .order('id', { ascending: true }),
+        supabase
+          .from('history_binitem')
+          .select('id, bin_id, category, drained_at, collector_id')
+          .eq('collector_id', collectorId)
+          .order('drained_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('notification_bin')
+          .select('id, status, bin_category, created_at, collector_id, first_name, middle_name, last_name')
+          .or(`collector_id.eq.${collectorId},last_name.eq.${collector?.last_name || ''}`)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
+      const assignedBins = binsRes.data || [];
+      const binIds = assignedBins.map((b) => b.id);
+      let totalItemsCollected = 0;
+      if (binIds.length > 0) {
+        const wasteCountRes = await supabase
+          .from('waste_items')
+          .select('id', { count: 'exact', head: true })
+          .in('bin_id', binIds);
+        totalItemsCollected = wasteCountRes.count || 0;
+      }
+      return {
+        assignedBins,
+        totalItemsCollected,
+        recentDrains: histRes.data || [],
+        notifications: notifRes.data || [],
+      };
+    } catch (err) {
+      console.error('Error fetching collector activity:', err);
+      return { assignedBins: [], totalItemsCollected: 0, recentDrains: [], notifications: [] };
+    }
   };
 
   const validateField = (name, value) => {
@@ -1289,6 +1352,30 @@ const handleCancelSave = () => {
                     ))}
                   </select>
                 </div>
+                {collectorActivity && (
+                  <div className="form-group full-width-group" style={{ marginTop: '12px' }}>
+                    <label>Collector Activity</label>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
+                        <span><strong>Assigned bins:</strong> {collectorActivity.assignedBins.length}</span>
+                        <span><strong>Items collected:</strong> {collectorActivity.totalItemsCollected}</span>
+                        <span><strong>Recent drains:</strong> {collectorActivity.recentDrains.length}</span>
+                      </div>
+                      <div style={{ fontSize: '0.88rem', color: '#334155', marginBottom: 6 }}>
+                        <strong>Assigned Bin Fill Levels:</strong>{' '}
+                        {collectorActivity.assignedBins.length === 0
+                          ? 'No assigned bins'
+                          : collectorActivity.assignedBins.map((b) => `${b.name} (${b.location || '—'}): ${Number(b.fill_level) || 0}%`).join(' | ')}
+                      </div>
+                      <div style={{ fontSize: '0.86rem', color: '#475569' }}>
+                        <strong>Recent Drains:</strong>{' '}
+                        {collectorActivity.recentDrains.length === 0
+                          ? 'None'
+                          : collectorActivity.recentDrains.slice(0, 5).map((d) => `${d.category || 'Unsorted'} @ ${d.drained_at ? new Date(d.drained_at).toLocaleString() : '—'}`).join(' | ')}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setEditingUser(null)}>Cancel</button>

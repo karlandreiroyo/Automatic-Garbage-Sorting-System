@@ -50,10 +50,13 @@ export default function BinListCard({
   const fillColor = getFillLevelColor(bin.fillLevel ?? 0);
   const level = bin.fillLevel ?? 0;
   const hasAssignedCollector = bin.assigned_collector_id != null;
+  const isWarning = level >= 80 && level < 100;
+  const isCritical = level >= 100;
 
   return (
     <div
       className={`bin-list-card ${isArchived ? 'archived' : colorClass} ${showArchiveCheckbox ? 'bin-list-card-has-archive-checkbox' : ''}`}
+      style={{ position: 'relative' }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -75,6 +78,16 @@ export default function BinListCard({
         </div>
       )}
       <div className="bin-list-header">
+        {isWarning && (
+          <div style={{ position: 'absolute', top: 8, right: 10, fontSize: 11, fontWeight: 700, background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '2px 8px' }}>
+            ⚠️ Almost Full
+          </div>
+        )}
+        {isCritical && (
+          <div style={{ position: 'absolute', top: 8, right: 10, fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#991b1b', borderRadius: 999, padding: '2px 8px' }}>
+            🚨 FULL
+          </div>
+        )}
         <div className="bin-list-icon-wrapper">
           <TrashIcon />
         </div>

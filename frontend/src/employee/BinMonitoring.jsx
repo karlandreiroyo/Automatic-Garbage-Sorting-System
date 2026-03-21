@@ -23,10 +23,11 @@ const DrainAllIcon = () => ( <svg width="18" height="18" viewBox="0 0 24 24" fil
 const AlertTriangle = () => ( <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> );
 
 const getFillLevelColor = (fillLevel) => {
-  if (fillLevel >= 50) return '#10b981'; 
-  if (fillLevel >= 30) return '#eab308'; 
-  if (fillLevel >= 15) return '#f97316'; 
-  return '#ef4444'; 
+  // Requested UI scale:
+  // low fill -> green, mid fill -> orange, full -> red
+  if (fillLevel >= 90) return '#ef4444';
+  if (fillLevel >= 50) return '#f97316';
+  return '#10b981';
 };
 
 // Map bin id to API category for POST /api/hardware/sort (Arduino servo tilt)
@@ -51,10 +52,17 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
   'Unsorted': 'UNSORTED',
 };
 const WS_BIN_TO_CARD_ID = {
-  bin_1: 'Biodegradable',
-  bin_2: 'Recyclable',
-  bin_3: 'Non Biodegradable',
-  bin_4: 'Unsorted',
+  bin_bio: 'Biodegradable',
+  bin_nonbio: 'Non Biodegradable',
+  bin_recycle: 'Recyclable',
+  bin_unsorted: 'Unsorted',
+};
+/** Card id → WS payload key (O(1) merge in onmessage). */
+const CARD_ID_TO_WS_BIN_KEY = {
+  Biodegradable: 'bin_bio',
+  'Non Biodegradable': 'bin_nonbio',
+  Recyclable: 'bin_recycle',
+  Unsorted: 'bin_unsorted',
 };
 
 const playAlertSound = (type) => {
@@ -64,7 +72,7 @@ const playAlertSound = (type) => {
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const now = ctx.currentTime;
-    const makeBeep = (start, freq = 880, duration = 0.09) => {
+    const makeBeep = (start, freq = 440, duration = 0.1) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -77,12 +85,12 @@ const playAlertSound = (type) => {
       osc.stop(start + duration);
     };
     if (type === 'critical') {
-      makeBeep(now, 900);
-      makeBeep(now + 0.14, 900);
-      makeBeep(now + 0.28, 900);
+      makeBeep(now, 880, 0.15);
+      makeBeep(now + 0.2, 880, 0.15);
+      makeBeep(now + 0.4, 880, 0.15);
     } else {
-      makeBeep(now, 720);
-      makeBeep(now + 0.16, 720);
+      makeBeep(now, 440, 0.1);
+      makeBeep(now + 0.16, 440, 0.1);
     }
   } catch (_) {}
 };
@@ -98,8 +106,8 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
   return (
     <div className={`bin-card ${colorClass} ${isSelected ? 'selected-card' : ''}`}>
       <div className="bin-header">
-        {isAlmostFull && <div className="bin-alert-badge warning">⚠️ Almost Full — Sorting Active</div>}
-        {isFull && <div className="bin-alert-badge critical">🚨 FULL — Sorting Paused</div>}
+        {isAlmostFull && <div className="bin-alert-badge warning">⚠️ Almost Full</div>}
+        {isFull && <div className="bin-alert-badge critical">🚨 FULL</div>}
         <div className="icon-circle"><_Icon /></div>
         <h3>{title}</h3>
       </div>
@@ -112,6 +120,11 @@ const BinCard = React.memo(({ title, capacity: _capacity, fillLevel, lastCollect
          <div className="progress-track">
            <div className="progress-fill" style={{ width: `${fillLevel}%`, backgroundColor: getFillLevelColor(fillLevel) }}></div>
          </div>
+         {last_ml_category && (
+           <div style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: '-8px' }}>
+             🤖 {last_ml_category} · {Number.isFinite(Number(last_ml_confidence)) ? `${(Number(last_ml_confidence) * 100).toFixed(1)}%` : '0.0%'} · just now
+           </div>
+         )}
         <div className="meta-info">
           <div className="meta-row"><span className="meta-label">Last Collection</span><strong className="meta-val">{lastCollection}</strong></div>
           {last_ml_category && (
@@ -208,14 +221,17 @@ const BinMonitoring = () => {
   const [isRestoring, setIsRestoring] = useState(true);
   const [sortingCategory, setSortingCategory] = useState(null);
   const [drainingBinId, setDrainingBinId] = useState(null);
-  const wsRef = useRef(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [wsAlertBanner, setWsAlertBanner] = useState(null);
-  const wsBannerTimerRef = useRef(null);
-  const fullBinsLockRef = useRef(new Set());
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
   binsRef.current = bins;
+  const wsRef = useRef(null);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [detectionLog, setDetectionLog] = useState([]);
+  const [wsAlertBanner, setWsAlertBanner] = useState(null);
+  const wsBannerTimerRef = useRef(null);
+  const fullBinsLockRef = useRef(new Set());
+  const wsThresholdSentRef = useRef(new Map());
+  const wsDetectedAuditRef = useRef(new Map());
 
   // Map card category id to physical bin_id (for drain API)
   const getBinIdForCard = (cardId, assignedBins) => {
@@ -274,21 +290,28 @@ const BinMonitoring = () => {
           }
         } catch (_) {}
         if (cancelled) return;
-        setBins(INITIAL_BINS.map((base) => {
-          const fromBackend = backendBins.find((b) => b.id === base.id);
-          const fromLocal = localBins.find((b) => b.id === base.id);
-          const fillBackend = fromBackend?.fillLevel ?? 0;
-          const fillLocal = fromLocal?.fillLevel ?? 0;
-          const fillLevel = Math.max(fillBackend, fillLocal);
-          const status = (fromBackend?.status ?? fromLocal?.status ?? base.status);
-          const lastCollection = (fromBackend?.lastCollection ?? fromLocal?.lastCollection ?? base.lastCollection);
-          return {
-            ...base,
-            fillLevel,
-            status: fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : fillLevel > 0 ? 'Normal' : 'Empty',
-            lastCollection,
-          };
-        }));
+        // Merge with current state so WebSocket fill updates that arrived before restore finishes are not wiped.
+        setBins((prevBins) =>
+          INITIAL_BINS.map((base) => {
+            const fromBackend = backendBins.find((b) => b.id === base.id);
+            const fromLocal = localBins.find((b) => b.id === base.id);
+            const prev = prevBins.find((b) => b.id === base.id);
+            const fillBackend = fromBackend?.fillLevel ?? 0;
+            const fillLocal = fromLocal?.fillLevel ?? 0;
+            const fillFromWs = Number(prev?.fillLevel) || 0;
+            const fillLevel = Math.max(fillBackend, fillLocal, fillFromWs);
+            const lastCollection =
+              fromBackend?.lastCollection ?? fromLocal?.lastCollection ?? prev?.lastCollection ?? base.lastCollection;
+            return {
+              ...base,
+              ...prev,
+              fillLevel,
+              status:
+                fillLevel >= 90 ? 'Full' : fillLevel >= 75 ? 'Almost Full' : fillLevel >= 50 ? 'Normal' : fillLevel > 0 ? 'Normal' : 'Empty',
+              lastCollection,
+            };
+          })
+        );
         setHasPersistedBinState(true);
         setRestoreAttempted(true);
         if (!cancelled) setIsRestoring(false);
@@ -325,7 +348,7 @@ const BinMonitoring = () => {
   const [loadingRecordedItems, setLoadingRecordedItems] = useState(false);
   const recordedItemsInitRef = useRef(false);
 
-  /** Same fill % as admin Bin Monitoring (from waste_items via /levels). */
+  /** Same fill % as admin Bin Monitoring (from waste_items via /levels). Keeps the higher fill level so websocket updates are not overwritten by slower polling. */
   const syncFillFromLevels = React.useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -338,36 +361,32 @@ const BinMonitoring = () => {
       const j = await res.json();
       if (!j.success || !Array.isArray(j.categories)) return;
       const categories = j.categories;
-      const next = INITIAL_BINS.map((base) => {
-        const cat = categories.find((c) => c.id === base.id);
-        if (!cat) {
-          return { ...base, fillLevel: 0, lastCollection: 'Just now', status: 'Empty' };
-        }
-        const fl = Math.min(100, Number(cat.fillLevel) || 0);
-        const last = cat.lastCollection
-          ? new Date(cat.lastCollection).toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              year: '2-digit',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
-          : 'Just now';
-        return {
-          ...base,
-          fillLevel: fl,
-          lastCollection: last,
-          status:
-            fl >= 90 ? 'Full' : fl >= 75 ? 'Almost Full' : fl >= 50 ? 'Normal' : fl > 0 ? 'Normal' : 'Empty',
-        };
-      });
-      setBins(next);
-      const serializable = next.map((b) => ({ id: b.id, fillLevel: b.fillLevel, status: b.status, lastCollection: b.lastCollection }));
-      try {
-        localStorage.setItem('agss_bin_state', JSON.stringify(serializable));
-        const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-        await fetch(`${API_BASE}/api/collector-bins`, { method: 'POST', headers, body: JSON.stringify({ bins: serializable }) });
-      } catch (_) {}
+      setBins((prevBins) =>
+        prevBins.map((prevBin) => {
+          const base = INITIAL_BINS.find((b) => b.id === prevBin.id);
+          const cat = categories.find((c) => c.id === prevBin.id);
+          const apiFill = cat ? Math.min(100, Number(cat.fillLevel) || 0) : 0;
+          const prevFill = Math.min(100, Number(prevBin.fillLevel) || 0);
+          const fl = Math.max(apiFill, prevFill);
+          const last = cat?.lastCollection
+            ? new Date(cat.lastCollection).toLocaleString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: '2-digit',
+                hour: 'numeric',
+                minute: '2-digit',
+              })
+            : prevBin.lastCollection || 'Just now';
+          return {
+            ...(base || {}),
+            ...prevBin,
+            fillLevel: fl,
+            lastCollection: last,
+            status:
+              fl >= 90 ? 'Full' : fl >= 75 ? 'Almost Full' : fl >= 50 ? 'Normal' : fl > 0 ? 'Normal' : 'Empty',
+          };
+        })
+      );
     } catch (_) {}
   }, []);
 
@@ -499,7 +518,7 @@ const BinMonitoring = () => {
     });
   }, [bins]);
 
-  // WebSocket: ML desktop app -> realtime updates for biodeg/non-bio cards only.
+  // WebSocket: ML desktop app -> realtime updates.
   useEffect(() => {
     let reconnectTimer = null;
     let closedByCleanup = false;
@@ -517,7 +536,7 @@ const BinMonitoring = () => {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const status = alert.type === 'critical' ? "100% - Bin Full" : `${alert.fill_level}% - Almost Full`;
+        const status = alert.type === 'critical' ? "100%" : "80%";
         await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -530,26 +549,86 @@ const BinMonitoring = () => {
       } catch (_) {}
     };
 
+    const sendMlThresholdNotification = async (cardId, thresholdLevel) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        // Prefer exact category mapping; fallback to any assigned collector bin so
+        // non-bio/recycle/unsorted threshold notifications are not dropped.
+        const binId = getBinIdForCard(cardId, collectorBins) ?? collectorBins?.[0]?.id ?? null;
+        if (!binId) return;
+        await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            bin_id: binId,
+            bin_category: cardId,
+            status: `${thresholdLevel}%`,
+            isUnread: true,
+          }),
+        });
+      } catch (_) {}
+    };
+
+    const sendDetectedRecycleOrUnsortedLog = async (latest) => {
+      try {
+        if (!latest) return;
+        const label = String(latest.bin_label || '').trim();
+        const normalized = label.toLowerCase();
+        const isRecycle = normalized.includes('recycl');
+        const isUnsorted = normalized.includes('unsort');
+        if (!isRecycle && !isUnsorted) return;
+        const cardId = isRecycle ? 'recyclable' : 'unsorted';
+        const dedupeKey = `${cardId}:${String(latest.last_category || '').toUpperCase()}`;
+        const now = Date.now();
+        const lastTs = Number(wsDetectedAuditRef.current.get(dedupeKey) || 0);
+        if (now - lastTs < 10000) return; // avoid flooding on rapid repeated detections
+        wsDetectedAuditRef.current.set(dedupeKey, now);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const binId = getBinIdForCard(cardId, collectorBins) ?? collectorBins?.[0]?.id ?? null;
+        if (!binId) return;
+        await fetch(`${API_BASE}/api/collector-bins/detected-log`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            bin_id: binId,
+            bin_category: isRecycle ? 'Recyclable' : 'Unsorted',
+            category: latest.last_category ?? null,
+            processing_time: null,
+          }),
+        });
+      } catch (_) {}
+    };
+
     const applyWsBinUpdate = (wsData) => {
       if (!wsData || typeof wsData !== "object") return;
       setBins((prevBins) =>
         prevBins.map((bin) => {
-          const wsKey = Object.keys(WS_BIN_TO_CARD_ID).find((k) => WS_BIN_TO_CARD_ID[k] === bin.id);
-          const wsBin = wsKey ? wsData[wsKey] : null;
-          if (wsBin) {
-            const incomingFill = Number(wsBin.fill_level ?? bin.fillLevel);
-            const isLocked = fullBinsLockRef.current.has(bin.id);
-            const nextFill = (isLocked && incomingFill > bin.fillLevel) ? bin.fillLevel : incomingFill;
-            return {
-              ...bin,
-              fillLevel: Math.min(100, Math.max(0, Number.isFinite(nextFill) ? nextFill : bin.fillLevel)),
-              status: (Number.isFinite(nextFill) ? nextFill : bin.fillLevel) >= 100 ? 'Full' : bin.status,
-              last_ml_category: wsBin.last_category ?? null,
-              last_ml_confidence: wsBin.last_confidence ?? null,
-              last_ml_detected_at: wsBin.last_detected_at ?? null,
-            };
-          }
-          return bin;
+          const wsKey = CARD_ID_TO_WS_BIN_KEY[bin.id];
+          if (!wsKey) return bin;
+          const wsBin = wsData[wsKey];
+          if (!wsBin || typeof wsBin !== "object") return bin;
+          const rawFill = wsBin.fill_level ?? wsBin.fillLevel;
+          const incomingFill = Number(rawFill);
+          const currentFull = Number(bin.fillLevel) >= 100;
+          const clampedIncoming = Math.min(100, Math.max(0, Number(incomingFill) || 0));
+          // Keep updates monotonic per bin except explicit reset (0) after drain.
+          const nextFill = Number.isFinite(incomingFill) && !currentFull
+            ? (clampedIncoming === 0 ? 0 : Math.max(Number(bin.fillLevel) || 0, clampedIncoming))
+            : bin.fillLevel;
+          const status = nextFill === 0 ? "Empty" : nextFill <= 74 ? "Normal" : nextFill <= 89 ? "Almost Full" : "Full";
+          return {
+            ...bin,
+            fillLevel: Math.min(100, Math.max(0, Number(nextFill) || 0)),
+            status,
+            last_ml_category: wsBin.last_category ?? null,
+            last_ml_confidence: wsBin.last_confidence ?? null,
+            last_ml_detected_at: wsBin.last_detected_at ?? new Date().toISOString(),
+          };
         })
       );
     };
@@ -560,13 +639,80 @@ const BinMonitoring = () => {
 
       ws.onopen = () => {
         setWsConnected(true);
+        console.log("[WS] Browser connected");
       };
 
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
+          console.log("[WS] Message received:", payload);
           if (!payload || (payload.type !== "init" && payload.type !== "update")) return;
           applyWsBinUpdate(payload.data);
+          if (payload.type === "update" && payload?.data && typeof payload.data === "object") {
+            try {
+              Object.entries(payload.data).forEach(([wsKey, wsBin]) => {
+                if (!wsBin || typeof wsBin !== "object") return;
+                const cardId = WS_BIN_TO_CARD_ID[wsKey];
+                if (!cardId) return;
+                const incoming = Number(wsBin.fill_level ?? wsBin.fillLevel);
+                const clamped = Math.min(100, Math.max(0, Number(incoming) || 0));
+                const threshold = Math.floor(clamped / 10) * 10;
+                const lastSent = Number(wsThresholdSentRef.current.get(cardId) || 0);
+                if (threshold <= 0) {
+                  wsThresholdSentRef.current.set(cardId, 0);
+                  return;
+                }
+                if (threshold <= lastSent) return;
+                for (let lvl = Math.max(10, lastSent + 10); lvl <= threshold; lvl += 10) {
+                  sendMlThresholdNotification(cardId, lvl);
+                }
+                wsThresholdSentRef.current.set(cardId, threshold);
+              });
+            } catch (_) {}
+          }
+          setTimeout(() => {
+            try {
+              persistBinsToBackendAndStorage(binsRef.current);
+            } catch (_) {}
+          }, 0);
+          if (payload?.data && typeof payload.data === "object") {
+            const entries = Object.values(payload.data).filter(Boolean);
+            if (entries.length) {
+              const latest = entries
+                .filter((b) => b.last_category && b.last_detected_at)
+                .sort((a, b) => new Date(b.last_detected_at).getTime() - new Date(a.last_detected_at).getTime())[0];
+              if (latest) {
+                sendDetectedRecycleOrUnsortedLog(latest);
+                setDetectionLog((prev) => {
+                  const latestTs = latest.last_detected_at ? new Date(latest.last_detected_at).getTime() : Date.now();
+                  const prevTop = prev[0];
+                  if (prevTop) {
+                    const prevTs = prevTop.timestamp ? new Date(prevTop.timestamp).getTime() : 0;
+                    const sameClass = (prevTop.category || "") === (latest.last_category || "");
+                    const sameBin = (prevTop.bin_label || "") === (latest.bin_label || "");
+                    if (sameClass && sameBin && latestTs - prevTs < 2000) {
+                      return prev;
+                    }
+                  }
+                  const next = [
+                    {
+                      id: Date.now(),
+                      bin_label: latest.bin_label,
+                      category: latest.last_category,
+                      confidence: latest.last_confidence,
+                      timestamp: latest.last_detected_at,
+                      colorClass:
+                        latest.bin_label === "Biodegradable" ? "green" :
+                        latest.bin_label === "Recyclable" ? "blue" :
+                        latest.bin_label === "Non-Biodegradable" ? "red" : "lime",
+                    },
+                    ...prev,
+                  ];
+                  return next.slice(0, 10);
+                });
+              }
+            }
+          }
           if (payload.alert) {
             const alert = payload.alert;
             const cardId = WS_BIN_TO_CARD_ID[alert.bin_id] || alert.bin_label;
@@ -574,8 +720,8 @@ const BinMonitoring = () => {
               fullBinsLockRef.current.add(cardId);
             }
             const bannerMessage = alert.type === 'critical'
-              ? `🚨 ${alert.bin_label} bin is FULL — automatic sorting paused for this bin`
-              : `⚠️ ${alert.bin_label} bin is almost full — machine will continue sorting`;
+              ? `🚨 ${alert.bin_label} bin is FULL at 100%! Sorting paused for this bin.`
+              : `⚠️ ${alert.bin_label} bin is almost full at 80%! Machine continues sorting.`;
             setWsAlertBanner({ type: alert.type, message: bannerMessage });
             if (wsBannerTimerRef.current) clearTimeout(wsBannerTimerRef.current);
             wsBannerTimerRef.current = setTimeout(() => setWsAlertBanner(null), 8000);
@@ -586,12 +732,12 @@ const BinMonitoring = () => {
             const notificationObj = {
               id: Date.now(),
               type: alert.type,
-              title: alert.type === 'critical' ? "Bin Full Alert" : "Bin update",
+              title: alert.type === 'critical' ? "Bin Full Alert" : "Bin Almost Full",
               time: "Just now",
               date: "",
-              message: bannerMessage,
+              message: alert.type === 'critical' ? `${alert.bin_label} bin is 100% full` : `${alert.bin_label} bin reached 80%`,
               subtext: alert.bin_label,
-              fillLevel: fillText,
+              fillLevel: alert.type === 'critical' ? "100%" : "80%",
               capacity: binForMeta?.capacity || "100 L",
               location: assignedBinLocationText || "",
               isUnread: true,
@@ -599,11 +745,16 @@ const BinMonitoring = () => {
             pushLocalNotification(notificationObj);
             sendAlertToBackend(alert);
           }
-        } catch (_) {}
+        } catch (err) {
+          console.error("[WS] onmessage error:", err);
+        }
       };
 
       ws.onerror = () => {
         setWsConnected(false);
+        // Do not force-close here; closing while CONNECTING triggers
+        // "WebSocket is closed before the connection is established".
+        // Let onclose handle reconnect.
       };
 
       ws.onclose = () => {
@@ -622,10 +773,13 @@ const BinMonitoring = () => {
       if (wsBannerTimerRef.current) clearTimeout(wsBannerTimerRef.current);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       try {
-        wsRef.current?.close();
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
       } catch (_) {}
     };
-  }, [assignedBinLocationText]);
+  }, [assignedBinLocationText, collectorBins]);
 
   // Persist on every bins change + on unmount
   useEffect(() => { persistBinsToBackendAndStorage(bins); }, [bins]);
@@ -923,12 +1077,67 @@ const BinMonitoring = () => {
       }
       setBins((prevBins) =>
         prevBins.map((bin) =>
-          categories.includes(bin.id) ? { ...bin, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' } : bin
+          categories.includes(bin.id)
+            ? {
+                ...bin,
+                fillLevel: 0,
+                status: 'Empty',
+                lastCollection: 'Just now',
+                last_ml_category: null,
+                last_ml_confidence: null,
+                last_ml_detected_at: null,
+              }
+            : bin
         )
       );
+      try {
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          categories.forEach((cat) => {
+            const wsBinId = CARD_ID_TO_WS_BIN_KEY[cat];
+            if (wsBinId) ws.send(JSON.stringify({ type: 'reset_bin', bin_id: wsBinId }));
+            wsThresholdSentRef.current.set(cat, 0);
+          });
+        }
+      } catch (_) {}
       persistBinsToBackendAndStorage(
-        binsRef.current.map((b) => (categories.includes(b.id) ? { ...b, fillLevel: 0, status: 'Empty', lastCollection: 'Just now' } : b))
+        binsRef.current.map((b) =>
+          categories.includes(b.id)
+            ? {
+                ...b,
+                fillLevel: 0,
+                status: 'Empty',
+                lastCollection: 'Just now',
+                last_ml_category: null,
+                last_ml_confidence: null,
+                last_ml_detected_at: null,
+              }
+            : b
+        )
       );
+      // Do not insert history_binitem from frontend.
+      // Backend /api/collector-bins/drain already writes authoritative drain history.
+      try {
+        const { data: { session: sessionNow } } = await supabase.auth.getSession();
+        const tokenNow = sessionNow?.access_token;
+        if (tokenNow) {
+          for (const cat of categories) {
+            const resolvedBinId = getBinIdForCard(cat, collectorBins) ?? binIds[0] ?? null;
+            if (!resolvedBinId) continue;
+            await fetch(`${API_BASE}/api/collector-bins/bin-alert`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenNow}` },
+              body: JSON.stringify({
+                bin_id: resolvedBinId,
+                bin_category: cat,
+                status: 'Drained',
+                isUnread: true,
+                message: `${cat} bin was drained and reset to 0%`,
+              }),
+            });
+          }
+        }
+      } catch (_) {}
       setSelectedBins([]);
       setConfirmModal({ show: false, binsToDrain: [] });
       setNotification('Bin(s) drained. See Collection History.');
@@ -985,8 +1194,12 @@ const BinMonitoring = () => {
       )}
 
       <HardwareStatus />
-      <div style={{ marginTop: "0.5rem", color: wsConnected ? "#16a34a" : "#6b7280", fontSize: "0.9rem" }}>
+      <div style={{ fontSize: "0.8rem", marginBottom: 8, color: wsConnected ? "#16a34a" : "#dc2626" }}>
         ● ML Camera: {wsConnected ? "Live" : "Disconnected"}
+        <span style={{ display: "block", color: "#64748b", fontSize: "0.75rem", marginTop: 4 }}>
+          WebSocket: {getWsUrl()}
+          {!wsConnected && " — start ws-server (node ws-server.js) on port 3001, then refresh."}
+        </span>
       </div>
 
       {isRestoring ? (
@@ -1009,6 +1222,31 @@ const BinMonitoring = () => {
         ))}
       </div>
       )}
+      <div style={{ marginTop: 16, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>🤖 Live Detection Feed</div>
+        {detectionLog.length === 0 ? (
+          <div style={{ color: "#64748b", fontSize: "0.9rem" }}>No detections yet</div>
+        ) : (
+          <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+            {detectionLog.map((d) => (
+              <div key={d.id} style={{ fontSize: "0.85rem", color: "#334155" }}>
+                <span style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  marginRight: 8,
+                  background:
+                    d.colorClass === "green" ? "#10b981" :
+                    d.colorClass === "blue" ? "#f97316" :
+                    d.colorClass === "red" ? "#ef4444" : "#6b7280"
+                }} />
+                {d.bin_label} · {d.category} · {Number.isFinite(Number(d.confidence)) ? `${(Number(d.confidence) * 100).toFixed(1)}%` : "0.0%"} · {d.timestamp ? new Date(d.timestamp).toLocaleTimeString() : "—"}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {collectorBins.length > 0 && (
         <div className="collection-history-inline">
