@@ -58,6 +58,25 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
 
   // Use shared API base (same-origin in prod so nginx can proxy /api to backend)
   const API_BASE_URL = API_BASE;
+  const LOCAL_BACKEND_FALLBACK = 'http://localhost:3001';
+
+  const fetchWithBackendFallback = async (path, options = {}) => {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const primaryUrl = `${API_BASE_URL}${normalizedPath}`;
+    try {
+      return await fetch(primaryUrl, options);
+    } catch (primaryErr) {
+      // Local dev fallback when VITE_API_URL/backend proxy is unavailable.
+      if (API_BASE_URL !== LOCAL_BACKEND_FALLBACK) {
+        try {
+          return await fetch(`${LOCAL_BACKEND_FALLBACK}${normalizedPath}`, options);
+        } catch (_) {
+          throw primaryErr;
+        }
+      }
+      throw primaryErr;
+    }
+  };
 
   // Restore remembered login (username + password) from Railway backend on mount
   useEffect(() => {
@@ -157,7 +176,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       if (authError) {
         // Maybe they entered their backup email: resolve to primary and try again
         try {
-          const resolveRes = await fetch(`${API_BASE_URL}/api/login/resolve-backup-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+          const resolveRes = await fetchWithBackendFallback(`/api/login/resolve-backup-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
           const resolveData = await resolveRes.json();
           if (resolveData.primaryEmail) {
             const { data: resolvedAuth, error: resolvedError } = await supabase.auth.signInWithPassword({
@@ -185,7 +204,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
             setIsLockedOut(true);
             setLockoutTimeRemaining(180);
             try {
-              await fetch(`${API_BASE_URL}/api/security/send-alert`, {
+              await fetchWithBackendFallback('/api/security/send-alert', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, failedAttempts: newAttempts }),
@@ -216,14 +235,14 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       // Remember me: save or clear on Railway backend (cookie + DB)
       try {
         if (rememberMe) {
-          await fetch(`${API_BASE_URL}/api/remember-me`, {
+          await fetchWithBackendFallback('/api/remember-me', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
           });
         } else {
-          await fetch(`${API_BASE_URL}/api/remember-me`, { method: 'DELETE', credentials: 'include' });
+          await fetchWithBackendFallback('/api/remember-me', { method: 'DELETE', credentials: 'include' });
         }
       } catch (_) {
         // non-blocking; login still succeeds
@@ -295,7 +314,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
       // 7. NEW: Check for 2FA Cooldown (1 Month) before sending verification
       try {
         console.log('Checking 2FA cooldown for:', userData.email);
-        const cooldownResponse = await fetch(`${API_BASE}/api/login/check-cooldown`, {
+        const cooldownResponse = await fetchWithBackendFallback('/api/login/check-cooldown', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -325,7 +344,7 @@ function Login({ setIsLoggedIn: _setIsLoggedIn, setUserRole: _setUserRole }) {
 
         // 8. If no cooldown, send verification code
         console.log('❌ No active cooldown - Sending 2FA verification code.');
-        const response = await fetch(`${API_BASE}/api/login/send-verification`, {
+        const response = await fetchWithBackendFallback('/api/login/send-verification', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

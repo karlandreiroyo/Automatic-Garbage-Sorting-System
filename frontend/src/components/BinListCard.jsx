@@ -21,10 +21,9 @@ const TrashIcon = () => (
 );
 
 function getFillLevelColor(fillLevel) {
-  if (fillLevel >= 50) return '#10b981';
-  if (fillLevel >= 30) return '#eab308';
-  if (fillLevel >= 15) return '#f97316';
-  return '#ef4444';
+  if (fillLevel >= 100) return '#ef4444'; // full -> red
+  if (fillLevel >= 50) return '#f97316'; // middle -> orange
+  return '#10b981'; // first/low -> green
 }
 
 function getColorClass(category) {

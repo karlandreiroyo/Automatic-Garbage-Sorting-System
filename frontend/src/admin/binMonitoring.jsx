@@ -140,12 +140,12 @@ const BinDetailCard = ({ bin, onDrain: _onDrain }) => {
     return <GearIcon />;
   };
 
-  // Get category color based on colorClass
+  // Level-based color: green (low), orange (mid), red (full)
   const getCategoryColor = () => {
-    if (bin.colorClass === 'green') return '#10b981'; // Biodegradable
-    if (bin.colorClass === 'red') return '#ef4444'; // Non-Biodegradable
-    if (bin.colorClass === 'blue') return '#f97316'; // Recyclable
-    return '#6b7280'; // Unsorted (lime)
+    const level = Number(bin.fillLevel) || 0;
+    if (level >= 100) return '#ef4444';
+    if (level >= 50) return '#f97316';
+    return '#10b981';
   };
 
   return (
@@ -483,7 +483,7 @@ const fetchBinData = async () => {
       const updatedBins = data.map(bin => ({
         id: bin.id,
         name: bin.name,
-        fillLevel: 0, // Will be updated from IoT later
+        fillLevel: Math.min(100, Math.max(0, Number(bin.fillLevel ?? bin.fill_level) || 0)),
         systemPower: bin.system_power || 100,
         capacity: bin.capacity || '20kg',
         lastUpdate: formatLastCollection(bin.last_update),
@@ -647,6 +647,7 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
       .in('bin_id', relevantCollectorBinIds.length ? relevantCollectorBinIds : binIds)
       .order('created_at', { ascending: false });
     const notifLatestByBinCategory = {};
+    const notifLatestStatusByBinCategory = {};
     const notifLatestByBin = {};
     (notifRows || []).forEach((n) => {
       const bid = Number(n.bin_id);
@@ -655,8 +656,10 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
       const ts = n.created_at ? new Date(n.created_at).getTime() : 0;
       if (ts && (!notifLatestByBin[bid] || ts > notifLatestByBin[bid])) notifLatestByBin[bid] = ts;
       if (!notifLatestByBinCategory[bid]) notifLatestByBinCategory[bid] = {};
+      if (!notifLatestStatusByBinCategory[bid]) notifLatestStatusByBinCategory[bid] = {};
       if (notifLatestByBinCategory[bid][cat] != null) return; // already latest due desc order
       const status = String(n.status || '').toLowerCase();
+      notifLatestStatusByBinCategory[bid][cat] = status;
       if (status === 'drained') {
         notifLatestByBinCategory[bid][cat] = 0;
         return;
@@ -683,6 +686,22 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
         const notifTs = Number(notifLatestByBin[bid] || 0);
         if (notifTs && notifTs > latestTs) latestTs = notifTs;
       });
+      // Support generic bin names like "Bin 2" where category cannot be inferred from name.
+      // In that case, aggregate by explicit waste_items category counts for the same bin_id.
+      if (categoryCounts.Biodegradable === 0 && categoryCounts['Non Biodegradable'] === 0 && categoryCounts.Recyclable === 0 && categoryCounts.Unsorted === 0) {
+        relatedBins.forEach((rb) => {
+          const bid = Number(rb.id);
+          if (!bid) return;
+          const s = byBin[bid] || { byCategory: {}, lastAt: null };
+          categoryCounts.Biodegradable += Number(s.byCategory?.Biodegradable || 0);
+          categoryCounts['Non Biodegradable'] += Number(s.byCategory?.['Non Biodegradable'] || 0);
+          categoryCounts.Recyclable += Number(s.byCategory?.Recyclable || 0);
+          categoryCounts.Unsorted += Number(s.byCategory?.Unsorted || 0);
+          if (s.lastAt && s.lastAt > latestTs) latestTs = s.lastAt;
+          const notifTs = Number(notifLatestByBin[bid] || 0);
+          if (notifTs && notifTs > latestTs) latestTs = notifTs;
+        });
+      }
       const categoryMap = {
         'Biodegradable': categoryCounts.Biodegradable,
         'Non Biodegradable': categoryCounts['Non Biodegradable'],
@@ -693,18 +712,51 @@ const updateBinFillLevelsFromWasteItems = async (binsOverride) => {
       relatedBins.forEach((rb) => {
         const cat = categoryFromBinName(rb.name);
         const bid = Number(rb.id);
-        if (!cat || !bid) return;
-        const notifFill = notifLatestByBinCategory[bid]?.[cat];
-        if (notifFill != null) fillFromNotifByCategory[cat] = Math.max(fillFromNotifByCategory[cat] || 0, roundToTen(notifFill));
+        if (!bid) return;
+        if (cat) {
+          const notifFill = notifLatestByBinCategory[bid]?.[cat];
+          if (notifFill != null) fillFromNotifByCategory[cat] = Math.max(fillFromNotifByCategory[cat] || 0, roundToTen(notifFill));
+          return;
+        }
+        // Generic bin names: use direct notification category values for this bin_id.
+        const notifCatMap = notifLatestByBinCategory[bid] || {};
+        Object.entries(notifCatMap).forEach(([notifCat, notifFill]) => {
+          if (notifFill == null) return;
+          if (fillFromNotifByCategory[notifCat] == null) return;
+          fillFromNotifByCategory[notifCat] = Math.max(fillFromNotifByCategory[notifCat] || 0, roundToTen(notifFill));
+        });
       });
       const lastUpdateStr = latestTs ? formatLastCollection(new Date(latestTs).toISOString()) : 'Just now';
       const updatedCategoryBins = bin.categoryBins.map(cb => {
         const count = categoryMap[cb.category] || 0;
         const catFillFromItems = Math.min(100, count * 10);
         const catFillFromNotif = fillFromNotifByCategory[cb.category] || 0;
-        return { ...cb, fillLevel: Math.max(roundToTen(catFillFromItems), catFillFromNotif) };
+        let drained = false;
+        relatedBins.forEach((rb) => {
+          const bid = Number(rb.id);
+          const cat = categoryFromBinName(rb.name);
+          if (!bid || cat !== cb.category) return;
+          const st = String(notifLatestStatusByBinCategory[bid]?.[cat] || '').toLowerCase();
+          if (st === 'drained') drained = true;
+        });
+        const persistedCategoryFloor = Number(cb.fillLevel) || 0;
+        const nextFill = drained ? 0 : Math.max(roundToTen(catFillFromItems), catFillFromNotif, persistedCategoryFloor);
+        return { ...cb, fillLevel: Math.min(100, Math.max(0, nextFill)) };
       });
-      const mainFill = Math.max(0, ...updatedCategoryBins.map((cb) => Number(cb.fillLevel) || 0));
+      const categoryMax = Math.max(0, ...updatedCategoryBins.map((cb) => Number(cb.fillLevel) || 0));
+      const hasDrainSignal = relatedBins.some((rb) => {
+        const bid = Number(rb.id);
+        const cat = categoryFromBinName(rb.name);
+        if (!bid) return false;
+        if (cat) {
+          const st = String(notifLatestStatusByBinCategory[bid]?.[cat] || '').toLowerCase();
+          return st === 'drained';
+        }
+        const statusMap = notifLatestStatusByBinCategory[bid] || {};
+        return Object.values(statusMap).some((st) => String(st || '').toLowerCase() === 'drained');
+      });
+      const persistedMainFloor = Number(bin.fillLevel) || 0;
+      const mainFill = hasDrainSignal ? categoryMax : Math.max(categoryMax, persistedMainFloor);
       return {
         ...bin,
         fillLevel: roundToTen(mainFill),

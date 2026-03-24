@@ -28,7 +28,7 @@ const isGmailMisspelling = (email) => {
 
 const API_BASE_URL = API_BASE;
 
-const Accounts = () => { 
+const Accounts = ({ includeAdminAccounts = false }) => { 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -194,11 +194,14 @@ const Accounts = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select('*')
-        .eq('role', 'COLLECTOR')
         .order('id', { ascending: false });
+      query = includeAdminAccounts
+        ? query.in('role', ['COLLECTOR', 'ADMIN'])
+        : query.eq('role', 'COLLECTOR');
+      const { data, error } = await query;
       
       if (error) throw error;
       setUsers(data || []);

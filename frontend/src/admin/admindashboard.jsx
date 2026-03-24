@@ -101,7 +101,7 @@ const CloseIcon = () => (
 
 /* ================= MAIN ================= */
 
-const AdminDashboard = ({ onLogout }) => {
+const AdminDashboard = ({ onLogout, isSuperadmin = false }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -131,12 +131,12 @@ const AdminDashboard = ({ onLogout }) => {
           .maybeSingle();
         if (userRow) {
           const name = [userRow.first_name, userRow.last_name].filter(Boolean).join(' ').trim();
-          setCurrentUserName(name || 'Admin');
+          setCurrentUserName(name || (isSuperadmin ? 'Superadmin' : 'Admin'));
         }
       } catch {}
     };
     loadCurrentUserName();
-  }, []);
+  }, [isSuperadmin]);
 
   // First-login: show Terms and Conditions for admin if not yet accepted (users.terms_accepted_at is null)
   useEffect(() => {
@@ -159,8 +159,8 @@ const AdminDashboard = ({ onLogout }) => {
           return;
         }
         setTermsCheckDone(true);
-        // Only show for ADMIN and COLLECTOR roles
-        if (userRow && (userRow.role === 'ADMIN' || userRow.role === 'COLLECTOR') && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
+        // Only show for ADMIN / SUPERADMIN / COLLECTOR roles
+        if (userRow && (userRow.role === 'ADMIN' || userRow.role === 'SUPERADMIN' || userRow.role === 'COLLECTOR') && (userRow.terms_accepted_at == null || userRow.terms_accepted_at === '')) {
           setCurrentUserId(userRow.id);
           setShowTermsModal(true);
         }
@@ -301,7 +301,7 @@ const AdminDashboard = ({ onLogout }) => {
         <div className="mobile-header">
           <div className="mobile-logo">
             <img src={sidebarLogo} alt="Logo" />
-            <span>{currentUserName || 'Admin Panel'}</span>
+            <span>{currentUserName || (isSuperadmin ? 'Superadmin Panel' : 'Admin Panel')}</span>
           </div>
           <button className="hamburger-btn" onClick={toggleSidebar}>
             {isSidebarCollapsed ? <MenuIcon /> : <CloseIcon />}
@@ -322,8 +322,8 @@ const AdminDashboard = ({ onLogout }) => {
           <div className="sidebar-logo-container">
             <img src={sidebarLogo} alt="Logo" className="sidebar-main-logo" />
             <div className="logo-text-stacked">
-              <h3>{currentUserName || 'Admin Panel'}</h3>
-              <p>Admin</p>
+              <h3>{currentUserName || (isSuperadmin ? 'Superadmin Panel' : 'Admin Panel')}</h3>
+              <p>{isSuperadmin ? 'Superadmin' : 'Admin'}</p>
             </div>
           </div>
         </div>
@@ -437,7 +437,7 @@ const AdminDashboard = ({ onLogout }) => {
         {activeTab === 'dashboard' && <AdminDash onNavigateTo={handleNavClick} />}
         {activeTab === 'users' && <WasteCategories />}
         {activeTab === 'data' && <DataAnalytics />}
-        {activeTab === 'account' && <Accounts />}
+        {activeTab === 'account' && <Accounts includeAdminAccounts={isSuperadmin} />}
         {activeTab === 'bins' && (
           <BinMonitoring
             openArchiveFromSidebar={sidebarArchiveRequested}
