@@ -56,8 +56,11 @@ export function getWsUrl() {
   if (typeof window !== 'undefined') {
     const h = (window.location.hostname || '').toLowerCase();
     if (h.includes('automatic-garbage-sorting-system')) {
-      const railWs = String(import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_RAILWAY_ML_WS_URL || '').trim();
+      const railWs = String(
+        import.meta.env.VITE_WS_URL || import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_RAILWAY_ML_WS_URL || ''
+      ).trim();
       if (railWs) return railWs.replace(/\/+$/, '');
+      return 'wss://ws-server-production-ab05.up.railway.app';
     }
   }
   // Python ML server is almost always ws://localhost:3001. If env is missing (wrong cwd, stale build),
