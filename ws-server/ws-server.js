@@ -70,6 +70,37 @@ function broadcast(payload) {
   }
 }
 
+/** Map YOLO / desktop human-readable bin labels to ws-server bin_id keys. */
+function resolveBinIdFromMessage(msg) {
+  if (!msg || typeof msg !== "object") return null;
+  if (typeof msg.bin_id === "string" && binData[msg.bin_id]) return msg.bin_id;
+  const raw = String(msg.bin_type || msg.target_bin || msg.sort_bin || msg.bin || "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw.includes("non") && (raw.includes("bio") || raw.includes("biodegrad"))) return "bin_nonbio";
+  if (raw.includes("bio") || raw.includes("biodegrad") || raw === "bio") return "bin_bio";
+  if (raw.includes("recycl")) return "bin_recycle";
+  if (raw.includes("unsort")) return "bin_unsorted";
+  return null;
+}
+
+/** Normalize incoming JSON so handleDetection always receives a valid bin_id when possible. */
+function coerceDetectionMessage(msg) {
+  if (!msg || typeof msg !== "object") return msg;
+  const resolved = resolveBinIdFromMessage(msg);
+  if (resolved) {
+    return { ...msg, bin_id: resolved, type: msg.type || "detection" };
+  }
+  return msg;
+}
+
+function isDetectionPayload(msg) {
+  if (!msg || typeof msg !== "object") return false;
+  if (msg.type === "reset_bin") return false;
+  if (msg.type === "detection" || msg.type === "mlDetection" || msg.type === "ml_detection") return true;
+  if (!msg.type && (msg.bin_id || msg.bin_type || msg.target_bin || msg.category != null)) return true;
+  return false;
+}
+
 function handleDetection(msg) {
   const id = typeof msg.bin_id === "string" && binData[msg.bin_id] ? msg.bin_id : "bin_unsorted";
   const target = binData[id];
@@ -111,7 +142,9 @@ wss.on("connection", (ws) => {
 
   ws.on("message", (raw) => {
     try {
-      const msg = JSON.parse(raw.toString());
+      const parsed = JSON.parse(raw.toString());
+      if (!parsed || typeof parsed !== "object") return;
+      const msg = coerceDetectionMessage(parsed);
       if (!msg || typeof msg !== "object") return;
 
       if (msg.type === "reset_bin" && msg.bin_id && binData[msg.bin_id]) {
@@ -121,7 +154,7 @@ wss.on("connection", (ws) => {
         broadcast({ type: "update", data: binData, alert: null });
         return;
       }
-      if (msg.type && msg.type !== "detection") return;
+      if (!isDetectionPayload(msg)) return;
 
       const mappedId = typeof msg.bin_id === "string" && binData[msg.bin_id] ? msg.bin_id : "bin_unsorted";
       const before = binData[mappedId].fill_level;

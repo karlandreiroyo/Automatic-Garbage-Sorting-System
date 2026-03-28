@@ -1,9 +1,9 @@
 """
-NutriBin desktop ML app — this repo did not previously include the full file.
-If you have a longer version locally, merge only the `self.ws_url` line below into your class __init__ (around line 180).
+NutriBin desktop ML app stub — merge `self.ws_url = get_ws_url()` into your real app __init__.
 """
+from ws_url import get_ws_url
 
 
 class DesktopApp:
     def __init__(self):
-        self.ws_url = "wss://ws-server-production-ab05.up.railway.app"
+        self.ws_url = get_ws_url()

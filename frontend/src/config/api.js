@@ -30,13 +30,35 @@ function isLANOrLocalPage() {
   return false;
 }
 
-/** WebSocket URL for ML bin updates. Order: VITE_WS_URL, then window.__AGSS_WS_URL__, then hostname rules. */
+/** WebSocket URL for ML bin updates. Order: VITE_WS_URL, then window.__AGSS_WS_URL__, then VITE_MODE, then hostname rules. */
 export function getWsUrl() {
   const env = import.meta.env.VITE_WS_URL;
   if (env && String(env).trim()) return String(env).trim().replace(/\/+$/, '');
   if (typeof window !== 'undefined' && window.__AGSS_WS_URL__) {
     const u = String(window.__AGSS_WS_URL__).trim();
     if (u) return u.replace(/\/+$/, '');
+  }
+  const viteMode = String(import.meta.env.VITE_MODE || '').trim().toLowerCase();
+  const localWsPort = String(import.meta.env.VITE_LOCAL_WS_PORT || '3001').trim();
+  if (viteMode === 'local') {
+    if (typeof window !== 'undefined') {
+      const h = window.location.hostname || '';
+      if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h) || /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) {
+        return `ws://${h}:${localWsPort}`;
+      }
+    }
+    return `ws://localhost:${localWsPort}`;
+  }
+  if (viteMode === 'deployed') {
+    const deployedWs = String(import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_WS_URL || '').trim();
+    if (deployedWs) return deployedWs.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const h = (window.location.hostname || '').toLowerCase();
+    if (h.includes('automatic-garbage-sorting-system')) {
+      const railWs = String(import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_RAILWAY_ML_WS_URL || '').trim();
+      if (railWs) return railWs.replace(/\/+$/, '');
+    }
   }
   // Python ML server is almost always ws://localhost:3001. If env is missing (wrong cwd, stale build),
   // do not derive from Railway API_BASE or the UI will never see local detections.
