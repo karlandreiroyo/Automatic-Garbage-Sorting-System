@@ -7,8 +7,10 @@
     <title>Automatic-Garbage-Sorting-System</title>
   </head>
   <body>
-    <!-- Optional: override backend URL at runtime. Default is https://brave-adaptation-production.up.railway.app -->
-    <!-- <script>window.__AGSS_BACKEND_URL__ = 'https://brave-adaptation-production.up.railway.app';</script> -->
+    <script>
+      window.__AGSS_BACKEND_URL__ = 'https://brave-adaptation-production.up.railway.app';
+      window.__AGSS_WS_URL__ = 'wss://ws-server-production-ab05.up.railway.app';
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
