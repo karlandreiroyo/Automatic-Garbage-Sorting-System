@@ -21,8 +21,6 @@ import Accounts from './admin/accounts.jsx';
 // Supervisor component
 import SupervisorDashboard from './supervisor/supervisordashboard';
 
-// Super Admin uses the same admin dashboard shell/pages
-
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState(null);
@@ -191,10 +189,10 @@ function App() {
           element={isLoggedIn && userRole === 'supervisor' ? <SupervisorDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
-        {/* Super Admin route */}
+        {/* Superadmin uses the same shell and pages as admin (per product spec). */}
         <Route
           path="/superadmin"
-          element={isLoggedIn && userRole === 'superadmin' ? <AdminDashboard onLogout={handleLogout} isSuperadmin /> : <Navigate to="/login" />}
+          element={isLoggedIn && userRole === 'superadmin' ? <AdminDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Employee routes */}

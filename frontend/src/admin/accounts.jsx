@@ -28,7 +28,7 @@ const isGmailMisspelling = (email) => {
 
 const API_BASE_URL = API_BASE;
 
-const Accounts = ({ includeAdminAccounts = false }) => { 
+const Accounts = () => { 
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -145,10 +145,18 @@ const Accounts = ({ includeAdminAccounts = false }) => {
 
   useEffect(() => {
     if (!editingUser?.id) return;
+    if (editingUser.role !== 'COLLECTOR') {
+      setCollectorActivity(null);
+      return;
+    }
     let cancelled = false;
     const run = async () => {
-      const details = await fetchCollectorActivity(editingUser);
-      if (!cancelled) setCollectorActivity(details);
+      try {
+        const details = await fetchCollectorActivity(editingUser);
+        if (!cancelled) setCollectorActivity(details);
+      } catch (_) {
+        if (!cancelled) setCollectorActivity(null);
+      }
     };
     run();
     const id = setInterval(run, 10000);
@@ -156,7 +164,7 @@ const Accounts = ({ includeAdminAccounts = false }) => {
       cancelled = true;
       clearInterval(id);
     };
-  }, [editingUser?.id]);
+  }, [editingUser?.id, editingUser?.role]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -194,15 +202,16 @@ const Accounts = ({ includeAdminAccounts = false }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('users')
-        .select('*')
-        .order('id', { ascending: false });
-      query = includeAdminAccounts
-        ? query.in('role', ['COLLECTOR', 'ADMIN'])
-        : query.eq('role', 'COLLECTOR');
+      const isSuperAdminSession =
+        typeof localStorage !== 'undefined' && localStorage.getItem('userRole') === 'superadmin';
+      let query = supabase.from('users').select('*').order('id', { ascending: false });
+      if (isSuperAdminSession) {
+        query = query.in('role', ['COLLECTOR', 'ADMIN']);
+      } else {
+        query = query.eq('role', 'COLLECTOR');
+      }
       const { data, error } = await query;
-      
+
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -1395,7 +1404,11 @@ const handleCancelSave = () => {
       <div className="accounts-header">
         <div>
           <h1>Account Management</h1>
-          <p>Collectors and Supervisors Accounts</p>
+          <p>
+            {typeof localStorage !== 'undefined' && localStorage.getItem('userRole') === 'superadmin'
+              ? 'Collectors, Admin accounts, and Supervisors'
+              : 'Collectors and Supervisors Accounts'}
+          </p>
         </div>
         <button className="add-employee-btn" onClick={() => setShowAddModal(true)}>
           <AddIcon /> Add Collector

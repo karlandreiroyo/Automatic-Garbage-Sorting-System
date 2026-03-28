@@ -1,0 +1,15 @@
+{
+  "name": "nutribin-ml-websocket",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node ws-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

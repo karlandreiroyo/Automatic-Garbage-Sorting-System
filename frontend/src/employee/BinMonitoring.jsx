@@ -2,6 +2,15 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { supabase } from "../supabaseClient";
 import { API_BASE, getWsUrl } from "../config/api";
+
+function isLocalDevPageHost() {
+  if (typeof window === "undefined") return false;
+  const h = (window.location.hostname || "").toLowerCase();
+  if (h === "localhost" || h === "127.0.0.1" || h === "[::1]") return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  return false;
+}
 import HardwareStatus from "../components/HardwareStatus";
 import "../employee/employeecss/BinMonitoring.css";
 
@@ -1196,10 +1205,18 @@ const BinMonitoring = () => {
       <HardwareStatus />
       <div style={{ fontSize: "0.8rem", marginBottom: 8, color: wsConnected ? "#16a34a" : "#dc2626" }}>
         ● ML Camera: {wsConnected ? "Live" : "Disconnected"}
-        <span style={{ display: "block", color: "#64748b", fontSize: "0.75rem", marginTop: 4 }}>
-          WebSocket: {getWsUrl()}
-          {!wsConnected && " — start ws-server (node ws-server.js) on port 3001, then refresh."}
-        </span>
+        {isLocalDevPageHost() ? (
+          <span style={{ display: "block", color: "#64748b", fontSize: "0.75rem", marginTop: 4 }}>
+            WebSocket: {getWsUrl()}
+            {!wsConnected && " — start ws-server (node ws-server.js) on port 3001, then refresh."}
+          </span>
+        ) : (
+          !wsConnected && (
+            <span style={{ display: "block", color: "#64748b", fontSize: "0.75rem", marginTop: 4 }}>
+              ML Camera is offline. Make sure the desktop app is running and connected.
+            </span>
+          )
+        )}
       </div>
 
       {isRestoring ? (

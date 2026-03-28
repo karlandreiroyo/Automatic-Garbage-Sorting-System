@@ -30,14 +30,14 @@ function isLANOrLocalPage() {
   return false;
 }
 
-/** WebSocket URL for ML bin updates. Override with VITE_WS_URL or window.__AGSS_WS_URL__. */
+/** WebSocket URL for ML bin updates. Order: VITE_WS_URL, then window.__AGSS_WS_URL__, then hostname rules. */
 export function getWsUrl() {
+  const env = import.meta.env.VITE_WS_URL;
+  if (env && String(env).trim()) return String(env).trim().replace(/\/+$/, '');
   if (typeof window !== 'undefined' && window.__AGSS_WS_URL__) {
     const u = String(window.__AGSS_WS_URL__).trim();
     if (u) return u.replace(/\/+$/, '');
   }
-  const env = import.meta.env.VITE_WS_URL;
-  if (env && String(env).trim()) return String(env).trim().replace(/\/+$/, '');
   // Python ML server is almost always ws://localhost:3001. If env is missing (wrong cwd, stale build),
   // do not derive from Railway API_BASE or the UI will never see local detections.
   if (import.meta.env.DEV || isBrowserLocalhost()) {
