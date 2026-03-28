@@ -199,7 +199,22 @@ function notificationRowToUI(row, binName) {
   let type = 'info';
   let title = 'Notification';
   let message = `${category}: ${status}`;
-  if (status === 'Drained') {
+  if (status.startsWith('AGSS_ML_V1|')) {
+    try {
+      const meta = JSON.parse(status.slice('AGSS_ML_V1|'.length));
+      const det = meta.detected != null ? String(meta.detected) : category;
+      const slot = meta.slot != null ? String(meta.slot) : binName || 'Bin';
+      const conf = Number(meta.confidence);
+      const confText = Number.isFinite(conf) ? `${(conf * 100).toFixed(1)}%` : '—';
+      type = 'info';
+      title = 'ML detection';
+      message = `${det} (${confText}) · ${slot}`;
+    } catch {
+      type = 'info';
+      title = 'ML detection';
+      message = category ? `${category} · ${binName || 'Bin'}` : String(status);
+    }
+  } else if (status === 'Drained') {
     type = 'success';
     title = 'Bin Drained';
     message = `${category} bin was drained.`;
@@ -256,7 +271,7 @@ function notificationRowToUI(row, binName) {
     message,
     subtext: category,
     time,
-    isUnread: row.is_read === false ? false : true,
+    isUnread: row.is_read !== true,
   };
 }
 
@@ -618,6 +633,8 @@ router.get('/collection-history', requireAuth, async (req, res) => {
       collector_name: collectorName,
       drained_at: r.drained_at || r.created_at,
       status: 'Drained',
+      fill_level_at_drain: r.weight != null && r.weight !== '' ? Number(r.weight) : null,
+      processing_time: r.processing_time != null ? r.processing_time : null,
     }));
 
     res.json({ history });

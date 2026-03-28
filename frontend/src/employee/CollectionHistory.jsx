@@ -8,10 +8,38 @@ import { API_BASE } from '../config/api';
 const normalizeType = (binCategory) => {
   if (!binCategory) return 'Unsorted';
   const s = String(binCategory).trim();
+  if (s.startsWith('AGSS_DRAIN:')) {
+    try {
+      const j = JSON.parse(s.slice('AGSS_DRAIN:'.length));
+      return normalizeType(j.card || j.title || 'Unsorted');
+    } catch {
+      return 'Unsorted';
+    }
+  }
   if (s === 'Non Biodegradable') return 'Non-Biodegradable';
   if (s === 'Biodegradable' || s === 'Recyclable' || s === 'Unsorted') return s;
   return s;
 };
+
+function parseHistoryEntry(entry) {
+  const rawCat = entry.bin_category ?? entry.category ?? '';
+  const s = String(rawCat);
+  let itemsSummary = null;
+  let fillAtDrain =
+    entry.fill_level_at_drain != null && entry.fill_level_at_drain !== ''
+      ? Number(entry.fill_level_at_drain)
+      : null;
+  if (s.startsWith('AGSS_DRAIN:')) {
+    try {
+      const j = JSON.parse(s.slice('AGSS_DRAIN:'.length));
+      if (Array.isArray(j.items) && j.items.length) itemsSummary = j.items.join(', ');
+      if ((fillAtDrain == null || Number.isNaN(fillAtDrain)) && j.fill != null) fillAtDrain = Number(j.fill);
+    } catch {
+      // ignore
+    }
+  }
+  return { itemsSummary, fillAtDrain };
+}
 
 // --- ICONS ---
 const LeafIcon = () => (
@@ -133,6 +161,7 @@ const CollectionHistory = () => {
       const drainOnly = raw.filter((entry) => (entry.status || 'Drained') === 'Drained');
       const mapped = drainOnly.map((entry) => {
         const d = entry.drained_at ? new Date(entry.drained_at) : new Date();
+        const { itemsSummary, fillAtDrain } = parseHistoryEntry(entry);
         return {
           id: entry.id,
           type: normalizeType(entry.bin_category),
@@ -141,6 +170,8 @@ const CollectionHistory = () => {
           drainedAt: d,
           collector: entry.collector_name || '—',
           status: entry.status || 'Completed',
+          itemsSummary,
+          fillAtDrain: fillAtDrain != null && !Number.isNaN(fillAtDrain) ? fillAtDrain : null,
         };
       });
       setHistoryData(mapped);
@@ -429,6 +460,16 @@ const CollectionHistory = () => {
                   <h3>
                     {item.type} <span className="light-text">Collection</span>
                   </h3>
+                  {item.fillAtDrain != null && (
+                    <p className="card-detail-line" style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#475569' }}>
+                      Fill at drain: {item.fillAtDrain}%
+                    </p>
+                  )}
+                  {item.itemsSummary && (
+                    <p className="card-detail-line" style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#334155' }}>
+                      Items: {item.itemsSummary}
+                    </p>
+                  )}
                   <div className="card-meta-row">
                     <div className="meta-item">
                       <CalendarIcon /> <span>{item.date || 'N/A'}</span>
