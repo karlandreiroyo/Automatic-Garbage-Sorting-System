@@ -2,10 +2,11 @@
 NutriBin desktop ML app stub — merge these lines into your real DesktopApp if needed.
 """
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 
 class DesktopApp:

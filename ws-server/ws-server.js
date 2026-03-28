@@ -63,6 +63,7 @@ function toNearestTen(v) {
 
 function broadcast(payload) {
   const out = JSON.stringify(payload);
+  // Fan-out to every connected client (all browsers + desktop); not limited to the sender.
   for (const client of wss.clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(out);
