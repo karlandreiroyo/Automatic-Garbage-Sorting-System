@@ -1,9 +1,13 @@
 """
-NutriBin desktop ML app stub — merge `self.ws_url = get_ws_url()` into your real app __init__.
+NutriBin desktop ML app stub — merge these lines into your real DesktopApp if needed.
 """
-from ws_url import get_ws_url
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class DesktopApp:
     def __init__(self):
-        self.ws_url = get_ws_url()
+        self.ws_url = os.getenv("WS_URL", "ws://localhost:3001")
