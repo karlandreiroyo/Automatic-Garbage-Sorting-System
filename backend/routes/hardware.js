@@ -21,81 +21,87 @@ router.get('/status', (req, res) => {
 });
 
 /**
+ * GET /api/hardware/bin-status — returns current bin fullness percentages
+ */
+router.get('/bin-status', (req, res) => {
+  try {
+    const state = getHardwareState();
+    res.json({
+      bin1: state.bin1 || 0,
+      bin2: state.bin2 || 0,
+      bin3: state.bin3 || 0,
+      bin4: state.bin4 || 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * POST /api/hardware/sort — send sort command to Arduino (Recycle, Non-Bio, Biodegradable, Unsorted).
+ * Accepts { category } for backward compatibility, or { waste_type, source, confidence } for ML.
  * Localhost: sends over serial. Railway: stores pending; bridge on PC polls GET /pending-sort and sends to Arduino.
  */
 router.post('/sort', async (req, res) => {
   try {
-    console.log('[SORT-RECEIVED] type:', req.body);
-    const incomingType = String((req.body && (req.body.type || req.body.category || req.body.label || req.body.detected)) || '').trim();
-    if (!incomingType) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing category/label. Send type, category, label, or detected.',
-      });
+    let waste_type, source, confidence;
+    if (req.body.waste_type) {
+      // New ML format
+      waste_type = String(req.body.waste_type).trim();
+      source = String(req.body.source || 'manual_button').trim();
+      confidence = req.body.confidence != null ? Number(req.body.confidence) : null;
+    } else {
+      // Backward compatibility with category
+      const category = String((req.body && req.body.category) || '').trim();
+      const map = {
+        recycle: 'Recycle',
+        'non-bio': 'Non-Bio',
+        biodegradable: 'Biodegradable',
+        unsorted: 'Unsorted',
+      };
+      waste_type = map[category.toLowerCase()] || category || '';
+      source = 'manual_button';
+      confidence = null;
     }
-    // Strip all non-alphanumeric so "HAIR CLIP", "hair-clip", "Hair_Clip" → same key
-    const key = incomingType.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const map = {
-      recycle: 'Recycle',
-      recyclable: 'Recycle',
-      recyclables: 'Recycle',
-      nonbio: 'Non-Bio',
-      nonbiodegradable: 'Non-Bio',
-      biodegradable: 'Biodegradable',
-      bio: 'Biodegradable',
-      unsorted: 'Unsorted',
-      unknown: 'Unsorted',
-      hairclip: 'Unsorted',
-      hairclipwaste: 'Unsorted',
-    };
-    const cmd = map[key] || 'Unsorted';
-    console.log(`[hardware/sort] Received sort request. incoming="${incomingType}" mapped="${cmd}" bodyType="${req.body?.type || ''}"`);
-    if (!map[key]) console.log(`[hardware/sort] Unmapped label "${incomingType}" - defaulting to "Unsorted"`);
-    console.log(`[hardware/sort] Attempting serial write: ${JSON.stringify(`${cmd}\n`)}`);
-    const sent = sendCommandToArduino(cmd);
+
+    const valid_types = ['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted'];
+    if (!waste_type || !valid_types.includes(waste_type)) {
+      return res.status(400).json({ success: false, message: 'Missing or invalid waste_type. Use: Recycle, Non-Bio, Biodegradable, Unsorted.' });
+    }
+
+    const sent = sendCommandToArduino(waste_type);
     if (sent) {
-      console.log('[SORT-FORWARDED] sending to bridge:', cmd);
-      const typeResponse = await waitForTypeResponse(5000);
-      if (!typeResponse) {
-        console.warn(`[hardware/sort] Serial command sent but no TYPE response within timeout for "${cmd}"`);
-      } else {
-        console.log(`[hardware/sort] Arduino TYPE response for "${cmd}": ${typeResponse}`);
+      // Save to sort_events
+      try {
+        const supabase = require('../utils/supabase');
+        await supabase.from('sort_events').insert({
+          waste_type,
+          source,
+          confidence,
+          triggered_at: new Date().toISOString()
+        });
+      } catch (dbErr) {
+        console.error('Failed to save sort event:', dbErr.message);
+        // Don't fail the request
       }
-      return res.json({
-        success: true,
-        message: `Sent "${cmd}" to Arduino.`,
-        command: cmd,
-        arduinoType: typeResponse,
-      });
+      return res.json({ success: true, message: `Sent "${waste_type}" to Arduino.` });
     }
     // No serial (e.g. Railway): store for bridge to pick up
-    console.error(`[hardware/sort] Arduino not connected - sort command dropped: ${cmd}`);
-    const bridgePushed = typeof req.app?.locals?.sendBridgeCommand === 'function'
-      ? req.app.locals.sendBridgeCommand(cmd)
-      : false;
-    console.log('[SORT-FORWARDED] sending to bridge:', cmd);
-    console.log(`[hardware/sort] WebSocket dispatch attempted: cmd="${cmd}" sent=${bridgePushed}`);
-    if (bridgePushed) {
-      console.log(`[hardware/sort] Sent to WebSocket bridge: "${cmd}"`);
+    setPendingSortCommand(waste_type);
+    // Still save to DB even if queued
+    try {
+      const supabase = require('../utils/supabase');
+      await supabase.from('sort_events').insert({
+        waste_type,
+        source,
+        confidence,
+        triggered_at: new Date().toISOString()
+      });
+    } catch (dbErr) {
+      console.error('Failed to save sort event:', dbErr.message);
     }
-    setPendingSortCommand(cmd);
-    console.log('[SORT-QUEUED] added to queue:', cmd);
-    console.log(`[hardware/sort] Queued for bridge polling: "${cmd}"`);
-    const typeResponse = await waitForTypeResponse(8000);
-    if (!typeResponse) {
-      console.warn(`[hardware/sort] Bridge did not return TYPE in time for "${cmd}"`);
-    } else {
-      console.log(`[hardware/sort] Bridge returned TYPE for "${cmd}": ${typeResponse}`);
-    }
-    res.json({
-      success: true,
-      message: `Sort "${cmd}" queued for bridge. Run arduino-bridge on PC with Arduino.`,
-      command: cmd,
-      arduinoType: typeResponse,
-    });
+    res.json({ success: true, message: `Sort "${waste_type}" queued for bridge. Run arduino-bridge on PC.` });
   } catch (err) {
-    console.error('[hardware/sort] Unexpected error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });

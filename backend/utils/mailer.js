@@ -56,6 +56,55 @@ function validateEmail(email) {
   return emailRegex.test(email);
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// CHECK USER EXISTS IN SUPABASE BEFORE SENDING EMAIL
+// ──────────────────────────────────────────────────────────────────────────────
+/**
+ * Check if a user exists in Supabase by email
+ * @param {string} email - The email address to check
+ * @returns {Promise<{exists: boolean, user: object|null, error: string|null}>}
+ */
+async function checkUserExistsInSupabase(email) {
+  try {
+    if (!email) {
+      return { exists: false, user: null, error: 'Email is required' };
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!validateEmail(normalizedEmail)) {
+      return { exists: false, user: null, error: 'Invalid email format' };
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, auth_id, status')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Mailer] Supabase query error:', error.message);
+      return { exists: false, user: null, error: `Database error: ${error.message}` };
+    }
+
+    if (!user) {
+      console.log(`[Mailer] ℹ️  User not found in Supabase: ${normalizedEmail}`);
+      return { exists: false, user: null, error: null };
+    }
+
+    console.log(`[Mailer] ✅ User found in Supabase: ${normalizedEmail} (status: ${user.status})`);
+    return { exists: true, user, error: null };
+  } catch (err) {
+    console.error('[Mailer] Error checking user existence:', err.message);
+    return { exists: false, user: null, error: err.message };
+  }
+}
+
+function validateEmail(email) {
+  if (!email) return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 function getSmtpConfig() {
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
@@ -67,7 +116,7 @@ function getSmtpConfig() {
     pass.toLowerCase().includes('your_app_password') ||
     pass.toLowerCase().includes('your_password') ||
     pass.toLowerCase().includes('your_smtp_pass')
-  ) && !pass.startsWith('xkeysib-');
+  ) && !pass.startsWith('xkeysib-') && !pass.startsWith('xsmtpsib-');
 
   const hasPlaceholders = 
     !host || !user || !pass || !from ||
@@ -315,4 +364,5 @@ module.exports = {
   sendSecurityAlertEmail,
   sendNewEmployeeCredentialsEmail,
   sendSecondEmailVerification,
+  checkUserExistsInSupabase,
 };

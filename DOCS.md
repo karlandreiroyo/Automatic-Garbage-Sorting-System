@@ -24,6 +24,7 @@ Single reference for setup, deployment, email, and hardware. Keep this file; the
 15. [Frontend / Backend login service](#15-frontend--backend-login-service)
 16. [Arduino hardware](#16-arduino-hardware)
 17. [Raspberry Pi](#17-raspberry-pi)
+18. [ML Detection Deployment](#18-ml-detection-deployment)
 
 ---
 
@@ -537,6 +538,76 @@ On Pi you can run Samba and access a shared folder from Windows Explorer; set up
 
 - If you use a virtual environment for ML on the Pi, activate it and reinstall if needed.
 - Run your trainer or inference from the path you copied, e.g. `~/Automatic-Garbage-Sorting-System/raspberry/LearningMachine/NutriBin-MachineLearning/` (datasets are under `data/images`, e.g. `yolo/data/images/val/`).
+
+---
+
+## 18. ML Detection Deployment
+
+The ML detection service runs computer vision on a webcam/USB camera to automatically classify waste and trigger sorting.
+
+### Architecture
+
+- **ML Service**: Python script with OpenCV + TensorFlow/Keras
+- **Camera**: USB webcam connected to the deployment server
+- **Integration**: HTTP POST to backend `/api/hardware/sort` with `source: "ml_detection"`
+- **Deployment**: Docker container with camera device access
+
+### Setup
+
+1. **Place your trained model** as `model.h5` in the project root.
+
+2. **Update camera device** in `docker-compose.local.yml`:
+   ```yaml
+   devices:
+     - /dev/video0:/dev/video0  # Adjust to your camera device
+   ```
+
+3. **Configure environment** (optional):
+   ```bash
+   export BACKEND_URL=http://localhost:3001
+   export CAMERA_INDEX=0
+   export CONFIDENCE_THRESHOLD=0.7
+   export COOLDOWN_SECONDS=3
+   ```
+
+### Docker Deployment
+
+```bash
+# Build and run the ML service
+docker-compose -f docker-compose.local.yml up --build ml-detection
+
+# Or run all services (backend, frontend, ml-detection)
+docker-compose -f docker-compose.local.yml up --build
+```
+
+### Local Development
+
+```bash
+# Install dependencies
+pip install -r requirements-ml.txt
+
+# Update model path in ml_detection.py
+MODEL_PATH = 'path/to/your/model.h5'
+
+# Run detection
+python ml_detection.py
+```
+
+### Model Requirements
+
+Your model should:
+- Accept 224x224x3 input images (configurable in `preprocess_image()`)
+- Output probabilities for 4 classes: `['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted']`
+- Be compatible with TensorFlow/Keras or update the loading code
+
+Replace the `DummyModel` class in `ml_detection.py` with your actual model implementation.
+
+### Integration
+
+- Sends detections to backend automatically
+- Frontend shows real-time updates via Supabase Realtime
+- Arduino receives sort commands and moves servos
+- All events logged to `sort_events` table
 
 ---
 

@@ -41,6 +41,10 @@ const hardwareState = {
   error: null,
   source: null, // 'serial' | 'bridge' | null
   _wasteTypeSetAt: 0, // when we last set a waste type (for bridge hold)
+  bin1: 0,
+  bin2: 0,
+  bin3: 0,
+  bin4: 0,
 };
 
 // Railway (no serial): store pending sort so bridge on PC can poll and send to Arduino
@@ -96,9 +100,6 @@ function initHardware() {
         setDetectedType(type.trim().toUpperCase() || 'NORMAL');
         return;
       }
-      parseBinLine(clean);
-      // Bin fullness lines do not overwrite lastType
-      if (/^BIN \d+:\s*\d+%?$/i.test(clean)) return;
       // Accept both RECYCABLE (AGSS.ino) and RECYCLABLE ("Detected: Recyclable")
       if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) setDetectedType('RECYCABLE');
       else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) setDetectedType('NON_BIO');

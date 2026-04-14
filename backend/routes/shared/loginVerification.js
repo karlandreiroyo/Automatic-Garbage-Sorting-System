@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const supabase = require('../../utils/supabase');
 const { generateVerificationCode, verificationCodes } = require('../../utils/verification');
-const { getSmtpConfig, sendLoginVerificationEmail } = require('../../utils/mailer');
+const { getSmtpConfig, sendLoginVerificationEmail, checkUserExistsInSupabase } = require('../../utils/mailer');
 const requireAuth = require('../../middleware/requireAuth');
 
 const COOLDOWN_HOURS = 720; // 1 Month (24h * 30d)
@@ -145,6 +145,17 @@ router.post('/send-verification', requireAuth, async (req, res) => {
     const verificationType = 'LOGIN 2FA VERIFICATION';
     const emailSubject = 'Login Verification';
     let emailResult = null;
+
+    // CHECK: User must exist in Supabase database before sending email
+    const userCheck = await checkUserExistsInSupabase(recipientEmail);
+    if (!userCheck.exists) {
+      console.warn(`[LoginVerification] ❌ User not found in Supabase: ${recipientEmail}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found in system',
+        code: 'USER_NOT_FOUND'
+      });
+    }
 
     if (smtpCfg.enabled) {
       try {

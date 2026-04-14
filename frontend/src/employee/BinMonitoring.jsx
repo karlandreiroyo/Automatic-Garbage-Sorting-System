@@ -262,8 +262,8 @@ const BinMonitoring = () => {
   const [_hasPersistedBinState, setHasPersistedBinState] = useState(false);
   const [_restoreAttempted, setRestoreAttempted] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
-  const [sortingCategory, setSortingCategory] = useState(null);
-  const [drainingBinId, setDrainingBinId] = useState(null);
+  const [binStatus, setBinStatus] = useState({ bin1: 0, bin2: 0, bin3: 0, bin4: 0 });
+  const [hardwareStatus, setHardwareStatus] = useState({ connected: false, lastType: 'NORMAL' });
   const lastArduinoTypeRef = useRef("NORMAL");
   const binsRef = useRef(bins);
   binsRef.current = bins;
@@ -396,6 +396,83 @@ const BinMonitoring = () => {
       } catch {}
     };
     load();
+  }, []);
+
+  // Poll bin status every 5 seconds
+  useEffect(() => {
+    const fetchBinStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/hardware/bin-status`);
+        if (res.ok) {
+          const data = await res.json();
+          setBinStatus(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch bin status:', err);
+      }
+    };
+    fetchBinStatus();
+    const interval = setInterval(fetchBinStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update bins fill levels from binStatus
+  useEffect(() => {
+    setBins(prevBins =>
+      prevBins.map(bin => {
+        let arduinoFill = 0;
+        if (bin.id === 'Recyclable') arduinoFill = binStatus.bin1 || 0;
+        else if (bin.id === 'Non Biodegradable') arduinoFill = binStatus.bin2 || 0;
+        else if (bin.id === 'Biodegradable') arduinoFill = binStatus.bin3 || 0;
+        else if (bin.id === 'Unsorted') arduinoFill = binStatus.bin4 || 0;
+        // Use Arduino data if available, otherwise keep existing
+        const newFill = arduinoFill > 0 ? arduinoFill : bin.fillLevel;
+        return {
+          ...bin,
+          fillLevel: newFill,
+          status: newFill >= 90 ? 'Full' : newFill >= 75 ? 'Almost Full' : newFill > 0 ? 'Normal' : 'Empty'
+        };
+      })
+    );
+  }, [binStatus]);
+
+  // Supabase Realtime for ML detections
+  useEffect(() => {
+    const channel = supabase
+      .channel('sort_events_ml')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'sort_events',
+        filter: 'source=eq.ml_detection'
+      }, (payload) => {
+        const event = payload.new;
+        // Update the corresponding bin's ML detection
+        setBins(prevBins =>
+          prevBins.map(bin => {
+            const binMap = {
+              'Recyclable': 'Recycle',
+              'Non Biodegradable': 'Non-Bio',
+              'Biodegradable': 'Biodegradable',
+              'Unsorted': 'Unsorted'
+            };
+            if (binMap[bin.id] === event.waste_type) {
+              return {
+                ...bin,
+                last_ml_category: event.waste_type,
+                last_ml_confidence: event.confidence,
+                last_ml_detected_at: event.triggered_at
+              };
+            }
+            return bin;
+          })
+        );
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const [recordedItems, setRecordedItems] = useState([]);
@@ -1392,6 +1469,11 @@ const BinMonitoring = () => {
       )}
 
       <HardwareStatus />
+      <div style={{ marginBottom: 16, textAlign: 'center' }}>
+        <span className={`badge ${hardwareStatus.connected ? 'badge-connected' : 'badge-disconnected'}`}>
+          {hardwareStatus.connected ? 'Ready' : 'Not Ready'}
+        </span>
+      </div>
       <div style={{ fontSize: "0.8rem", marginBottom: 8, color: wsConnected ? "#16a34a" : "#dc2626" }}>
         ● ML Camera: {wsConnected ? "Live" : "Disconnected"}
         {isLocalDevPageHost() ? (

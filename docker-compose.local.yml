@@ -26,3 +26,22 @@ services:
     ports:
       - "5173:80"
     restart: unless-stopped
+
+  ml-detection:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    container_name: agss-ml-detection-local
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:3001
+      - CAMERA_INDEX=0
+      - MODEL_PATH=/app/model.h5  # Mount your model here
+      - CONFIDENCE_THRESHOLD=0.7
+      - COOLDOWN_SECONDS=3
+    devices:
+      - /dev/video0:/dev/video0  # Adjust device path as needed
+    volumes:
+      - ./model.h5:/app/model.h5:ro  # Mount your trained model
+    restart: unless-stopped

@@ -11,13 +11,6 @@
  *   node backend/scripts/arduino-bridge.js
  */
 
-const path = require('path');
-const dotenv = require('dotenv');
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env.bridge') });
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-
-const BACKEND_URL = String(process.env.BACKEND_URL || '').trim().replace(/\/$/, '');
-const ARDUINO_PORT = String(process.env.ARDUINO_PORT || '').trim();
 const BAUD = Number(process.env.ARDUINO_BAUD || 9600);
 const SCAN_RETRY_MS = 5000;
 
