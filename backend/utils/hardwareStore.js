@@ -22,12 +22,14 @@ const getSerialPortConfig = () => ({
 });
 const BRIDGE_CONNECTED_SEC = 90; // treat as connected for this long after last bridge update
 const WASTE_TYPE_HOLD_MS = 4000;  // keep lastType as waste type this long so frontend can count (Railway poll ~1s)
+const BRIDGE_HEARTBEAT_TIMEOUT_MS = 15000;
 
 let port;
 let parser;
 let serialAttempted = false;
 let latestBins = { bin1: 0, bin2: 0, bin3: 0, bin4: 0 };
 const typeWaiters = new Set();
+let bridgeHeartbeatAt = 0;
 
 const WASTE_TYPES = ['RECYCABLE', 'NON_BIO', 'BIO', 'UNSORTED'];
 
@@ -148,6 +150,7 @@ function updateStateFromBridge(type, weightG = null, rawLine = null) {
   hardwareState.error = null;
   hardwareState.source = 'bridge';
   hardwareState._bridgeLastAt = now;
+  bridgeHeartbeatAt = now;
 }
 
 function getHardwareState() {
@@ -208,6 +211,23 @@ function getLatestBins() {
   return { ...latestBins };
 }
 
+function markBridgeHeartbeat(meta = {}) {
+  bridgeHeartbeatAt = Date.now();
+  hardwareState.connected = true;
+  hardwareState.error = null;
+  hardwareState.source = 'bridge';
+  hardwareState._bridgeLastAt = bridgeHeartbeatAt;
+  if (meta && meta.rawLine) {
+    hardwareState.lastLine = String(meta.rawLine);
+    hardwareState.lastUpdated = new Date().toISOString();
+  }
+}
+
+function getBridgeStatus() {
+  const elapsed = bridgeHeartbeatAt ? (Date.now() - bridgeHeartbeatAt) : Number.POSITIVE_INFINITY;
+  return { connected: elapsed <= BRIDGE_HEARTBEAT_TIMEOUT_MS };
+}
+
 /**
  * Send a command to the Arduino over serial (e.g. "Recycle", "Non-Bio", "Biodegradable", "Unsorted").
  * Used by POST /api/hardware/sort. No-op if serial not open.
@@ -244,6 +264,8 @@ module.exports = {
   sendCommandToArduino,
   waitForTypeResponse,
   getLatestBins,
+  markBridgeHeartbeat,
+  getBridgeStatus,
   setPendingSortCommand,
   getAndClearPendingSortCommand,
 };

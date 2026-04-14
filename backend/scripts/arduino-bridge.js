@@ -67,9 +67,31 @@ async function sendToBackend(payload) {
 }
 
 let _pendingSortLoggedFailure = false;
+let _backendConnectedLogged = false;
+
+async function sendHeartbeat() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/hardware/bridge-heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port: ARDUINO_PORT }),
+    });
+    if (res.ok) {
+      if (!_backendConnectedLogged) {
+        console.log('Bridge connected to backend');
+        _backendConnectedLogged = true;
+      }
+      return;
+    }
+    console.warn('Bridge heartbeat failed:', res.status, await res.text());
+  } catch (err) {
+    console.warn('Bridge heartbeat error:', err.message);
+  }
+}
+
 async function pollPendingSort(port) {
   try {
-    if (!port || typeof port.write !== 'function') return;
+    if (!port || typeof port.write !== 'function' || !port.isOpen) return;
     const res = await fetch(`${BACKEND_URL}/api/hardware/pending-sort`);
     if (!res.ok) {
       if (!_pendingSortLoggedFailure) {
@@ -81,8 +103,16 @@ async function pollPendingSort(port) {
     const data = await res.json();
     const cmd = data && data.command;
     if (!cmd) return;
-    port.write(String(cmd).trim() + '\n');
-    console.log('>>> Bridge sent to Arduino:', cmd, '- servo should move now.');
+    const cleanCmd = String(cmd).trim();
+    console.log(`Sort command received: ${cleanCmd}`);
+    console.log(`Writing to Arduino: ${cleanCmd}`);
+    port.write(`${cleanCmd}\n`, (err) => {
+      if (err) {
+        console.error(`Bridge serial write failed for "${cleanCmd}":`, err.message);
+      } else {
+        console.log(`Bridge serial write success: ${JSON.stringify(`${cleanCmd}\n`)}`);
+      }
+    });
   } catch (err) {
     if (!_pendingSortLoggedFailure) {
       console.warn('Bridge pending-sort error:', err.message, '- is BACKEND_URL correct?', BACKEND_URL);
@@ -107,6 +137,10 @@ function main() {
   const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
   parser.on('data', (line) => {
     const parsed = parseLine(line);
+    const clean = String(line).trim();
+    if (clean.toUpperCase().startsWith('TYPE:')) {
+      console.log(`Arduino responded: ${clean}`);
+    }
     if (!parsed) return;
     const body = { type: parsed.type, rawLine: parsed.rawLine };
     if (parsed.weight != null) body.weight = parsed.weight;
@@ -115,7 +149,10 @@ function main() {
 
   // Only poll for sort commands after port is open (so write() works)
   port.on('open', () => {
-    setInterval(() => pollPendingSort(port), 1200);
+    console.log(`Bridge serial ready on ${ARDUINO_PORT} @ ${BAUD}`);
+    sendHeartbeat();
+    setInterval(() => pollPendingSort(port), 500);
+    setInterval(() => sendHeartbeat(), 5000);
   });
 
   port.on('error', (err) => {

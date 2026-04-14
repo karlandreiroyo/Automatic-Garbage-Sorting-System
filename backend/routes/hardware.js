@@ -6,6 +6,8 @@ const {
   sendCommandToArduino,
   waitForTypeResponse,
   getLatestBins,
+  markBridgeHeartbeat,
+  getBridgeStatus,
   setPendingSortCommand,
   getAndClearPendingSortCommand
 } = require('../utils/hardwareStore');
@@ -58,7 +60,19 @@ router.post('/sort', async (req, res) => {
     // No serial (e.g. Railway): store for bridge to pick up
     console.error(`[hardware/sort] Arduino not connected - sort command dropped: ${cmd}`);
     setPendingSortCommand(cmd);
-    res.json({ success: true, message: `Sort "${cmd}" queued for bridge. Run arduino-bridge on PC with Arduino.` });
+    console.log(`[hardware/sort] Queued for bridge polling: "${cmd}"`);
+    const typeResponse = await waitForTypeResponse(8000);
+    if (!typeResponse) {
+      console.warn(`[hardware/sort] Bridge did not return TYPE in time for "${cmd}"`);
+    } else {
+      console.log(`[hardware/sort] Bridge returned TYPE for "${cmd}": ${typeResponse}`);
+    }
+    res.json({
+      success: true,
+      message: `Sort "${cmd}" queued for bridge. Run arduino-bridge on PC with Arduino.`,
+      command: cmd,
+      arduinoType: typeResponse,
+    });
   } catch (err) {
     console.error('[hardware/sort] Unexpected error:', err);
     res.status(500).json({ success: false, error: err.message });
@@ -83,9 +97,27 @@ router.get('/bins', (req, res) => {
 router.get('/pending-sort', (req, res) => {
   try {
     const command = getAndClearPendingSortCommand();
+    if (command) console.log(`[hardware/pending-sort] Bridge picked command: "${command}"`);
     res.json({ command: command || null });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/bridge-heartbeat', (req, res) => {
+  try {
+    markBridgeHeartbeat({ rawLine: `bridge-heartbeat:${req.body?.port || 'unknown-port'}` });
+    res.json({ success: true, connected: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/bridge-status', (req, res) => {
+  try {
+    res.json(getBridgeStatus());
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
