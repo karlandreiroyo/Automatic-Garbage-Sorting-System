@@ -20,6 +20,11 @@ if (!BACKEND_URL || !ARDUINO_PORT || !ARDUINO_BAUD) {
   console.error("   Required: BACKEND_URL, ARDUINO_PORT, ARDUINO_BAUD");
   process.exit(1);
 }
+if (BACKEND_URL.includes("ws-server")) {
+  console.error("❌ BACKEND_URL points to ws-server. Use your backend API Railway URL instead.");
+  console.error("   Example: https://brave-adaptation-production.up.railway.app");
+  process.exit(1);
+}
 
 const wsUrl = BACKEND_URL.replace(/^http/i, "ws") + "/bridge";
 let ws = null;
