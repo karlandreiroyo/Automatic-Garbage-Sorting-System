@@ -76,6 +76,7 @@ router.post('/sort', async (req, res) => {
       console.log(`[hardware/sort] Sent to WebSocket bridge: "${cmd}"`);
     }
     setPendingSortCommand(cmd);
+    console.log('[SORT-QUEUED] added to queue:', cmd);
     console.log(`[hardware/sort] Queued for bridge polling: "${cmd}"`);
     const typeResponse = await waitForTypeResponse(8000);
     if (!typeResponse) {
@@ -113,7 +114,10 @@ router.get('/bins', (req, res) => {
 router.get('/pending-sort', (req, res) => {
   try {
     const command = getAndClearPendingSortCommand();
+    const pendingQueue = command ? [command] : [];
+    console.log('[PENDING-SORT] queue length:', pendingQueue.length, 'returning:', command || null);
     console.log('[BRIDGE-POLL] pending commands:', command ? [command] : []);
+    if (command) console.log('[SORT-DEQUEUED] sending to bridge:', command);
     if (command) console.log(`[hardware/pending-sort] Bridge picked command: "${command}"`);
     res.json({ command: command || null });
   } catch (err) {

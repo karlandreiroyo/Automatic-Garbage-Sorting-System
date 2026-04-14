@@ -14,6 +14,7 @@ const BACKEND_URL = String(process.env.BACKEND_URL || "").trim().replace(/\/+$/,
 const ARDUINO_PORT = String(process.env.ARDUINO_PORT || "").trim();
 const ARDUINO_BAUD = Number(process.env.ARDUINO_BAUD || 9600);
 const WS_RECONNECT_MS = 3000;
+const POLL_URL = `${BACKEND_URL}/api/hardware/pending-sort`;
 
 if (!BACKEND_URL || !ARDUINO_PORT || !ARDUINO_BAUD) {
   console.error("❌ Missing required bridge config in .env.bridge");
@@ -33,6 +34,7 @@ let isWsOpen = false;
 
 let serial = null;
 let parser = null;
+let pollTimer = null;
 
 function connectSerial() {
   console.log(`🔌 Opening Arduino serial on ${ARDUINO_PORT} @ ${ARDUINO_BAUD}...`);
@@ -47,6 +49,11 @@ function connectSerial() {
 
   serial.on("open", () => {
     console.log(`✅ Arduino serial connected (${ARDUINO_PORT})`);
+    if (!pollTimer) {
+      pollTimer = setInterval(() => {
+        void pollPendingSort();
+      }, 1000);
+    }
   });
 
   serial.on("close", () => {
@@ -65,6 +72,36 @@ function connectSerial() {
       ws.send(JSON.stringify({ source: "arduino", data }));
     }
   });
+}
+
+async function pollPendingSort() {
+  try {
+    console.log('[BRIDGE-POLL] checking for commands...');
+    const res = await fetch(POLL_URL);
+    const text = await res.text();
+    console.log('[BRIDGE-POLL] response status:', res.status, 'body:', text);
+    if (!res.ok) return;
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return;
+    }
+    const command = String(data?.command || '').trim();
+    if (!command) return;
+    if (!serial || !serial.isOpen) {
+      console.warn(`⚠️ Bridge poll got command but serial is not open: ${command}`);
+      return;
+    }
+    const line = `${command}\n`;
+    console.log('[BRIDGE] writing to serial:', command);
+    serial.write(line, (err) => {
+      if (err) console.error(`❌ Serial write error (poll): ${err.message}`);
+      else console.log(`✅ Serial write success (poll): ${JSON.stringify(line)}`);
+    });
+  } catch (err) {
+    console.warn('[BRIDGE-POLL] error:', err?.message || err);
+  }
 }
 
 function scheduleWsReconnect() {
@@ -120,5 +157,6 @@ function connectWebSocket() {
 }
 
 console.log("🚀 Starting local Arduino bridge");
+console.log('[BRIDGE] polling URL:', POLL_URL);
 connectSerial();
 connectWebSocket();
