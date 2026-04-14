@@ -1,0 +1,5 @@
+opencv-python>=4.5.0
+numpy>=1.21.0
+requests>=2.25.0
+tensorflow>=2.8.0  # or torch, depending on your model
+pillow>=8.0.0

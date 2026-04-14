@@ -1,85 +1,146 @@
+#!/usr/bin/env python3
+"""
+AGSS ML Detection Script for Raspberry Pi
+Captures webcam frames, runs inference on waste classification model,
+sends HTTP POST to backend when waste is detected.
+"""
+
 import cv2
 import numpy as np
 import requests
 import time
+import sys
+import os
 from datetime import datetime
 
-# Assuming your ML model is loaded here
-# Replace with your actual model loading code
-# For example, if using TensorFlow/Keras:
-# from tensorflow.keras.models import load_model
-# model = load_model('path/to/your/model.h5')
+# Configuration from environment variables
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:3001')
+CAMERA_INDEX = int(os.getenv('CAMERA_INDEX', '0'))
+MODEL_PATH = os.getenv('MODEL_PATH', 'path/to/your/model.h5')  # Update with your model path
+CONFIDENCE_THRESHOLD = float(os.getenv('CONFIDENCE_THRESHOLD', '0.7'))
+COOLDOWN_SECONDS = int(os.getenv('COOLDOWN_SECONDS', '3'))
 
-# Placeholder for model prediction
+# Waste classes (must match Arduino commands)
+CLASSES = ['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted']
+
+# Load your ML model here
+# Example for TensorFlow/Keras:
+# import tensorflow as tf
+# model = tf.keras.models.load_model(MODEL_PATH)
+
+# Placeholder model - replace with your actual model loading
+class DummyModel:
+    def predict(self, image):
+        # Random prediction for demo - replace with your model
+        class_idx = np.random.randint(0, len(CLASSES))
+        confidence = np.random.uniform(0.5, 0.95)
+        return CLASSES[class_idx], confidence
+
+model = DummyModel()
+
+def preprocess_image(frame):
+    """Preprocess frame for model input"""
+    # Resize to your model's expected input size
+    resized = cv2.resize(frame, (224, 224))  # Adjust size as needed
+    # Normalize if required
+    normalized = resized / 255.0
+    # Add batch dimension
+    return np.expand_dims(normalized, axis=0)
+
 def predict_waste_type(frame):
-    """
-    Replace this with your actual model inference.
-    Should return (waste_type, confidence) where waste_type is one of:
-    'Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted'
-    """
-    # Dummy implementation - replace with real model
-    # This should analyze the frame and classify
-    waste_types = ['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted']
-    # Random for demo - replace with actual prediction
-    predicted_index = np.random.randint(0, 4)
-    confidence = np.random.uniform(0.5, 0.95)  # Random confidence
-    return waste_types[predicted_index], confidence
+    """Run inference and return detection result"""
+    try:
+        processed = preprocess_image(frame)
+        # For TensorFlow/Keras:
+        # predictions = model.predict(processed)
+        # class_idx = np.argmax(predictions[0])
+        # confidence = predictions[0][class_idx]
 
-# Configuration
-BACKEND_URL = 'http://localhost:3001'  # Change to your backend URL
-API_ENDPOINT = f'{BACKEND_URL}/api/hardware/sort'
-COOLDOWN_SECONDS = 3
+        # Using dummy model for now
+        waste_type, confidence = model.predict(processed)
 
-# Webcam setup
-cap = cv2.VideoCapture(0)  # 0 for default webcam, change if needed
-if not cap.isOpened():
-    print("Error: Could not open webcam")
-    exit()
+        if confidence >= CONFIDENCE_THRESHOLD:
+            return waste_type, confidence
+    except Exception as e:
+        print(f"Inference error: {e}")
+    return None, 0.0
 
-last_detection_time = 0
-font = cv2.FONT_HERSHEY_SIMPLEX
+def send_detection(waste_type, confidence):
+    """Send detection to backend"""
+    try:
+        payload = {
+            'waste_type': waste_type,
+            'source': 'ml_detection',
+            'confidence': confidence
+        }
+        response = requests.post(f"{BACKEND_URL}/api/hardware/sort", json=payload, timeout=5)
+        if response.status_code == 200:
+            print(f"✓ Sent {waste_type} (confidence: {confidence:.2f}) to backend")
+            return True
+        else:
+            print(f"✗ Backend error: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"✗ Failed to send detection: {e}")
+    return False
 
-print("Starting ML detection. Press 'q' to quit.")
+def main():
+    print("Starting AGSS ML Detection on Raspberry Pi...")
+    print(f"Backend URL: {BACKEND_URL}")
+    print(f"Camera index: {CAMERA_INDEX}")
+    print(f"Confidence threshold: {CONFIDENCE_THRESHOLD}")
+    print(f"Cooldown: {COOLDOWN_SECONDS} seconds")
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Error: Could not read frame")
-        break
+    # Open webcam
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    if not cap.isOpened():
+        print("Error: Could not open camera")
+        return
 
-    # Run inference on the frame
-    waste_type, confidence = predict_waste_type(frame)
+    # Set camera properties
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 30)
 
-    # Display detection result on frame
-    text = f"Detected: {waste_type} ({confidence:.2f})"
-    cv2.putText(frame, text, (10, 30), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+    last_detection_time = 0
 
-    # Check if enough time has passed since last detection
-    current_time = time.time()
-    if current_time - last_detection_time >= COOLDOWN_SECONDS:
-        # Send to backend
-        try:
-            payload = {
-                'waste_type': waste_type,
-                'source': 'ml_detection',
-                'confidence': confidence
-            }
-            response = requests.post(API_ENDPOINT, json=payload)
-            if response.status_code == 200:
-                print(f"Sent {waste_type} to backend (confidence: {confidence:.2f})")
-                last_detection_time = current_time
+    print("Camera opened. Running detection loop. Press Ctrl+C to stop.")
+
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Could not read frame")
+                time.sleep(1)
+                continue
+
+            # Flip frame if needed (depending on camera orientation)
+            frame = cv2.flip(frame, 1)
+
+            # Run detection
+            waste_type, confidence = predict_waste_type(frame)
+
+            if waste_type:
+                print(f"Detected: {waste_type} (confidence: {confidence:.2f})")
+
+                # Check cooldown
+                current_time = time.time()
+                if current_time - last_detection_time >= COOLDOWN_SECONDS:
+                    if send_detection(waste_type, confidence):
+                        last_detection_time = current_time
+                else:
+                    remaining = COOLDOWN_SECONDS - (current_time - last_detection_time)
+                    print(f"Cooldown active: {remaining:.1f}s remaining")
             else:
-                print(f"Failed to send to backend: {response.status_code}")
-        except Exception as e:
-            print(f"Error sending to backend: {e}")
+                print("No waste detected")
 
-    # Show the frame
-    cv2.imshow('Waste Detection', frame)
+            # Small delay to prevent excessive CPU usage
+            time.sleep(0.1)
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    except KeyboardInterrupt:
+        print("\nInterrupted by user")
+    finally:
+        cap.release()
+        print("Camera closed.")
 
-cap.release()
-cv2.destroyAllWindows()</content>
-<parameter name="filePath">/home/admin/Automatic-Garbage-Sorting-System/raspberry/ml_detection.py
+if __name__ == "__main__":
+    main()
