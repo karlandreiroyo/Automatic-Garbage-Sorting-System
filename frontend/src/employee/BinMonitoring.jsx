@@ -74,6 +74,8 @@ const ML_CATEGORY_TO_SORT_CATEGORY = {
   'biodegradable waste': 'Biodegradable',
   bio: 'Biodegradable',
   organic: 'Biodegradable',
+  'hair clip': 'Unsorted',
+  hairclip: 'Unsorted',
   unsorted: 'Unsorted',
   unknown: 'Unsorted',
   other: 'Unsorted',
@@ -680,10 +682,13 @@ const BinMonitoring = () => {
         const normalized = String(mlCategory || "").trim().toLowerCase();
         const sortCategory = ML_CATEGORY_TO_SORT_CATEGORY[normalized];
         console.log('[AUTO-SORT] normalized:', normalized, '→ sortCategory:', sortCategory);
-        const finalCategory = sortCategory ?? mlCategory;
+        const finalCategory = sortCategory ?? 'Unsorted';
         if (!finalCategory || !detectedAt) {
           console.log('[AUTO-SORT-BLOCKED] no sortCategory or detectedAt', { sortCategory, detectedAt });
           return;
+        }
+        if (!sortCategory) {
+          console.log('[AUTO-SORT] Unmapped ML label, falling back to Unsorted:', mlCategory);
         }
         console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${finalCategory} (${wsKey}) at ${detectedAt}`);
         console.log('[AUTO-SORT] POST payload:', { type: finalCategory });

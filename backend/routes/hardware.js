@@ -39,15 +39,12 @@ router.post('/sort', async (req, res) => {
       bio: 'Biodegradable',
       unsorted: 'Unsorted',
       unknown: 'Unsorted',
+      hairclip: 'Unsorted',
+      hairclipwaste: 'Unsorted',
     };
-    const cmd = map[key] || '';
+    const cmd = map[key] || 'Unsorted';
     console.log(`[hardware/sort] Received sort request. incoming="${incomingType}" mapped="${cmd}" bodyType="${req.body?.type || ''}"`);
-    if (!cmd) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing or invalid category/label: "${incomingType}". Use: Recycle, Non-Bio, Biodegradable, Unsorted.`
-      });
-    }
+    if (!map[key]) console.log(`[hardware/sort] Unmapped label "${incomingType}" - defaulting to "Unsorted"`);
     console.log(`[hardware/sort] Attempting serial write: ${JSON.stringify(`${cmd}\n`)}`);
     const sent = sendCommandToArduino(cmd);
     if (sent) {
