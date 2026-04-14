@@ -41,6 +41,7 @@ function connectSerial() {
       console.error(`❌ Serial open error: ${err.message}`);
     }
   });
+  console.log('[BRIDGE] serial port open:', Boolean(serial?.isOpen));
 
   parser = serial.pipe(new ReadlineParser({ delimiter: "\n" }));
 
@@ -96,6 +97,7 @@ function connectWebSocket() {
         }
         const line = `${command}\n`;
         console.log(`📥 Bridge -> Arduino: ${command}`);
+        console.log('[BRIDGE] writing to serial:', command);
         serial.write(line, (err) => {
           if (err) console.error(`❌ Serial write error: ${err.message}`);
           else console.log(`✅ Serial write success: ${JSON.stringify(line)}`);

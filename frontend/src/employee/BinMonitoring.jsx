@@ -260,7 +260,6 @@ const BinMonitoring = () => {
   const wsThresholdSentRef = useRef(new Map());
   const mlItemsByCardRef = useRef({});
   const mlNotifDedupeRef = useRef(new Set());
-  const mlSortDedupeRef = useRef(new Set());
   const prevWsBinSnapshotRef = useRef(null);
   const collectorInfoRef = useRef(null);
   const collectorBinsRef = useRef([]);
@@ -679,26 +678,23 @@ const BinMonitoring = () => {
       try {
         const normalized = String(mlCategory || "").trim().toLowerCase();
         const sortCategory = ML_CATEGORY_TO_SORT_CATEGORY[normalized];
-        if (!sortCategory || !detectedAt) return;
-        const dedupeKey = `${wsKey}|${detectedAt}|${sortCategory}`;
-        if (mlSortDedupeRef.current.has(dedupeKey)) return;
-        mlSortDedupeRef.current.add(dedupeKey);
-        if (mlSortDedupeRef.current.size > 400) {
-          const first = mlSortDedupeRef.current.values().next().value;
-          if (first != null) mlSortDedupeRef.current.delete(first);
-        }
-        console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${sortCategory} (${wsKey}) at ${detectedAt}`);
+        console.log('[AUTO-SORT] normalized:', normalized, '→ sortCategory:', sortCategory);
+        const finalCategory = sortCategory ?? mlCategory;
+        if (!finalCategory || !detectedAt) return;
+        console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${finalCategory} (${wsKey}) at ${detectedAt}`);
+        console.log('[AUTO-SORT] POST payload:', { type: finalCategory });
         const res = await fetch(`${API_BASE}/api/hardware/sort`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: sortCategory }),
+          body: JSON.stringify({ type: finalCategory }),
         });
         const payload = await res.json().catch(() => ({}));
+        console.log('[AUTO-SORT] response status:', res.status, 'body:', payload);
         if (!res.ok) {
-          console.warn(`[AUTO-SORT] Sort API failed for ${sortCategory}:`, payload?.message || res.status);
+          console.warn(`[AUTO-SORT] Sort API failed for ${finalCategory}:`, payload?.message || res.status);
           return;
         }
-        console.log(`[AUTO-SORT] Sort API success for ${sortCategory}:`, payload?.arduinoType || "queued");
+        console.log(`[AUTO-SORT] Sort API success for ${finalCategory}:`, payload?.arduinoType || "queued");
       } catch (err) {
         console.warn(`[AUTO-SORT] Error triggering sort: ${err?.message || err}`);
       }
@@ -739,6 +735,7 @@ const BinMonitoring = () => {
                   wsBin.last_category &&
                   (!prevSnap || prevSnap.last_detected_at !== wsBin.last_detected_at)
                 ) {
+                  console.log('[WS-DEBUG] raw category:', wsBin.last_category, 'at:', wsBin.last_detected_at);
                   console.log("[AUTO-SORT][WS RAW]", {
                     wsKey,
                     last_category: wsBin.last_category,

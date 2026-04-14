@@ -26,6 +26,7 @@ router.get('/status', (req, res) => {
  */
 router.post('/sort', async (req, res) => {
   try {
+    console.log('[SORT-RECEIVED] type:', req.body);
     const incomingType = String((req.body && (req.body.type || req.body.category || req.body.label || req.body.detected)) || '').trim();
     const key = incomingType.toLowerCase().replace(/[_\s-]+/g, '');
     const map = {
@@ -50,6 +51,7 @@ router.post('/sort', async (req, res) => {
     console.log(`[hardware/sort] Attempting serial write: ${JSON.stringify(`${cmd}\n`)}`);
     const sent = sendCommandToArduino(cmd);
     if (sent) {
+      console.log('[SORT-FORWARDED] sending to bridge:', cmd);
       const typeResponse = await waitForTypeResponse(5000);
       if (!typeResponse) {
         console.warn(`[hardware/sort] Serial command sent but no TYPE response within timeout for "${cmd}"`);
@@ -68,6 +70,7 @@ router.post('/sort', async (req, res) => {
     const bridgePushed = typeof req.app?.locals?.sendBridgeCommand === 'function'
       ? req.app.locals.sendBridgeCommand(cmd)
       : false;
+    console.log('[SORT-FORWARDED] sending to bridge:', cmd);
     console.log(`[hardware/sort] WebSocket dispatch attempted: cmd="${cmd}" sent=${bridgePushed}`);
     if (bridgePushed) {
       console.log(`[hardware/sort] Sent to WebSocket bridge: "${cmd}"`);
@@ -110,6 +113,7 @@ router.get('/bins', (req, res) => {
 router.get('/pending-sort', (req, res) => {
   try {
     const command = getAndClearPendingSortCommand();
+    console.log('[BRIDGE-POLL] pending commands:', command ? [command] : []);
     if (command) console.log(`[hardware/pending-sort] Bridge picked command: "${command}"`);
     res.json({ command: command || null });
   } catch (err) {
