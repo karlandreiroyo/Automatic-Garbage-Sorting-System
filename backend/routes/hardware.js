@@ -28,7 +28,14 @@ router.post('/sort', async (req, res) => {
   try {
     console.log('[SORT-RECEIVED] type:', req.body);
     const incomingType = String((req.body && (req.body.type || req.body.category || req.body.label || req.body.detected)) || '').trim();
-    const key = incomingType.toLowerCase().replace(/[_\s-]+/g, '');
+    if (!incomingType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing category/label. Send type, category, label, or detected.',
+      });
+    }
+    // Strip all non-alphanumeric so "HAIR CLIP", "hair-clip", "Hair_Clip" → same key
+    const key = incomingType.toLowerCase().replace(/[^a-z0-9]/g, '');
     const map = {
       recycle: 'Recycle',
       recyclable: 'Recycle',
