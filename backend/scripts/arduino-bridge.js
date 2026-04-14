@@ -11,15 +11,19 @@
  *   node backend/scripts/arduino-bridge.js
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env.bridge') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const BACKEND_URL = (process.env.BACKEND_URL || process.env.API_URL || process.env.VITE_API_URL || '').replace(/\/$/, '');
-const ARDUINO_PORT = (process.env.ARDUINO_PORT || '').trim();
+const BACKEND_URL = String(process.env.BACKEND_URL || '').trim().replace(/\/$/, '');
+const ARDUINO_PORT = String(process.env.ARDUINO_PORT || '').trim();
 const BAUD = Number(process.env.ARDUINO_BAUD || 9600);
 const SCAN_RETRY_MS = 5000;
 
 if (!BACKEND_URL) {
-  console.error('Set BACKEND_URL (or API_URL) to your Railway backend, e.g. https://your-backend.up.railway.app');
+  console.error('ERROR: BACKEND_URL is not set. Add it to backend/.env');
+  console.error('Create .env.bridge file with: BACKEND_URL=https://your-railway-url');
   process.exit(1);
 }
 
@@ -74,6 +78,7 @@ let parser = null;
 let reconnectTimer = null;
 let startedPolling = false;
 const queuedSortCommands = [];
+let lastConnectedPath = '';
 
 const KNOWN_USB_MANUFACTURERS = ['arduino', 'wch.cn', 'ftdi', 'silicon labs', 'ch340', 'ch341'];
 const KNOWN_VENDOR_IDS = new Set(['2341', '0403', '1a86', '10c4']);
@@ -204,8 +209,20 @@ function attachSerialHandlers(openPort, usingPath) {
 }
 
 async function detectArduinoPortPath() {
-  if (ARDUINO_PORT) return ARDUINO_PORT;
   const ports = await SerialPort.list();
+  const availablePaths = new Set(ports.map((p) => String(p.path || '').toUpperCase()));
+  if (ARDUINO_PORT) {
+    const exact = ports.find((p) => String(p.path || '').toUpperCase() === ARDUINO_PORT.toUpperCase());
+    if (!exact) {
+      console.log(`${ARDUINO_PORT} busy or not found — retrying in 5s. Close Arduino IDE if open.`);
+      return null;
+    }
+    return exact.path;
+  }
+  if (lastConnectedPath && !availablePaths.has(lastConnectedPath.toUpperCase())) {
+    console.log(`${lastConnectedPath} busy or not found — retrying in 5s. Close Arduino IDE if open.`);
+    return null;
+  }
   const match = ports.find((p) => isLikelyArduino(p));
   return match?.path || null;
 }
@@ -226,6 +243,7 @@ async function tryConnectArduino() {
       }
     });
     attachSerialHandlers(nextPort, path);
+    lastConnectedPath = path;
     console.log('Arduino bridge connected to backend polling:', BACKEND_URL);
   } catch (err) {
     console.warn('Auto-detect failed:', err.message);
@@ -243,7 +261,7 @@ function scheduleReconnect() {
 
 async function main() {
   console.log('Bridge starting. Run this once and keep terminal open.');
-  console.log(`Backend target: ${BACKEND_URL}`);
+  console.log(`Connecting bridge to: ${BACKEND_URL}`);
   sendHeartbeat();
   if (!startedPolling) {
     startedPolling = true;

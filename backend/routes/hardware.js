@@ -59,6 +59,12 @@ router.post('/sort', async (req, res) => {
     }
     // No serial (e.g. Railway): store for bridge to pick up
     console.error(`[hardware/sort] Arduino not connected - sort command dropped: ${cmd}`);
+    const bridgePushed = typeof req.app?.locals?.sendBridgeCommand === 'function'
+      ? req.app.locals.sendBridgeCommand(cmd)
+      : false;
+    if (bridgePushed) {
+      console.log(`[hardware/sort] Sent to WebSocket bridge: "${cmd}"`);
+    }
     setPendingSortCommand(cmd);
     console.log(`[hardware/sort] Queued for bridge polling: "${cmd}"`);
     const typeResponse = await waitForTypeResponse(8000);

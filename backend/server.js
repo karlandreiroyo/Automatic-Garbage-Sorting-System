@@ -1,12 +1,28 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
+const http = require('http');
+const { WebSocketServer } = require('ws');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { getSmtpConfig } = require('./utils/mailer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const server = http.createServer(app);
+const bridgeClients = new Set();
+app.locals.bridgeClients = bridgeClients;
+app.locals.sendBridgeCommand = (command) => {
+  const payload = JSON.stringify({ target: 'arduino', data: command });
+  let sent = false;
+  for (const client of bridgeClients) {
+    if (client.readyState === 1) {
+      client.send(payload);
+      sent = true;
+    }
+  }
+  return sent;
+};
 
 // Dynamic CORS: allow FRONTEND_URL and/or CORS_ORIGIN (comma-separated) for Railway/deploy; always allow localhost in dev
 const isProduction = process.env.NODE_ENV === 'production';
@@ -161,12 +177,36 @@ try {
 
 // Start server
 const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
-app.listen(PORT, '0.0.0.0', () => {
+const bridgeWss = new WebSocketServer({ server, path: '/bridge' });
+bridgeWss.on('connection', (ws) => {
+  bridgeClients.add(ws);
+  console.log(`Bridge connected via WebSocket. Active bridges: ${bridgeClients.size}`);
+  ws.on('message', (raw) => {
+    try {
+      const payload = JSON.parse(String(raw));
+      if (payload?.source === 'arduino') {
+        console.log(`[bridge] Arduino data: ${payload.data}`);
+      }
+    } catch (err) {
+      console.warn('[bridge] Invalid message:', err.message);
+    }
+  });
+  ws.on('close', () => {
+    bridgeClients.delete(ws);
+    console.log(`Bridge disconnected. Active bridges: ${bridgeClients.size}`);
+  });
+  ws.on('error', (err) => {
+    console.warn('[bridge] WebSocket error:', err.message);
+  });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server running on port ${PORT}`);
   console.log(`API base: ${backendBase}`);
   console.log(`Health: ${backendBase}/api/health`);
   console.log(`Hardware: ${backendBase}/api/hardware/status`);
   console.log(`Collector bins: ${backendBase}/api/collector-bins`);
+  console.log(`Bridge WS: ${backendBase.replace(/^http/i, 'ws')}/bridge`);
 });
 
 module.exports = app;

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "ws-server": "node ws-server.js",
+    "bridge": "node bridge.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
