@@ -675,12 +675,16 @@ const BinMonitoring = () => {
     };
 
     const triggerAutoSortFromMl = async (mlCategory, detectedAt, wsKey) => {
+      console.log('[AUTO-SORT-ENTER] function called with:', mlCategory, detectedAt, wsKey);
       try {
         const normalized = String(mlCategory || "").trim().toLowerCase();
         const sortCategory = ML_CATEGORY_TO_SORT_CATEGORY[normalized];
         console.log('[AUTO-SORT] normalized:', normalized, '→ sortCategory:', sortCategory);
         const finalCategory = sortCategory ?? mlCategory;
-        if (!finalCategory || !detectedAt) return;
+        if (!finalCategory || !detectedAt) {
+          console.log('[AUTO-SORT-BLOCKED] no sortCategory or detectedAt', { sortCategory, detectedAt });
+          return;
+        }
         console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${finalCategory} (${wsKey}) at ${detectedAt}`);
         console.log('[AUTO-SORT] POST payload:', { type: finalCategory });
         const res = await fetch(`${API_BASE}/api/hardware/sort`, {
@@ -732,17 +736,22 @@ const BinMonitoring = () => {
                 const prevSnap = prevWsBinSnapshotRef.current?.[wsKey];
                 if (
                   wsBin.last_detected_at &&
-                  wsBin.last_category &&
-                  (!prevSnap || prevSnap.last_detected_at !== wsBin.last_detected_at)
+                  wsBin.last_category
                 ) {
-                  console.log('[WS-DEBUG] raw category:', wsBin.last_category, 'at:', wsBin.last_detected_at);
-                  console.log("[AUTO-SORT][WS RAW]", {
-                    wsKey,
-                    last_category: wsBin.last_category,
-                    last_detected_at: wsBin.last_detected_at,
-                  });
-                  persistMlNotification(wsKey, wsBin);
-                  triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey);
+                  const prevAt = prevSnap?.last_detected_at;
+                  const prevCat = prevSnap?.last_category;
+                  const isNew = !prevSnap || prevAt !== wsBin.last_detected_at || prevCat !== wsBin.last_category;
+                  console.log('[AUTO-SORT-CHECK] isNew:', isNew, 'prevAt:', prevAt, 'newAt:', wsBin.last_detected_at, 'prevCat:', prevCat, 'newCat:', wsBin.last_category);
+                  if (isNew) {
+                    console.log('[WS-DEBUG] raw category:', wsBin.last_category, 'at:', wsBin.last_detected_at);
+                    console.log("[AUTO-SORT][WS RAW]", {
+                      wsKey,
+                      last_category: wsBin.last_category,
+                      last_detected_at: wsBin.last_detected_at,
+                    });
+                    persistMlNotification(wsKey, wsBin);
+                    triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey);
+                  }
                 }
                 if (cardId) {
                   const incoming = Number(wsBin.fill_level ?? wsBin.fillLevel);
