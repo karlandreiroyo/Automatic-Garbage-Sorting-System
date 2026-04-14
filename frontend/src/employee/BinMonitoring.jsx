@@ -60,6 +60,19 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
   'Biodegradable': 'BIO',
   'Unsorted': 'UNSORTED',
 };
+const ML_CATEGORY_TO_SORT_CATEGORY = {
+  recycle: 'Recycle',
+  recyclable: 'Recycle',
+  recyclables: 'Recycle',
+  'non-bio': 'Non-Bio',
+  nonbio: 'Non-Bio',
+  'non biodegradable': 'Non-Bio',
+  'non-biodegradable': 'Non-Bio',
+  biodegradable: 'Biodegradable',
+  bio: 'Biodegradable',
+  unsorted: 'Unsorted',
+  unknown: 'Unsorted',
+};
 const WS_BIN_TO_CARD_ID = {
   bin_bio: 'Biodegradable',
   bin_nonbio: 'Non Biodegradable',
@@ -242,6 +255,7 @@ const BinMonitoring = () => {
   const wsThresholdSentRef = useRef(new Map());
   const mlItemsByCardRef = useRef({});
   const mlNotifDedupeRef = useRef(new Set());
+  const mlSortDedupeRef = useRef(new Set());
   const prevWsBinSnapshotRef = useRef(null);
   const collectorInfoRef = useRef(null);
   const collectorBinsRef = useRef([]);
@@ -657,6 +671,35 @@ const BinMonitoring = () => {
       );
     };
 
+    const triggerAutoSortFromMl = async (mlCategory, detectedAt, wsKey) => {
+      try {
+        const normalized = String(mlCategory || "").trim().toLowerCase();
+        const sortCategory = ML_CATEGORY_TO_SORT_CATEGORY[normalized];
+        if (!sortCategory || !detectedAt) return;
+        const dedupeKey = `${wsKey}|${detectedAt}|${sortCategory}`;
+        if (mlSortDedupeRef.current.has(dedupeKey)) return;
+        mlSortDedupeRef.current.add(dedupeKey);
+        if (mlSortDedupeRef.current.size > 400) {
+          const first = mlSortDedupeRef.current.values().next().value;
+          if (first != null) mlSortDedupeRef.current.delete(first);
+        }
+        console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${sortCategory} (${wsKey}) at ${detectedAt}`);
+        const res = await fetch(`${API_BASE}/api/hardware/sort`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: sortCategory }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.warn(`[AUTO-SORT] Sort API failed for ${sortCategory}:`, payload?.message || res.status);
+          return;
+        }
+        console.log(`[AUTO-SORT] Sort API success for ${sortCategory}:`, payload?.arduinoType || "queued");
+      } catch (err) {
+        console.warn(`[AUTO-SORT] Error triggering sort: ${err?.message || err}`);
+      }
+    };
+
     const connect = () => {
       const ws = new WebSocket(getWsUrl());
       wsRef.current = ws;
@@ -693,6 +736,7 @@ const BinMonitoring = () => {
                   (!prevSnap || prevSnap.last_detected_at !== wsBin.last_detected_at)
                 ) {
                   persistMlNotification(wsKey, wsBin);
+                  triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey);
                 }
                 if (cardId) {
                   const incoming = Number(wsBin.fill_level ?? wsBin.fillLevel);
