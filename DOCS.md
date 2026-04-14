@@ -317,7 +317,7 @@ The main app uses `backend/server.js`. There is also a small **backendlogin** se
 - Sketch runs on **Arduino Uno**; sends waste type and weight over **serial (USB)**.
 - Backend expects lines like: `RECYCABLE`, `NON_BIO`, `BIO`, `UNSORTED`, `Weight: X.X g`.
 - **Conflict:** Serial Monitor and backend both need the same COM port – only one can use it. Close Serial Monitor when running the backend.
-- **Local backend:** In `backend/.env` set `ARDUINO_PORT=` your port (e.g. COM5, COM7, COM8 — any COM port), `ARDUINO_BAUD=9600`, and **`ARDUINO_LOCAL=true`**. Then start backend with `npm start`; the backend will open the serial port and Bin Monitoring will show "Serial connected".
+- **Local backend:** In `backend/.env` set `ARDUINO_PORT=` your port (e.g. COM5, COM8 — any COM port), `ARDUINO_BAUD=9600`, and **`ARDUINO_LOCAL=true`**. Then start backend with `npm start`; the backend will open the serial port and Bin Monitoring will show "Serial connected".
 
 ### Arduino when deployed (e.g. Railway)
 
@@ -327,7 +327,7 @@ On Railway there is no COM port. Use the **Arduino bridge** on your PC:
 2. Set your Railway backend URL and COM port, then run the bridge:
    ```powershell
    $env:BACKEND_URL="https://your-backend.up.railway.app"
-   $env:ARDUINO_PORT="COM5"   # or COM7, COM8, etc. — use the port your Arduino is on
+   $env:ARDUINO_PORT="COM5"   # or COM8, etc. — use the port your Arduino is on
    node backend/scripts/arduino-bridge.js
    ```
 3. The bridge reads from the Arduino and POSTs each line to `POST /api/hardware/arduino`. Bin Monitoring will show **"Connected (bridge)"** and the detected type.

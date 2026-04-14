@@ -61,7 +61,7 @@ export default function HardwareStatus() {
       {(status.error) && <div className="hardware-status-error">{status.error}</div>}
       {showLocalHint && (
         <div className="hardware-status-hint">
-          In <code>backend/.env</code> set <strong>ARDUINO_LOCAL=true</strong> and <strong>ARDUINO_PORT=</strong> your port (e.g. COM5, COM7, COM8), then start the backend. If the Arduino IDE Serial Monitor is open, close it — only one program can use the COM port.
+          In <code>backend/.env</code> set <strong>ARDUINO_LOCAL=true</strong> and <strong>ARDUINO_PORT=</strong> your port (e.g. COM5, COM8), then start the backend. If the Arduino IDE Serial Monitor is open, close it — only one program can use the COM port.
         </div>
       )}
       {showBridgeHint && (

@@ -177,7 +177,23 @@ try {
 
 // Start server
 const backendBase = process.env.BACKEND_URL || process.env.API_URL || 'https://brave-adaptation-production.up.railway.app';
-const bridgeWss = new WebSocketServer({ server, path: '/bridge' });
+const bridgeWss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+  try {
+    const pathname = new URL(request.url, 'http://localhost').pathname;
+    if (pathname === '/bridge') {
+      bridgeWss.handleUpgrade(request, socket, head, (ws) => {
+        bridgeWss.emit('connection', ws, request);
+      });
+      return;
+    }
+    socket.destroy();
+  } catch {
+    socket.destroy();
+  }
+});
+
 bridgeWss.on('connection', (ws) => {
   bridgeClients.add(ws);
   console.log(`Bridge connected via WebSocket. Active bridges: ${bridgeClients.size}`);

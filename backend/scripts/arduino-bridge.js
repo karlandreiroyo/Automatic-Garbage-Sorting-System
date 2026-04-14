@@ -7,7 +7,7 @@
  *
  * Usage (PowerShell):
  *   set BACKEND_URL=https://your-backend.up.railway.app
- *   set ARDUINO_PORT=COM7
+ *   set ARDUINO_PORT=COM5
  *   node backend/scripts/arduino-bridge.js
  */
 
