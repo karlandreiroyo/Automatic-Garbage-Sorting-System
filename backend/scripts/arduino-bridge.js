@@ -14,8 +14,9 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const BACKEND_URL = (process.env.BACKEND_URL || process.env.API_URL || process.env.VITE_API_URL || '').replace(/\/$/, '');
-const ARDUINO_PORT = process.env.ARDUINO_PORT || 'COM5'; // or COM7, COM8, etc. — any COM port
+const ARDUINO_PORT = (process.env.ARDUINO_PORT || '').trim();
 const BAUD = Number(process.env.ARDUINO_BAUD || 9600);
+const SCAN_RETRY_MS = 5000;
 
 if (!BACKEND_URL) {
   console.error('Set BACKEND_URL (or API_URL) to your Railway backend, e.g. https://your-backend.up.railway.app');
@@ -68,13 +69,32 @@ async function sendToBackend(payload) {
 
 let _pendingSortLoggedFailure = false;
 let _backendConnectedLogged = false;
+let port = null;
+let parser = null;
+let reconnectTimer = null;
+let startedPolling = false;
+const queuedSortCommands = [];
+
+const KNOWN_USB_MANUFACTURERS = ['arduino', 'wch.cn', 'ftdi', 'silicon labs', 'ch340', 'ch341'];
+const KNOWN_VENDOR_IDS = new Set(['2341', '0403', '1a86', '10c4']);
+
+function normalizeVendorId(value) {
+  const s = String(value || '').toLowerCase().replace(/^0x/, '');
+  return s.padStart(4, '0');
+}
+
+function isLikelyArduino(p) {
+  const m = String(p.manufacturer || '').toLowerCase();
+  const vid = normalizeVendorId(p.vendorId);
+  return KNOWN_USB_MANUFACTURERS.some((x) => m.includes(x)) || KNOWN_VENDOR_IDS.has(vid);
+}
 
 async function sendHeartbeat() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/hardware/bridge-heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ port: ARDUINO_PORT }),
+      body: JSON.stringify({ port: port?.path || ARDUINO_PORT || 'auto' }),
     });
     if (res.ok) {
       if (!_backendConnectedLogged) {
@@ -89,9 +109,23 @@ async function sendHeartbeat() {
   }
 }
 
-async function pollPendingSort(port) {
+function flushQueuedCommands() {
+  if (!port || !port.isOpen || !queuedSortCommands.length) return;
+  while (queuedSortCommands.length) {
+    const cmd = queuedSortCommands.shift();
+    console.log(`Writing queued command to Arduino: ${cmd}`);
+    port.write(`${cmd}\n`, (err) => {
+      if (err) {
+        console.error(`Bridge serial write failed for queued "${cmd}":`, err.message);
+      } else {
+        console.log(`Bridge serial write success: ${JSON.stringify(`${cmd}\n`)}`);
+      }
+    });
+  }
+}
+
+async function pollPendingSort() {
   try {
-    if (!port || typeof port.write !== 'function' || !port.isOpen) return;
     const res = await fetch(`${BACKEND_URL}/api/hardware/pending-sort`);
     if (!res.ok) {
       if (!_pendingSortLoggedFailure) {
@@ -105,6 +139,11 @@ async function pollPendingSort(port) {
     if (!cmd) return;
     const cleanCmd = String(cmd).trim();
     console.log(`Sort command received: ${cleanCmd}`);
+    if (!port || !port.isOpen) {
+      console.log('Sort command received but Arduino not connected — queuing');
+      queuedSortCommands.push(cleanCmd);
+      return;
+    }
     console.log(`Writing to Arduino: ${cleanCmd}`);
     port.write(`${cleanCmd}\n`, (err) => {
       if (err) {
@@ -121,20 +160,9 @@ async function pollPendingSort(port) {
   }
 }
 
-function main() {
-  const port = new SerialPort(
-    { path: ARDUINO_PORT, baudRate: BAUD },
-    (err) => {
-      if (err) {
-        console.error('Cannot open', ARDUINO_PORT, err.message);
-        process.exit(1);
-      }
-      console.log('Arduino bridge: reading from', ARDUINO_PORT, '->', BACKEND_URL);
-      console.log('Polling for sort commands — click "Sort here" in the app to move the servo.');
-    }
-  );
-
-  const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
+function attachSerialHandlers(openPort, usingPath) {
+  port = openPort;
+  parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
   parser.on('data', (line) => {
     const parsed = parseLine(line);
     const clean = String(line).trim();
@@ -147,17 +175,82 @@ function main() {
     sendToBackend(body);
   });
 
-  // Only poll for sort commands after port is open (so write() works)
   port.on('open', () => {
-    console.log(`Bridge serial ready on ${ARDUINO_PORT} @ ${BAUD}`);
+    console.log(`Arduino auto-detected on ${usingPath} — connected`);
+    console.log(`Bridge serial ready on ${usingPath} @ ${BAUD}`);
     sendHeartbeat();
-    setInterval(() => pollPendingSort(port), 500);
-    setInterval(() => sendHeartbeat(), 5000);
+    flushQueuedCommands();
+    if (!startedPolling) {
+      startedPolling = true;
+      setInterval(() => pollPendingSort(), 500);
+      setInterval(() => sendHeartbeat(), 5000);
+    }
+  });
+
+  port.on('close', () => {
+    console.log('Arduino disconnected. Waiting for reconnect...');
+    try {
+      parser?.removeAllListeners();
+    } catch {}
+    parser = null;
+    port = null;
+    scheduleReconnect();
   });
 
   port.on('error', (err) => {
     console.error('Serial error:', err.message);
+    if (!port || !port.isOpen) scheduleReconnect();
   });
+}
+
+async function detectArduinoPortPath() {
+  if (ARDUINO_PORT) return ARDUINO_PORT;
+  const ports = await SerialPort.list();
+  const match = ports.find((p) => isLikelyArduino(p));
+  return match?.path || null;
+}
+
+async function tryConnectArduino() {
+  if (port && port.isOpen) return;
+  try {
+    const path = await detectArduinoPortPath();
+    if (!path) {
+      console.log('No Arduino detected. Plug in Arduino USB... retrying in 5s');
+      scheduleReconnect();
+      return;
+    }
+    const nextPort = new SerialPort({ path, baudRate: BAUD }, (err) => {
+      if (err) {
+        console.error(`Cannot open ${path}: ${err.message}`);
+        scheduleReconnect();
+      }
+    });
+    attachSerialHandlers(nextPort, path);
+    console.log('Arduino bridge connected to backend polling:', BACKEND_URL);
+  } catch (err) {
+    console.warn('Auto-detect failed:', err.message);
+    scheduleReconnect();
+  }
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    await tryConnectArduino();
+  }, SCAN_RETRY_MS);
+}
+
+async function main() {
+  console.log('Bridge starting. Run this once and keep terminal open.');
+  console.log(`Backend target: ${BACKEND_URL}`);
+  sendHeartbeat();
+  if (!startedPolling) {
+    startedPolling = true;
+    setInterval(() => pollPendingSort(), 500);
+    setInterval(() => sendHeartbeat(), 5000);
+  }
+  await tryConnectArduino();
 }
 
 main();

@@ -70,12 +70,10 @@ export default function HardwareStatus() {
           <p className="hardware-bridge-note">The badge above shows &quot;Bridge required&quot; because the server has no Arduino. Run the bridge on your PC to enable sorting.</p>
           <ol className="hardware-steps">
             <li>On the PC with the Arduino plugged in via USB, open PowerShell in the <strong>project folder</strong> (where <code>backend</code> and <code>frontend</code> folders are).</li>
-            <li>Run these three lines (replace <code>COM7</code> with your Arduino port — e.g. from Device Manager or <code>cd backend && npm run list-ports</code>):</li>
+            <li>Run this command once. The bridge will automatically detect your Arduino - just keep the terminal open:</li>
           </ol>
           <pre className="hardware-bridge-cmd">
-{`$env:BACKEND_URL="${API_BASE}"
-$env:ARDUINO_PORT="COM7"
-node backend/scripts/arduino-bridge.js`}
+{`node backend/scripts/arduino-bridge.js`}
           </pre>
           <p>Keep the terminal open. Then <strong>click &quot;Sort here&quot;</strong> on a bin below — the servo will move and the bin will get +10%.</p>
         </div>
