@@ -56,3 +56,29 @@ def send_to_backend(category, processing_time_seconds=0):
     except Exception as e:
         print("AGSS: send failed", e, file=sys.stderr)
         return False
+
+
+def send_sort_command(sort_type):
+    """
+    Send a sort request to backend hardware endpoint.
+    sort_type: "Recycle" | "Non-Bio" | "Biodegradable" | "Unsorted"
+    """
+    try:
+        import requests
+    except ImportError:
+        print("AGSS connect: pip install requests", file=sys.stderr)
+        return False
+
+    url = f"{API_URL}/api/hardware/sort"
+    body = {"type": sort_type}
+    print(f"AGSS sort: POST {url} body={body}")
+    try:
+        r = requests.post(url, json=body, headers={"Content-Type": "application/json"}, timeout=10)
+        print(f"AGSS sort: response status={r.status_code} body={r.text}")
+        if r.ok:
+            return True
+        print("AGSS sort: backend error", r.status_code, r.text, file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"AGSS sort: send failed type={type(e).__name__} error={e}", file=sys.stderr)
+        return False

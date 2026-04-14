@@ -26,6 +26,8 @@ const WASTE_TYPE_HOLD_MS = 4000;  // keep lastType as waste type this long so fr
 let port;
 let parser;
 let serialAttempted = false;
+let latestBins = { bin1: 0, bin2: 0, bin3: 0, bin4: 0 };
+const typeWaiters = new Set();
 
 const WASTE_TYPES = ['RECYCABLE', 'NON_BIO', 'BIO', 'UNSORTED'];
 
@@ -88,18 +90,20 @@ function initHardware() {
       const upper = clean.toUpperCase();
       if (upper.startsWith('TYPE:')) {
         const type = clean.split(':')[1] || '';
-        hardwareState.lastType = type.trim().toUpperCase() || 'NORMAL';
+        console.log(`[hardwareStore] Arduino TYPE response received: ${type.trim().toUpperCase() || 'NORMAL'}`);
+        setDetectedType(type.trim().toUpperCase() || 'NORMAL');
         return;
       }
-      // Bin fullness lines (e.g. "Bin 1: 50%") – do not overwrite lastType
+      parseBinLine(clean);
+      // Bin fullness lines do not overwrite lastType
       if (/^BIN \d+:\s*\d+%?$/i.test(clean)) return;
       // Accept both RECYCABLE (AGSS.ino) and RECYCLABLE ("Detected: Recyclable")
-      if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) hardwareState.lastType = 'RECYCABLE';
-      else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) hardwareState.lastType = 'NON_BIO';
-      else if (upper.includes('BIO') && !upper.includes('NON')) hardwareState.lastType = 'BIO';
-      else if (upper.includes('UNSORTED')) hardwareState.lastType = 'UNSORTED';
-      else if (upper.includes('NORMAL POSITION') || upper.includes('NO OBJECT')) hardwareState.lastType = 'NORMAL';
-      else hardwareState.lastType = 'NORMAL';
+      if (upper.includes('RECYCABLE') || upper.includes('RECYCLABLE')) setDetectedType('RECYCABLE');
+      else if (upper.includes('NON - BIO') || upper.includes('NON-BIO')) setDetectedType('NON_BIO');
+      else if (upper.includes('BIO') && !upper.includes('NON')) setDetectedType('BIO');
+      else if (upper.includes('UNSORTED')) setDetectedType('UNSORTED');
+      else if (upper.includes('NORMAL POSITION') || upper.includes('NO OBJECT')) setDetectedType('NORMAL');
+      else setDetectedType('NORMAL');
     });
   } catch (err) {
     console.error('Failed to init hardware:', err.message);
@@ -136,8 +140,9 @@ function updateStateFromBridge(type, weightG = null, rawLine = null) {
   }
 
   if (isWasteType) hardwareState._wasteTypeSetAt = now;
-  hardwareState.lastType = lastType;
+  setDetectedType(lastType);
   hardwareState.lastLine = rawLine != null ? String(rawLine) : hardwareState.lastLine;
+  if (rawLine != null) parseBinLine(String(rawLine));
   hardwareState.lastUpdated = new Date().toISOString();
   hardwareState.connected = true;
   hardwareState.error = null;
@@ -159,15 +164,72 @@ function getHardwareState() {
   return out;
 }
 
+function parseBinLine(line) {
+  const m = String(line || '').match(/^Bin\s+([1-4])\s*:\s*(\d{1,3})%?$/i);
+  if (!m) return;
+  const key = `bin${Number(m[1])}`;
+  const value = Math.max(0, Math.min(100, Number(m[2])));
+  latestBins = { ...latestBins, [key]: value };
+}
+
+function setDetectedType(type) {
+  hardwareState.lastType = type || 'NORMAL';
+  if (WASTE_TYPES.includes(hardwareState.lastType)) {
+    hardwareState._wasteTypeSetAt = Date.now();
+  }
+  if (!WASTE_TYPES.includes(hardwareState.lastType)) return;
+  for (const waiter of [...typeWaiters]) {
+    try {
+      waiter.resolve(hardwareState.lastType);
+    } catch {}
+    typeWaiters.delete(waiter);
+  }
+}
+
+function waitForTypeResponse(timeoutMs = 5000) {
+  return new Promise((resolve) => {
+    const waiter = { resolve: (t) => resolve(t) };
+    typeWaiters.add(waiter);
+    console.log(`[hardwareStore] Waiting for Arduino TYPE response (timeout=${Math.max(250, Number(timeoutMs) || 5000)}ms)`);
+    const timer = setTimeout(() => {
+      typeWaiters.delete(waiter);
+      console.warn('[hardwareStore] TYPE response timeout');
+      resolve(null);
+    }, Math.max(250, Number(timeoutMs) || 5000));
+    waiter.resolve = (t) => {
+      clearTimeout(timer);
+      console.log(`[hardwareStore] TYPE response resolved: ${t}`);
+      resolve(t);
+    };
+  });
+}
+
+function getLatestBins() {
+  return { ...latestBins };
+}
+
 /**
  * Send a command to the Arduino over serial (e.g. "Recycle", "Non-Bio", "Biodegradable", "Unsorted").
  * Used by POST /api/hardware/sort. No-op if serial not open.
  */
 function sendCommandToArduino(command) {
-  if (!port || typeof port.write !== 'function') return false;
+  if (!port || typeof port.write !== 'function') {
+    console.error(`[hardwareStore] Arduino not connected - sort command dropped: ${command}`);
+    return false;
+  }
+  if (!port.isOpen) {
+    console.error(`[hardwareStore] Arduino not connected - sort command dropped: ${command}`);
+    return false;
+  }
   try {
     const line = String(command).trim() + '\n';
-    port.write(line);
+    port.write(line, (err) => {
+      if (err) {
+        console.error(`[hardwareStore] Serial write failed for "${String(command).trim()}": ${err.message}`);
+      } else {
+        console.log(`[hardwareStore] Serial write ok: ${JSON.stringify(line)}`);
+      }
+    });
     return true;
   } catch (err) {
     console.error('Send command to Arduino failed:', err.message);
@@ -180,6 +242,8 @@ module.exports = {
   getHardwareState,
   updateStateFromBridge,
   sendCommandToArduino,
+  waitForTypeResponse,
+  getLatestBins,
   setPendingSortCommand,
   getAndClearPendingSortCommand,
 };
