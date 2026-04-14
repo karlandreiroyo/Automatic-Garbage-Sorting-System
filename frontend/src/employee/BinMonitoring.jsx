@@ -63,15 +63,20 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
 const ML_CATEGORY_TO_SORT_CATEGORY = {
   recycle: 'Recycle',
   recyclable: 'Recycle',
+  'recyclable waste': 'Recycle',
   recyclables: 'Recycle',
   'non-bio': 'Non-Bio',
   nonbio: 'Non-Bio',
   'non biodegradable': 'Non-Bio',
   'non-biodegradable': 'Non-Bio',
+  'non biodegradable waste': 'Non-Bio',
   biodegradable: 'Biodegradable',
+  'biodegradable waste': 'Biodegradable',
   bio: 'Biodegradable',
+  organic: 'Biodegradable',
   unsorted: 'Unsorted',
   unknown: 'Unsorted',
+  other: 'Unsorted',
 };
 const WS_BIN_TO_CARD_ID = {
   bin_bio: 'Biodegradable',
@@ -633,7 +638,6 @@ const BinMonitoring = () => {
           bin_id: physicalId,
           collector_id: info.id,
           bin_category: String(wsBin.last_category),
-          status: `AGSS_ML_V1|${JSON.stringify(meta)}`,
           first_name: info.first_name ?? "",
           last_name: info.last_name ?? "",
           middle_name: info.middle_name ?? "",
@@ -735,6 +739,11 @@ const BinMonitoring = () => {
                   wsBin.last_category &&
                   (!prevSnap || prevSnap.last_detected_at !== wsBin.last_detected_at)
                 ) {
+                  console.log("[AUTO-SORT][WS RAW]", {
+                    wsKey,
+                    last_category: wsBin.last_category,
+                    last_detected_at: wsBin.last_detected_at,
+                  });
                   persistMlNotification(wsKey, wsBin);
                   triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey);
                 }
