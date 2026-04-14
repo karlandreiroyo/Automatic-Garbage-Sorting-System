@@ -26,19 +26,26 @@ router.get('/status', (req, res) => {
  */
 router.post('/sort', async (req, res) => {
   try {
-    const incomingType = String((req.body && (req.body.type || req.body.category)) || '').trim();
+    const incomingType = String((req.body && (req.body.type || req.body.category || req.body.label || req.body.detected)) || '').trim();
+    const key = incomingType.toLowerCase().replace(/[_\s-]+/g, '');
     const map = {
       recycle: 'Recycle',
-      'non-bio': 'Non-Bio',
+      recyclable: 'Recycle',
+      recyclables: 'Recycle',
       nonbio: 'Non-Bio',
-      'non biodegradable': 'Non-Bio',
+      nonbiodegradable: 'Non-Bio',
       biodegradable: 'Biodegradable',
+      bio: 'Biodegradable',
       unsorted: 'Unsorted',
+      unknown: 'Unsorted',
     };
-    const cmd = map[incomingType.toLowerCase()] || incomingType || '';
+    const cmd = map[key] || '';
     console.log(`[hardware/sort] Received sort request. incoming="${incomingType}" mapped="${cmd}" bodyType="${req.body?.type || ''}"`);
     if (!cmd) {
-      return res.status(400).json({ success: false, message: 'Missing or invalid category. Use: Recycle, Non-Bio, Biodegradable, Unsorted.' });
+      return res.status(400).json({
+        success: false,
+        message: `Missing or invalid category/label: "${incomingType}". Use: Recycle, Non-Bio, Biodegradable, Unsorted.`
+      });
     }
     console.log(`[hardware/sort] Attempting serial write: ${JSON.stringify(`${cmd}\n`)}`);
     const sent = sendCommandToArduino(cmd);
@@ -61,6 +68,7 @@ router.post('/sort', async (req, res) => {
     const bridgePushed = typeof req.app?.locals?.sendBridgeCommand === 'function'
       ? req.app.locals.sendBridgeCommand(cmd)
       : false;
+    console.log(`[hardware/sort] WebSocket dispatch attempted: cmd="${cmd}" sent=${bridgePushed}`);
     if (bridgePushed) {
       console.log(`[hardware/sort] Sent to WebSocket bridge: "${cmd}"`);
     }

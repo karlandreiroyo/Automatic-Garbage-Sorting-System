@@ -16,12 +16,14 @@ app.locals.bridgeConnected = false;
 app.locals.sendBridgeCommand = (command) => {
   const payload = JSON.stringify({ target: 'arduino', data: command });
   let sent = false;
+  console.log(`[bridge->ws] Sending command to bridge clients: command="${command}" clients=${bridgeClients.size}`);
   for (const client of bridgeClients) {
     if (client.readyState === 1) {
       client.send(payload);
       sent = true;
     }
   }
+  if (!sent) console.warn(`[bridge->ws] No active bridge client received command "${command}"`);
   return sent;
 };
 

@@ -80,6 +80,7 @@ function connectWebSocket() {
 
   ws.on("message", (raw) => {
     try {
+      console.log(`📨 Bridge received WS message: ${String(raw)}`);
       const msg = JSON.parse(String(raw));
       if (msg?.target === "arduino") {
         const command = String(msg.data || "").trim();
@@ -92,6 +93,7 @@ function connectWebSocket() {
         console.log(`📥 Bridge -> Arduino: ${command}`);
         serial.write(line, (err) => {
           if (err) console.error(`❌ Serial write error: ${err.message}`);
+          else console.log(`✅ Serial write success: ${JSON.stringify(line)}`);
         });
       }
     } catch (err) {
