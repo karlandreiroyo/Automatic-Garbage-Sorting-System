@@ -7,7 +7,6 @@ const {
   waitForTypeResponse,
   getLatestBins,
   markBridgeHeartbeat,
-  getBridgeStatus,
   setPendingSortCommand,
   getAndClearPendingSortCommand
 } = require('../utils/hardwareStore');
@@ -114,14 +113,6 @@ router.post('/bridge-heartbeat', (req, res) => {
   try {
     markBridgeHeartbeat({ rawLine: `bridge-heartbeat:${req.body?.port || 'unknown-port'}` });
     res.json({ success: true, connected: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-router.get('/bridge-status', (req, res) => {
-  try {
-    res.json(getBridgeStatus());
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

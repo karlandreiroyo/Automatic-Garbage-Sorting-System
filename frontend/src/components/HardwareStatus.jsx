@@ -10,6 +10,7 @@ export default function HardwareStatus() {
     connected: false,
     error: null,
   });
+  const [bridgeConnected, setBridgeConnected] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,6 +32,26 @@ export default function HardwareStatus() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBridgeStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/hardware/bridge-status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setBridgeConnected(Boolean(data?.connected));
+      } catch {
+        if (!cancelled) setBridgeConnected(false);
+      }
+    };
+    fetchBridgeStatus();
+    const id = setInterval(fetchBridgeStatus, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
   const formatTime = (iso) => {
     if (!iso) return '—';
     try {
@@ -42,19 +63,18 @@ export default function HardwareStatus() {
 
   const isLocalhost = /localhost|127\.0\.0\.1/.test(API_BASE);
   const isRailwayOrRemote = !isLocalhost;
-  const connectionLabel = status.connected
-    ? (status.source === 'bridge' ? 'Connected (bridge)' : 'Serial connected')
-    : isRailwayOrRemote
-      ? 'Bridge required'
-      : 'Not connected';
-  const showBridgeHint = !status.connected && !status.error && !isLocalhost;
+  const uiConnected = isRailwayOrRemote ? bridgeConnected : status.connected;
+  const connectionLabel = isRailwayOrRemote
+    ? (bridgeConnected ? 'Bridge connected' : 'Bridge required')
+    : (status.connected ? 'Serial connected' : 'Not connected');
+  const showBridgeHint = !bridgeConnected && !status.error && !isLocalhost;
   const showLocalHint = !status.connected && !status.error && isLocalhost;
 
   return (
     <div className="hardware-status">
       <div className="hardware-status-header">
         <h2>Arduino sorting status</h2>
-        <span className={`badge ${status.connected ? 'badge-connected' : 'badge-disconnected'}`}>
+        <span className={`badge ${uiConnected ? 'badge-connected' : 'badge-disconnected'}`}>
           {connectionLabel}
         </span>
       </div>

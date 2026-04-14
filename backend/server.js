@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 const bridgeClients = new Set();
 app.locals.bridgeClients = bridgeClients;
+app.locals.bridgeConnected = false;
 app.locals.sendBridgeCommand = (command) => {
   const payload = JSON.stringify({ target: 'arduino', data: command });
   let sent = false;
@@ -138,6 +139,12 @@ app.get('/', (req, res) => {
   });
 });
 
+// Bridge connection status (WebSocket client presence)
+app.get('/api/hardware/bridge-status', (req, res) => {
+  const connected = bridgeClients.size > 0 || app.locals.bridgeConnected === true;
+  res.json({ connected });
+});
+
 // Use routes
 app.use('/api/forgot-password', forgotPasswordRoutes);
 app.use('/api/profile', profilePasswordRoutes);
@@ -196,6 +203,7 @@ server.on('upgrade', (request, socket, head) => {
 
 bridgeWss.on('connection', (ws) => {
   bridgeClients.add(ws);
+  app.locals.bridgeConnected = true;
   console.log(`Bridge connected via WebSocket. Active bridges: ${bridgeClients.size}`);
   ws.on('message', (raw) => {
     try {
@@ -209,6 +217,7 @@ bridgeWss.on('connection', (ws) => {
   });
   ws.on('close', () => {
     bridgeClients.delete(ws);
+    if (bridgeClients.size === 0) app.locals.bridgeConnected = false;
     console.log(`Bridge disconnected. Active bridges: ${bridgeClients.size}`);
   });
   ws.on('error', (err) => {
