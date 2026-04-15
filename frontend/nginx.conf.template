@@ -19,8 +19,8 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
     }
 
-    # SPA shell must not be cached, or browsers keep an old index.html that still
-    # references a previous JS chunk (e.g. stale sortingCategory bug after deploy).
+    # SPA shell must not be cached. Browsers often request "/" (not "/index.html");
+    # try_files still serves index.html internally, so no-cache must apply here too.
     location = /index.html {
         add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate" always;
         add_header Pragma "no-cache" always;
@@ -28,6 +28,9 @@ server {
     }
 
     location / {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate" always;
+        add_header Pragma "no-cache" always;
+        expires -1;
         try_files $uri $uri/ /index.html;
     }
 }
