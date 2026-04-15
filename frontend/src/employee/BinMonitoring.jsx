@@ -241,7 +241,7 @@ const BinMonitoring = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [detectionLog, setDetectionLog] = useState([]);
   const [wsAlertBanner, setWsAlertBanner] = useState(null);
-  const [activeSortCategory, setActiveSortCategory] = useState(null);
+  const [sortingCategory, setSortingCategory] = useState(null);
   const [drainingBinId, setDrainingBinId] = useState(null);
   const [recordedItems, setRecordedItems] = useState([]);
   const [loadingRecordedItems, setLoadingRecordedItems] = useState(false);
@@ -1222,7 +1222,7 @@ const BinMonitoring = () => {
   /** Send sort command to Arduino so servo tilts to the selected bin; add +10% to that bin. */
   const handleSortToBin = async (category) => {
     if (!category) return;
-    setActiveSortCategory(category);
+    setSortingCategory(category);
     setNotification("");
     try {
       const { displayCategory, data } = await runSortPipeline({
@@ -1243,7 +1243,7 @@ const BinMonitoring = () => {
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {
-      setActiveSortCategory(null);
+      setSortingCategory(null);
     }
   };
 
@@ -1470,7 +1470,7 @@ const BinMonitoring = () => {
             onDrain={isCollector ? () => handleDrainSingle(bin.id) : undefined}
             onSort={handleSortToBin}
             sortCategory={BIN_TO_SORT_CATEGORY[bin.id]}
-            isSorting={activeSortCategory === BIN_TO_SORT_CATEGORY[bin.id]}
+            isSorting={sortingCategory === BIN_TO_SORT_CATEGORY[bin.id]}
             isDraining={drainingBinId === bin.id}
             last_ml_category={bin.last_ml_category}
             last_ml_confidence={bin.last_ml_confidence}
