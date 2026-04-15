@@ -14,6 +14,19 @@ server {
         proxy_set_header Authorization $http_authorization;
     }
 
+    # Hashed Vite assets — safe to cache forever (new deploy = new filenames).
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    # SPA shell must not be cached, or browsers keep an old index.html that still
+    # references a previous JS chunk (e.g. stale sortingCategory bug after deploy).
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate" always;
+        add_header Pragma "no-cache" always;
+        expires -1;
+    }
+
     location / {
         try_files $uri $uri/ /index.html;
     }
