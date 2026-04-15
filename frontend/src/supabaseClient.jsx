@@ -36,18 +36,20 @@ const safeStorage = {
   removeItem: (key) => window.localStorage.removeItem(key),
 }
 
-try {
-  const legacyRaw = window.localStorage.getItem(legacyStorageKey)
-  if (legacyRaw && !window.localStorage.getItem(storageKey)) {
-    const legacyParsed = JSON.parse(legacyRaw)
-    if (legacyParsed && (legacyParsed.refresh_token || legacyParsed.currentSession?.refresh_token)) {
-      window.localStorage.setItem(storageKey, legacyRaw)
+if (typeof window !== 'undefined') {
+  try {
+    const legacyRaw = window.localStorage.getItem(legacyStorageKey)
+    if (legacyRaw && !window.localStorage.getItem(storageKey)) {
+      const legacyParsed = JSON.parse(legacyRaw)
+      if (legacyParsed && (legacyParsed.refresh_token || legacyParsed.currentSession?.refresh_token)) {
+        window.localStorage.setItem(storageKey, legacyRaw)
+      }
     }
+    // Remove old key so deployed/local sessions do not conflict.
+    window.localStorage.removeItem(legacyStorageKey)
+  } catch {
+    // ignore storage migration failures
   }
-  // Remove old key so deployed/local sessions do not conflict.
-  window.localStorage.removeItem(legacyStorageKey)
-} catch {
-  // ignore storage migration failures
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {

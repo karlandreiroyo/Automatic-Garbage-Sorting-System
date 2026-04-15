@@ -271,8 +271,11 @@ const BinMonitoring = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [detectionLog, setDetectionLog] = useState([]);
   const [wsAlertBanner, setWsAlertBanner] = useState(null);
-  const [sortingCategory, setSortingCategory] = useState(null);
+  const [activeSortCategory, setActiveSortCategory] = useState(null);
   const [drainingBinId, setDrainingBinId] = useState(null);
+  const [recordedItems, setRecordedItems] = useState([]);
+  const [loadingRecordedItems, setLoadingRecordedItems] = useState(false);
+  const recordedItemsInitRef = useRef(false);
   const wsBannerTimerRef = useRef(null);
   const fullBinsLockRef = useRef(new Set());
   const wsThresholdSentRef = useRef(new Map());
@@ -476,10 +479,6 @@ const BinMonitoring = () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
-  const [recordedItems, setRecordedItems] = useState([]);
-  const [loadingRecordedItems, setLoadingRecordedItems] = useState(false);
-  const recordedItemsInitRef = useRef(false);
 
   /** Same fill % as admin Bin Monitoring (from waste_items via /levels). Keeps the higher fill level so websocket updates are not overwritten by slower polling. */
   const syncFillFromLevels = React.useCallback(async () => {
@@ -1247,7 +1246,7 @@ const BinMonitoring = () => {
   /** Send sort command to Arduino so servo tilts to the selected bin; add +10% to that bin. */
   const handleSortToBin = async (category) => {
     if (!category) return;
-    setSortingCategory(category);
+    setActiveSortCategory(category);
     setNotification("");
     try {
       const res = await fetch(`${API_BASE}/api/hardware/sort`, {
@@ -1309,7 +1308,7 @@ const BinMonitoring = () => {
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {
-      setSortingCategory(null);
+      setActiveSortCategory(null);
     }
   };
 
@@ -1524,15 +1523,23 @@ const BinMonitoring = () => {
         {bins.map((bin) => (
           <BinCard 
             key={bin.id}
-            {...bin}
+            title={bin.title}
+            capacity={bin.capacity}
+            fillLevel={bin.fillLevel}
+            lastCollection={bin.lastCollection}
+            colorClass={bin.colorClass}
+            status={bin.status}
+            icon={bin.icon}
             isSelected={selectedBins.includes(bin.id)}
             onToggle={() => handleToggleSelect(bin.id)}
             onDrain={isCollector ? () => handleDrainSingle(bin.id) : undefined}
             onSort={handleSortToBin}
             sortCategory={BIN_TO_SORT_CATEGORY[bin.id]}
-            isSorting={sortingCategory === BIN_TO_SORT_CATEGORY[bin.id]}
+            isSorting={activeSortCategory === BIN_TO_SORT_CATEGORY[bin.id]}
             isDraining={drainingBinId === bin.id}
-            icon={bin.icon}
+            last_ml_category={bin.last_ml_category}
+            last_ml_confidence={bin.last_ml_confidence}
+            last_ml_detected_at={bin.last_ml_detected_at}
           />
         ))}
       </div>
