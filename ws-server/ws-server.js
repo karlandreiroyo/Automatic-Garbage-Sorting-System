@@ -156,6 +156,45 @@ wss.on("connection", (ws) => {
         broadcast({ type: "update", data: binData, alert: null });
         return;
       }
+
+      // Handle bin update messages from Arduino sorting
+      if (msg.type === "bin_update" && msg.category && typeof msg.increment === "number") {
+        // Map category to bin_id
+        const categoryToBinId = {
+          "biodegradable": "bin_bio",
+          "recyclable": "bin_recycle",
+          "non-recyclable": "bin_nonbio",
+          "nonrecyclable": "bin_nonbio",
+          "non bio": "bin_nonbio",
+          "non-bio": "bin_nonbio",
+          "bio": "bin_bio",
+          "organic": "bin_bio"
+        };
+
+        const binId = categoryToBinId[msg.category.toLowerCase()] || "bin_unsorted";
+        const increment = Math.max(0, Math.min(100, msg.increment)); // Clamp to 0-100
+
+        const before = binData[binId].fill_level;
+        binData[binId].fill_level = Math.min(100, binData[binId].fill_level + increment);
+        binData[binId].detection_count += 1;
+
+        console.log(`[WS-SERVER] Bin update: ${binId} +${increment}% (${before}% -> ${binData[binId].fill_level}%) for category: ${msg.category}`);
+
+        // Check for alerts
+        let alert = null;
+        if (binData[binId].fill_level >= 80 && binData[binId].last_alerted_level < 80) {
+          binData[binId].last_alerted_level = 80;
+          alert = { bin_id: binId, bin_label: binData[binId].bin_label, fill_level: 80, type: "warning" };
+        }
+        if (binData[binId].fill_level >= 100 && binData[binId].last_alerted_level < 100) {
+          binData[binId].last_alerted_level = 100;
+          alert = { bin_id: binId, bin_label: binData[binId].bin_label, fill_level: 100, type: "critical" };
+        }
+
+        broadcast({ type: "update", data: binData, alert });
+        return;
+      }
+
       if (!isDetectionPayload(msg)) {
         console.log("[WS-SERVER] Message not recognized as detection payload:", msg);
         return;
