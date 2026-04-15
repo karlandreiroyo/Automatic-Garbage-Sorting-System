@@ -70,7 +70,16 @@ def send_sort_command(sort_type):
         return False
 
     url = f"{API_URL}/api/hardware/sort"
-    body = {"type": sort_type}
+    try:
+        from ml_label_classify import normalize_waste_type
+    except ImportError:
+        try:
+            from raspberry.ml_label_classify import normalize_waste_type
+        except ImportError:
+            def normalize_waste_type(x):
+                return x
+    mapped = normalize_waste_type(sort_type)
+    body = {"category": mapped}
     print(f"AGSS sort: POST {url} body={body}")
     try:
         r = requests.post(url, json=body, headers={"Content-Type": "application/json"}, timeout=10)

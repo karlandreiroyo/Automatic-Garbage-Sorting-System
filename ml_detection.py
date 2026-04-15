@@ -68,8 +68,17 @@ def detect_waste(frame):
 def send_detection(waste_type, confidence):
     """Send detection to backend"""
     try:
+        try:
+            from ml_label_classify import normalize_waste_type
+        except ImportError:
+            try:
+                from raspberry.ml_label_classify import normalize_waste_type
+            except ImportError:
+                def normalize_waste_type(x):
+                    return x
+        normalized = normalize_waste_type(str(waste_type))
         payload = {
-            'waste_type': waste_type,
+            'waste_type': normalized,
             'source': 'ml_detection',
             'confidence': confidence
         }

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { supabase } from "../supabaseClient";
 import { API_BASE, getWsUrl } from "../config/api";
+import { classifyMlLabelToWasteType } from "../utils/mlLabelClassify";
 
 function isLocalDevPageHost() {
   if (typeof window === "undefined") return false;
@@ -60,39 +61,8 @@ const SORT_CATEGORY_TO_LAST_TYPE = {
   'Biodegradable': 'BIO',
   'Unsorted': 'UNSORTED',
 };
-const ML_CATEGORY_TO_SORT_CATEGORY = {
-  recycle: 'Recycle',
-  recyclable: 'Recycle',
-  'recyclable waste': 'Recycle',
-  recyclables: 'Recycle',
-  'non-bio': 'Non-Bio',
-  nonbio: 'Non-Bio',
-  'non biodegradable': 'Non-Bio',
-  'non-biodegradable': 'Non-Bio',
-  'non biodegradable waste': 'Non-Bio',
-  biodegradable: 'Biodegradable',
-  'biodegradable waste': 'Biodegradable',
-  bio: 'Biodegradable',
-  organic: 'Biodegradable',
-  'hair clip': 'Unsorted',
-  hairclip: 'Unsorted',
-  unsorted: 'Unsorted',
-  unknown: 'Unsorted',
-  other: 'Unsorted',
-};
 
-/** Map any ML label to one of Recycle | Non-Bio | Biodegradable | Unsorted (never raw YOLO class names). */
-function mlLabelToSortCommand(raw) {
-  const s = String(raw || '').trim();
-  if (!s) return 'Unsorted';
-  const spaced = s.toLowerCase().replace(/\s+/g, ' ').trim();
-  const compact = s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return (
-    ML_CATEGORY_TO_SORT_CATEGORY[spaced] ||
-    ML_CATEGORY_TO_SORT_CATEGORY[compact] ||
-    'Unsorted'
-  );
-}
+const VALID_SORT_WASTE_TYPES = ['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted'];
 
 const WS_BIN_TO_CARD_ID = {
   bin_bio: 'Biodegradable',
@@ -546,6 +516,75 @@ const BinMonitoring = () => {
     }
   }, []);
 
+  /** Manual + ML auto-sort: POST /api/hardware/sort, notifications, waste_items, dashboard refresh. */
+  const runSortPipeline = React.useCallback(
+    async ({ wasteType, source, confidence, rawLabel }) => {
+      const apiWaste = VALID_SORT_WASTE_TYPES.includes(wasteType)
+        ? wasteType
+        : classifyMlLabelToWasteType(rawLabel || wasteType);
+
+      const body =
+        source === 'manual_button'
+          ? { category: apiWaste }
+          : {
+              waste_type: apiWaste,
+              source: source || 'ml_detection',
+              ...(confidence != null && Number.isFinite(Number(confidence)) ? { confidence: Number(confidence) } : {}),
+            };
+
+      const res = await fetch(`${API_BASE}/api/hardware/sort`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = res.ok ? await res.json().catch(() => ({})) : {};
+      if (!res.ok) {
+        throw new Error(data.message || `Sort failed (${res.status})`);
+      }
+
+      const lastTypeValue = SORT_CATEGORY_TO_LAST_TYPE[apiWaste];
+      if (lastTypeValue) lastArduinoTypeRef.current = lastTypeValue;
+
+      const displayCategory = SORT_CATEGORY_TO_BIN_ID[apiWaste] || apiWaste;
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          await fetch(`${API_BASE}/api/collector-bins/sort-notification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ bin_category: displayCategory }),
+          }).catch(() => {});
+
+          const info = collectorInfoRef.current;
+          const binsAssigned = collectorBinsRef.current?.length ? collectorBinsRef.current : collectorBins;
+          const wasteBinId = getBinIdForCard(displayCategory, binsAssigned);
+          if (wasteBinId && info) {
+            await fetch(`${API_BASE}/api/collector-bins/waste-item`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({
+                bin_id: wasteBinId,
+                category: displayCategory,
+                weight: null,
+                processing_time: 0,
+                first_name: info.first_name ?? '',
+                middle_name: info.middle_name ?? '',
+                last_name: info.last_name ?? '',
+              }),
+            }).catch(() => {});
+          }
+        }
+      } catch (_) {}
+
+      await syncFillFromLevels();
+      await fetchRecordedItems({ showLoadingOnlyFirst: false });
+      return { apiWaste, displayCategory, data };
+    },
+    [collectorBins, syncFillFromLevels, fetchRecordedItems]
+  );
+
   useEffect(() => {
     if (isRestoring) return;
     let cancelled = false;
@@ -773,81 +812,18 @@ const BinMonitoring = () => {
       });
     };
 
-    const getBinIdForCardFromRef = (cardId) => {
-      const assignedBins = collectorBinsRef.current || [];
-      if (!Array.isArray(assignedBins) || assignedBins.length === 0) return null;
-      const n = (cardId || '').toLowerCase();
-      const match = assignedBins.find((b) => {
-        const name = (b.name || '').toLowerCase();
-        if (n.includes('recycl') && name.includes('recycl')) return true;
-        if (n.includes('biodegradable') && !n.includes('non') && name.includes('bio') && !name.includes('non')) return true;
-        if (n.includes('non') && n.includes('bio') && (name.includes('non') || name.includes('non-bio'))) return true;
-        if (n.includes('unsorted') && name.includes('unsort')) return true;
-        return false;
-      });
-      return (match || assignedBins[0])?.id ?? null;
-    };
-
-    const triggerAutoSortFromMl = async (mlCategory, detectedAt, wsKey) => {
-      console.log('[AUTO-SORT-ENTER] function called with:', mlCategory, detectedAt, wsKey);
+    const triggerAutoSortFromMl = async (mlCategory, detectedAt, wsKey, wsBin) => {
       try {
-        const finalCategory = mlLabelToSortCommand(mlCategory);
-        const spaced = String(mlCategory || '').trim().toLowerCase().replace(/\s+/g, ' ').trim();
-        const compact = String(mlCategory || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-        console.log('[AUTO-SORT] ML label → command:', { raw: mlCategory, spaced, compact, finalCategory });
-        if (!detectedAt) {
-          console.log('[AUTO-SORT-BLOCKED] missing detectedAt');
-          return;
-        }
-        console.log(`[AUTO-SORT] Triggering servo sort for ML detection: ${finalCategory} (${wsKey}) at ${detectedAt}`);
-        console.log('[AUTO-SORT] POST payload:', { type: finalCategory });
-        const res = await fetch(`${API_BASE}/api/hardware/sort`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: finalCategory }),
+        if (!detectedAt) return;
+        console.log('[AUTO-SORT]', { raw: mlCategory, wsKey });
+        await runSortPipeline({
+          wasteType: mlCategory,
+          source: 'ml_detection',
+          confidence: wsBin?.last_confidence,
+          rawLabel: mlCategory,
         });
-        const payload = await res.json().catch(() => ({}));
-        console.log('[AUTO-SORT] response status:', res.status, 'body:', payload);
-        if (!res.ok) {
-          console.warn(`[AUTO-SORT] Sort API failed for ${finalCategory}:`, payload?.message || res.status);
-          return;
-        }
-        console.log(`[AUTO-SORT] Sort API success for ${finalCategory}:`, payload?.arduinoType || 'queued');
-        const lastTypeValue = SORT_CATEGORY_TO_LAST_TYPE[finalCategory];
-        if (lastTypeValue) lastArduinoTypeRef.current = lastTypeValue;
-        const displayCategory = SORT_CATEGORY_TO_BIN_ID[finalCategory] || finalCategory;
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token;
-          if (token) {
-            await fetch(`${API_BASE}/api/collector-bins/sort-notification`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ bin_category: displayCategory }),
-            }).catch(() => {});
-            const info = collectorInfoRef.current;
-            const wasteBinId = getBinIdForCardFromRef(displayCategory);
-            if (wasteBinId && info) {
-              await fetch(`${API_BASE}/api/collector-bins/waste-item`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                  bin_id: wasteBinId,
-                  category: displayCategory,
-                  weight: null,
-                  processing_time: 0,
-                  first_name: info.first_name ?? '',
-                  middle_name: info.middle_name ?? '',
-                  last_name: info.last_name ?? '',
-                }),
-              }).catch(() => {});
-            }
-          }
-        } catch (_) {}
-        await syncFillFromLevels();
-        await fetchRecordedItems({ showLoadingOnlyFirst: false });
       } catch (err) {
-        console.warn(`[AUTO-SORT] Error triggering sort: ${err?.message || err}`);
+        console.warn('[AUTO-SORT]', err?.message || err);
       }
     };
 
@@ -917,7 +893,7 @@ const BinMonitoring = () => {
                       last_detected_at: wsBin.last_detected_at,
                     });
                     persistMlNotification(wsKey, wsBin);
-                    triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey);
+                    triggerAutoSortFromMl(wsBin.last_category, wsBin.last_detected_at, wsKey, wsBin);
                   }
                 }
                 if (cardId) {
@@ -1045,7 +1021,7 @@ const BinMonitoring = () => {
         }
       } catch (_) {}
     };
-  }, [assignedBinLocationText, syncFillFromLevels, fetchRecordedItems]);
+  }, [assignedBinLocationText, syncFillFromLevels, fetchRecordedItems, runSortPipeline]);
 
   // Persist on every bins change + on unmount
   useEffect(() => { persistBinsToBackendAndStorage(bins); }, [bins]);
@@ -1249,22 +1225,12 @@ const BinMonitoring = () => {
     setActiveSortCategory(category);
     setNotification("");
     try {
-      const res = await fetch(`${API_BASE}/api/hardware/sort`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category }),
+      const { displayCategory, data } = await runSortPipeline({
+        wasteType: category,
+        source: 'manual_button',
+        confidence: null,
+        rawLabel: null,
       });
-      const data = res.ok ? await res.json().catch(() => ({})) : {};
-      if (!res.ok) {
-        const msg = data.message || (res.status === 503 ? 'Arduino not connected. Check cable and backend.' : 'Sort failed.');
-        setNotification(msg);
-        return;
-      }
-      // So hardware poll doesn't double-add when Arduino echoes TYPE:XXX
-      const lastTypeValue = SORT_CATEGORY_TO_LAST_TYPE[category];
-      if (lastTypeValue) lastArduinoTypeRef.current = lastTypeValue;
-
-      const displayCategory = SORT_CATEGORY_TO_BIN_ID[category] || category;
       const msg = (data?.message || '').toString().toLowerCase();
       const isQueuedForBridge = msg.includes('queued');
       const isRailway = !/localhost|127\.0\.0\.1/.test(API_BASE);
@@ -1274,37 +1240,6 @@ const BinMonitoring = () => {
         setNotification(`Sorted into ${displayCategory} bin (+10%)`);
       }
       setTimeout(() => setNotification(''), 5000);
-
-      // notification_bin (Notifications) + waste_items (Supabase — visible in Table Editor & used on drain)
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (token) {
-          await fetch(`${API_BASE}/api/collector-bins/sort-notification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ bin_category: displayCategory }),
-          });
-          const wasteBinId = getBinIdForCard(displayCategory, collectorBins);
-          if (wasteBinId && collectorInfo) {
-            await fetch(`${API_BASE}/api/collector-bins/waste-item`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({
-                bin_id: wasteBinId,
-                category: displayCategory,
-                weight: null,
-                processing_time: 0,
-                first_name: collectorInfo.first_name ?? '',
-                middle_name: collectorInfo.middle_name ?? '',
-                last_name: collectorInfo.last_name ?? '',
-              }),
-            });
-          }
-        }
-      } catch (_) {}
-      await syncFillFromLevels();
-      await fetchRecordedItems({ showLoadingOnlyFirst: false });
     } catch (err) {
       setNotification(err.message || 'Could not send sort command.');
     } finally {

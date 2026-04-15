@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { classifyRawLabelToWasteType } = require('../utils/mlLabelClassify');
 const {
   getHardwareState,
   updateStateFromBridge,
@@ -65,6 +66,12 @@ router.post('/sort', async (req, res) => {
     }
 
     const valid_types = ['Recycle', 'Non-Bio', 'Biodegradable', 'Unsorted'];
+    if (waste_type && !valid_types.includes(waste_type)) {
+      const normalized = classifyRawLabelToWasteType(waste_type);
+      if (valid_types.includes(normalized)) {
+        waste_type = normalized;
+      }
+    }
     if (!waste_type || !valid_types.includes(waste_type)) {
       return res.status(400).json({ success: false, message: 'Missing or invalid waste_type. Use: Recycle, Non-Bio, Biodegradable, Unsorted.' });
     }
