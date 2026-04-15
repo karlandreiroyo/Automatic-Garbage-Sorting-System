@@ -144,6 +144,7 @@ wss.on("connection", (ws) => {
   ws.on("message", (raw) => {
     try {
       const parsed = JSON.parse(raw.toString());
+      console.log("[WS-SERVER] Received message:", parsed);
       if (!parsed || typeof parsed !== "object") return;
       const msg = coerceDetectionMessage(parsed);
       if (!msg || typeof msg !== "object") return;
@@ -151,22 +152,25 @@ wss.on("connection", (ws) => {
       if (msg.type === "reset_bin" && msg.bin_id && binData[msg.bin_id]) {
         binData[msg.bin_id].fill_level = 0;
         binData[msg.bin_id].last_alerted_level = 0;
-        console.log(`[WS] Broadcasting fill_level: ${msg.bin_id} = ${binData[msg.bin_id].fill_level}%`);
+        console.log(`[WS-SERVER] Broadcasting fill_level: ${msg.bin_id} = ${binData[msg.bin_id].fill_level}%`);
         broadcast({ type: "update", data: binData, alert: null });
         return;
       }
-      if (!isDetectionPayload(msg)) return;
+      if (!isDetectionPayload(msg)) {
+        console.log("[WS-SERVER] Message not recognized as detection payload:", msg);
+        return;
+      }
 
       const mappedId = typeof msg.bin_id === "string" && binData[msg.bin_id] ? msg.bin_id : "bin_unsorted";
       const before = binData[mappedId].fill_level;
-      console.log(`[WS] Received detection: ${mappedId} -> ${msg.category ?? "Unknown"}`);
+      console.log(`[WS-SERVER] Processing detection: ${mappedId} -> ${msg.category ?? "Unknown"}`);
       const alert = handleDetection(msg);
       console.log(
-        `[WS] Broadcasting fill_level: ${mappedId} = ${binData[mappedId].fill_level}% (from ${before}%, detections=${binData[mappedId].detection_count})`
+        `[WS-SERVER] Broadcasting fill_level: ${mappedId} = ${binData[mappedId].fill_level}% (from ${before}%, detections=${binData[mappedId].detection_count})`
       );
       broadcast({ type: "update", data: binData, alert });
     } catch (_) {
-      // swallow parse and transport errors
+      console.log("[WS-SERVER] Error processing message:", _);
     }
   });
 });

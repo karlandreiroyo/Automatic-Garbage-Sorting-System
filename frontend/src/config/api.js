@@ -38,54 +38,25 @@ export function getWsUrl() {
     const u = String(window.__AGSS_WS_URL__).trim();
     if (u) return u.replace(/\/+$/, '');
   }
+  
+  // For WebSocket, always prefer production server to ensure desktop_app.py and frontend connect to the same server
+  const productionWs = 'wss://ws-server-production-ab05.up.railway.app';
+  
   const viteMode = String(import.meta.env.VITE_MODE || '').trim().toLowerCase();
-  const localWsPort = String(import.meta.env.VITE_LOCAL_WS_PORT || '3001').trim();
   if (viteMode === 'local') {
-    if (typeof window !== 'undefined') {
-      const h = window.location.hostname || '';
-      if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h) || /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) {
-        return `ws://${h}:${localWsPort}`;
-      }
-    }
-    return `ws://localhost:${localWsPort}`;
+    // Even in local mode, use production WebSocket to match desktop_app.py
+    return productionWs;
   }
-  if (viteMode === 'deployed') {
-    const deployedWs = String(import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_WS_URL || '').trim();
-    if (deployedWs) return deployedWs.replace(/\/+$/, '');
-  }
+  
   if (typeof window !== 'undefined') {
     const h = (window.location.hostname || '').toLowerCase();
     if (h.includes('automatic-garbage-sorting-system')) {
-      const railWs = String(
-        import.meta.env.VITE_WS_URL || import.meta.env.VITE_DEPLOYED_WS_URL || import.meta.env.VITE_RAILWAY_ML_WS_URL || ''
-      ).trim();
-      if (railWs) return railWs.replace(/\/+$/, '');
-      return 'wss://ws-server-production-ab05.up.railway.app';
+      return productionWs;
     }
   }
-  // Python ML server is almost always ws://localhost:3001. If env is missing (wrong cwd, stale build),
-  // do not derive from Railway API_BASE or the UI will never see local detections.
-  if (import.meta.env.DEV || isBrowserLocalhost()) {
-    if (typeof window !== 'undefined') {
-      const h = window.location.hostname || '';
-      if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h) || /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) {
-        return `ws://${h}:3001`;
-      }
-    }
-    return LOCAL_ML_WS;
-  }
-  if (typeof window !== 'undefined' && isLANOrLocalPage() && !isBrowserLocalhost()) {
-    const h = window.location.hostname;
-    return `ws://${h}:3001`;
-  }
-  try {
-    const base = getApiBase();
-    const url = new URL(base.startsWith('http') ? base : `https://${base}`);
-    const wsProto = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${wsProto}//${url.host}`;
-  } catch {
-    return LOCAL_ML_WS;
-  }
+  
+  // Default to production for consistency
+  return productionWs;
 }
 /**
  * Parse response as JSON. If the server returns HTML (e.g. error page), throws a clear error

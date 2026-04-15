@@ -271,6 +271,8 @@ const BinMonitoring = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const [detectionLog, setDetectionLog] = useState([]);
   const [wsAlertBanner, setWsAlertBanner] = useState(null);
+  const [sortingCategory, setSortingCategory] = useState(null);
+  const [drainingBinId, setDrainingBinId] = useState(null);
   const wsBannerTimerRef = useRef(null);
   const fullBinsLockRef = useRef(new Set());
   const wsThresholdSentRef = useRef(new Map());
@@ -739,9 +741,10 @@ const BinMonitoring = () => {
     };
 
     const applyWsBinUpdate = (wsData) => {
+      console.log("[WS-FRONTEND] applyWsBinUpdate called with:", wsData);
       if (!wsData || typeof wsData !== "object") return;
-      setBins((prevBins) =>
-        prevBins.map((bin) => {
+      setBins((prevBins) => {
+        const newBins = prevBins.map((bin) => {
           const wsKey = CARD_ID_TO_WS_BIN_KEY[bin.id];
           if (!wsKey) return bin;
           const wsBin = wsData[wsKey];
@@ -755,7 +758,7 @@ const BinMonitoring = () => {
           }
           const status =
             nextFill === 0 ? "Empty" : nextFill <= 74 ? "Normal" : nextFill <= 89 ? "Almost Full" : "Full";
-          return {
+          const updatedBin = {
             ...bin,
             fillLevel: nextFill,
             status,
@@ -763,8 +766,12 @@ const BinMonitoring = () => {
             last_ml_confidence: wsBin.last_confidence ?? null,
             last_ml_detected_at: wsBin.last_detected_at ?? null,
           };
-        })
-      );
+          console.log(`[WS-FRONTEND] Updating bin ${bin.id}: fillLevel ${bin.fillLevel} -> ${nextFill}`);
+          return updatedBin;
+        });
+        console.log("[WS-FRONTEND] New bins state:", newBins);
+        return newBins;
+      });
     };
 
     const getBinIdForCardFromRef = (cardId) => {
@@ -846,22 +853,42 @@ const BinMonitoring = () => {
     };
 
     const connect = () => {
-      const ws = new WebSocket(getWsUrl());
+      const wsUrl = getWsUrl();
+      console.log("[WS-FRONTEND] Connecting to:", wsUrl);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
+        console.log("[WS-FRONTEND] Connected successfully");
         setWsConnected(true);
-        console.log("[WS] Browser connected");
+      };
+
+      ws.onclose = () => {
+        console.log("[WS-FRONTEND] Connection closed");
+        setWsConnected(false);
+        // ... rest of onclose
+      };
+
+      ws.onerror = (error) => {
+        console.error("[WS-FRONTEND] WebSocket error:", error);
+        // ... rest of onerror
       };
 
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          console.log("[WS] Message received:", payload);
-          if (!payload || (payload.type !== "init" && payload.type !== "update")) return;
+          console.log("[WS-FRONTEND] Message received:", payload);
+          if (!payload || (payload.type !== "init" && payload.type !== "update")) {
+            console.log("[WS-FRONTEND] Ignoring message - not init or update type");
+            return;
+          }
           const wsData = payload.data;
-          if (!wsData || typeof wsData !== "object") return;
+          if (!wsData || typeof wsData !== "object") {
+            console.log("[WS-FRONTEND] No valid data in message");
+            return;
+          }
 
+          console.log("[WS-FRONTEND] Applying bin update:", wsData);
           applyWsBinUpdate(wsData);
 
           if (payload.type === "update") {
